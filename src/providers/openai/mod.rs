@@ -1,0 +1,71 @@
+//! OpenAI Provider Module
+//!
+//! Modular implementation of OpenAI API client with capability separation.
+//! This module follows the design pattern of separating different AI capabilities
+//! into distinct modules while providing a unified client interface.
+//!
+//! # Architecture
+//! - `client.rs` - Main OpenAI client that aggregates all capabilities
+//! - `config.rs` - Configuration structures and validation
+//! - `builder.rs` - Builder pattern implementation for client creation
+//! - `chat.rs` - Chat completion capability implementation
+//! - `audio.rs` - Audio processing (TTS/STT) capability implementation
+//! - `embeddings.rs` - Text embedding capability implementation
+//! - `images.rs` - Image generation capability implementation (future)
+//! - `files.rs` - File management capability implementation (future)
+//! - `models.rs` - Model listing capability implementation (future)
+//! - `moderation.rs` - Content moderation capability implementation (future)
+//! - `types.rs` - OpenAI-specific type definitions
+//! - `utils.rs` - Utility functions and helpers
+//!
+//! # Example Usage
+//! ```rust,no_run
+//! use siumai::llm;
+//!
+//! let client = llm()
+//!     .openai()
+//!     .api_key("your-api-key")
+//!     .model("gpt-4")
+//!     .build()
+//!     .await?;
+//!
+//! // Use chat capability
+//! let messages = vec![user!("Hello, world!")];
+//! let response = client.chat(messages).await?;
+//!
+//! // Use audio capability
+//! let audio_data = client.speech("Hello, world!").await?;
+//!
+//! // Use embedding capability
+//! let embeddings = client.embed(vec!["Hello, world!".to_string()]).await?;
+//! ```
+
+// Core modules
+pub mod builder;
+pub mod client;
+pub mod config;
+pub mod types;
+pub mod utils;
+
+// Capability modules
+pub mod audio;
+pub mod chat;
+pub mod embeddings;
+pub mod streaming;
+
+// Future capability modules (placeholders)
+// pub mod files;
+// pub mod images;
+// pub mod models;
+// pub mod moderation;
+
+// Re-export main types for convenience
+pub use builder::OpenAiBuilder;
+pub use client::OpenAiClient;
+pub use config::OpenAiConfig;
+pub use types::*;
+
+// Re-export capability implementations
+pub use audio::OpenAiAudio;
+pub use chat::OpenAiChatCapability;
+pub use embeddings::OpenAiEmbeddings;
