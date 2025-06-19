@@ -3,6 +3,7 @@
 //! Contains specific implementations for each LLM provider.
 
 pub mod anthropic;
+pub mod gemini;
 pub mod openai;
 
 // Re-export main types

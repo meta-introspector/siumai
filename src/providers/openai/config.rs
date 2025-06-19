@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use crate::params::{OpenAiParams};
-use crate::types::{CommonParams, HttpConfig};
+use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 
 /// OpenAI provider configuration.
 /// 
@@ -48,6 +48,9 @@ pub struct OpenAiConfig {
     
     /// HTTP configuration
     pub http_config: HttpConfig,
+
+    /// Web search configuration
+    pub web_search_config: WebSearchConfig,
 }
 
 impl OpenAiConfig {
@@ -67,6 +70,7 @@ impl OpenAiConfig {
             common_params: CommonParams::default(),
             openai_params: OpenAiParams::default(),
             http_config: HttpConfig::default(),
+            web_search_config: WebSearchConfig::default(),
         }
     }
 
@@ -116,11 +120,30 @@ impl OpenAiConfig {
     }
 
     /// Set the maximum tokens.
-    /// 
+    ///
     /// # Arguments
     /// * `max_tokens` - The maximum number of tokens
     pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Enable web search functionality.
+    ///
+    /// # Arguments
+    /// * `config` - Optional web search configuration
+    pub fn with_web_search(mut self, config: Option<WebSearchConfig>) -> Self {
+        self.web_search_config = config.unwrap_or_else(|| {
+            let mut default_config = WebSearchConfig::default();
+            default_config.enabled = true;
+            default_config
+        });
+        self
+    }
+
+    /// Enable web search with default settings.
+    pub fn enable_web_search(mut self) -> Self {
+        self.web_search_config.enabled = true;
         self
     }
 
@@ -231,6 +254,7 @@ impl Default for OpenAiConfig {
             common_params: CommonParams::default(),
             openai_params: OpenAiParams::default(),
             http_config: HttpConfig::default(),
+            web_search_config: WebSearchConfig::default(),
         }
     }
 }

@@ -221,6 +221,7 @@ impl ChatCapability for OpenAiChatCapability {
             common_params: CommonParams::default(),
             openai_params: OpenAiParams::default(),
             http_config: self.http_config.clone(),
+            web_search_config: crate::types::WebSearchConfig::default(),
         };
 
         let streaming = super::streaming::OpenAiStreaming::new(config, self.http_client.clone());

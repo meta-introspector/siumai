@@ -3,6 +3,10 @@
 //! Contains data structures specific to the Anthropic Claude API.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use super::cache::CacheControl;
+use super::thinking::ThinkingConfig;
 
 /// Anthropic Message format
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,11 +28,23 @@ pub struct AnthropicChatResponse {
     pub usage: Option<AnthropicUsage>,
 }
 
-/// Anthropic Content Block
+/// Anthropic Content Block according to official API documentation
+/// https://docs.anthropic.com/en/api/messages
 #[derive(Debug, Deserialize)]
 pub struct AnthropicContentBlock {
     pub r#type: String,
     pub text: Option<String>,
+    // Thinking-related fields
+    pub thinking: Option<String>,
+    pub signature: Option<String>,
+    // Tool use fields
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub input: Option<serde_json::Value>,
+    // Tool result fields
+    pub tool_use_id: Option<String>,
+    pub content: Option<serde_json::Value>,
+    pub is_error: Option<bool>,
 }
 
 /// Anthropic Usage
@@ -48,17 +64,31 @@ pub struct AnthropicSpecificParams {
     /// Prompt caching configuration
     pub cache_control: Option<CacheControl>,
     /// Thinking mode configuration
-    pub thinking_mode: Option<bool>,
+    pub thinking_config: Option<ThinkingConfig>,
     /// Custom metadata
     pub metadata: Option<serde_json::Value>,
 }
 
-/// Cache Control configuration for Anthropic
-#[derive(Debug, Clone)]
-pub struct CacheControl {
-    /// Cache type (e.g., "ephemeral")
+/// Anthropic Models List Response according to official API documentation
+/// https://docs.anthropic.com/en/api/models-list
+#[derive(Debug, Deserialize)]
+pub struct AnthropicModelsResponse {
+    pub data: Vec<AnthropicModelInfo>,
+    pub first_id: Option<String>,
+    pub has_more: bool,
+    pub last_id: Option<String>,
+}
+
+/// Anthropic Model Information
+#[derive(Debug, Deserialize)]
+pub struct AnthropicModelInfo {
+    pub id: String,
+    pub display_name: String,
+    pub created_at: String,
     pub r#type: String,
 }
+
+
 
 /// Tool Use block for Anthropic
 #[derive(Debug, Serialize, Deserialize)]

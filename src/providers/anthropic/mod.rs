@@ -2,8 +2,11 @@
 //!
 //! Modular implementation of Anthropic Claude API client with capability separation.
 
+pub mod cache;
 pub mod chat;
 pub mod client;
+pub mod models;
+pub mod thinking;
 pub mod types;
 pub mod utils;
 
@@ -13,3 +16,4 @@ pub use types::*;
 
 // Re-export capability implementations
 pub use chat::AnthropicChatCapability;
+pub use models::AnthropicModels;

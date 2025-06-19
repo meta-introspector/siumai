@@ -40,33 +40,54 @@
 //! }
 //! ```
 
+pub mod benchmarks;
 pub mod builder;
 pub mod client;
+pub mod custom_provider;
 pub mod error;
 pub mod error_handling;
+pub mod multimodal;
 pub mod params;
+pub mod performance;
+pub mod provider_features;
 pub mod providers;
 pub mod retry;
+pub mod retry_strategy;
 pub mod stream;
 pub mod traits;
 pub mod types;
+pub mod web_search;
 
 // Re-export main types and traits
+pub use benchmarks::*;
 pub use builder::*;
 pub use client::*;
+pub use custom_provider::*;
 pub use error::LlmError;
+pub use multimodal::*;
+pub use performance::*;
+pub use provider_features::*;
+pub use retry_strategy::*;
 pub use stream::*;
 pub use traits::*;
 pub use types::*;
+pub use web_search::*;
 
 /// Convenient pre-import module
 pub mod prelude {
+    pub use crate::benchmarks::*;
     pub use crate::builder::*;
     pub use crate::client::*;
+    pub use crate::custom_provider::*;
     pub use crate::error::LlmError;
+    pub use crate::multimodal::*;
+    pub use crate::performance::*;
+    pub use crate::provider_features::*;
+    pub use crate::retry_strategy::*;
     pub use crate::stream::*;
     pub use crate::traits::*;
     pub use crate::types::*;
+    pub use crate::web_search::*;
     pub use crate::{assistant, llm, system, tool, user};
 }
 

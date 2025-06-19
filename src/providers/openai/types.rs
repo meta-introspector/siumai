@@ -55,12 +55,31 @@ pub struct OpenAiUsage {
     pub total_tokens: Option<u32>,
 }
 
+/// OpenAI Model information
+#[derive(Debug, Deserialize)]
+pub struct OpenAiModel {
+    pub id: String,
+    pub object: String,
+    pub created: Option<u64>,
+    pub owned_by: String,
+    pub permission: Option<Vec<serde_json::Value>>,
+    pub root: Option<String>,
+    pub parent: Option<String>,
+}
+
+/// OpenAI Models API response
+#[derive(Debug, Deserialize)]
+pub struct OpenAiModelsResponse {
+    pub object: String,
+    pub data: Vec<OpenAiModel>,
+}
+
 /// OpenAI-specific parameters
 #[derive(Debug, Clone, Default)]
 pub struct OpenAiSpecificParams {
     /// Organization ID
     pub organization: Option<String>,
-    /// Project ID  
+    /// Project ID
     pub project: Option<String>,
     /// Response format for structured output
     pub response_format: Option<serde_json::Value>,

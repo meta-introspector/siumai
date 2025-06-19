@@ -12,6 +12,7 @@ use crate::traits::*;
 use crate::types::*;
 
 use super::chat::OpenAiChatCapability;
+use super::models::OpenAiModels;
 use super::types::OpenAiSpecificParams;
 use super::utils::get_default_models;
 
@@ -19,6 +20,8 @@ use super::utils::get_default_models;
 pub struct OpenAiClient {
     /// Chat capability implementation
     chat_capability: OpenAiChatCapability,
+    /// Models capability implementation
+    models_capability: OpenAiModels,
     /// Common parameters
     common_params: CommonParams,
     /// OpenAI-specific parameters
@@ -45,8 +48,18 @@ impl OpenAiClient {
             config.http_config.clone(),
         );
 
+        let models_capability = OpenAiModels::new(
+            config.api_key.clone(),
+            config.base_url.clone(),
+            http_client.clone(),
+            config.organization.clone(),
+            config.project.clone(),
+            config.http_config.clone(),
+        );
+
         Self {
             chat_capability,
+            models_capability,
             common_params: config.common_params,
             openai_params: config.openai_params,
             specific_params,
@@ -72,6 +85,7 @@ impl OpenAiClient {
             common_params,
             openai_params,
             http_config,
+            web_search_config: crate::types::WebSearchConfig::default(),
         };
 
         Self::new(config, http_client)
@@ -162,6 +176,17 @@ impl ChatCapability for OpenAiClient {
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
         self.chat_capability.chat_stream(messages, tools).await
+    }
+}
+
+#[async_trait]
+impl ModelListingCapability for OpenAiClient {
+    async fn list_models(&self) -> Result<Vec<ModelInfo>, LlmError> {
+        self.models_capability.list_models().await
+    }
+
+    async fn get_model(&self, model_id: String) -> Result<ModelInfo, LlmError> {
+        self.models_capability.get_model(model_id).await
     }
 }
 

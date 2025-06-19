@@ -140,6 +140,43 @@ pub enum MessageContent {
     MultiModal(Vec<ContentPart>),
 }
 
+impl MessageContent {
+    /// Extract text content if available
+    pub fn text(&self) -> Option<&str> {
+        match self {
+            MessageContent::Text(text) => Some(text),
+            MessageContent::MultiModal(parts) => {
+                // Return the first text part found
+                for part in parts {
+                    if let ContentPart::Text { text } = part {
+                        return Some(text);
+                    }
+                }
+                None
+            }
+        }
+    }
+
+    /// Extract all text content
+    pub fn all_text(&self) -> String {
+        match self {
+            MessageContent::Text(text) => text.clone(),
+            MessageContent::MultiModal(parts) => {
+                let mut result = String::new();
+                for part in parts {
+                    if let ContentPart::Text { text } = part {
+                        if !result.is_empty() {
+                            result.push(' ');
+                        }
+                        result.push_str(text);
+                    }
+                }
+                result
+            }
+        }
+    }
+}
+
 /// Content part
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ContentPart {
@@ -341,7 +378,7 @@ impl ChatMessageBuilder {
     }
 }
 
-// Placeholder type definitions - to be completed in subsequent implementations
+// Tool calling types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolCall {
     pub id: String,
@@ -353,6 +390,170 @@ pub struct ToolCall {
 pub struct FunctionCall {
     pub name: String,
     pub arguments: String,
+}
+
+/// Web search configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebSearchConfig {
+    /// Whether web search is enabled
+    pub enabled: bool,
+    /// Maximum number of search results to retrieve
+    pub max_results: Option<u32>,
+    /// Search context size for providers that support it
+    pub context_size: Option<WebSearchContextSize>,
+    /// Custom search prompt for result integration
+    pub search_prompt: Option<String>,
+    /// Web search implementation strategy
+    pub strategy: WebSearchStrategy,
+    /// Provider-specific search parameters
+    pub provider_params: HashMap<String, serde_json::Value>,
+}
+
+impl Default for WebSearchConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            max_results: Some(5),
+            context_size: None,
+            search_prompt: None,
+            strategy: WebSearchStrategy::Auto,
+            provider_params: HashMap::new(),
+        }
+    }
+}
+
+/// Web search context size for providers that support it
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WebSearchContextSize {
+    Small,
+    Medium,
+    Large,
+}
+
+/// Web search implementation strategy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum WebSearchStrategy {
+    /// Automatically choose the best strategy for the provider
+    Auto,
+    /// Use provider's built-in search tools (OpenAI Responses API, xAI Live Search)
+    BuiltIn,
+    /// Use provider's web search tool (Anthropic web_search tool)
+    Tool,
+    /// Use external search API and inject results into context
+    External,
+}
+
+/// Web search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebSearchResult {
+    /// Search result title
+    pub title: String,
+    /// Search result URL
+    pub url: String,
+    /// Search result snippet/description
+    pub snippet: String,
+    /// Additional metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+/// Tool definition for function calling
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tool {
+    /// Tool type (usually "function")
+    pub r#type: String,
+    /// Function definition
+    pub function: ToolFunction,
+}
+
+impl Tool {
+    /// Create a new function tool
+    pub fn function(name: String, description: String, parameters: serde_json::Value) -> Self {
+        Self {
+            r#type: "function".to_string(),
+            function: ToolFunction {
+                name,
+                description,
+                parameters,
+            },
+        }
+    }
+}
+
+/// Tool function definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToolFunction {
+    /// Function name
+    pub name: String,
+    /// Function description
+    pub description: String,
+    /// JSON schema for function parameters
+    pub parameters: serde_json::Value,
+}
+
+/// Tool type enumeration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ToolType {
+    #[serde(rename = "function")]
+    Function,
+    #[serde(rename = "code_interpreter")]
+    CodeInterpreter,
+    #[serde(rename = "file_search")]
+    FileSearch,
+    #[serde(rename = "web_search")]
+    WebSearch,
+}
+
+/// OpenAI-specific built-in tools
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum OpenAiBuiltInTool {
+    /// Web search tool
+    WebSearch,
+    /// File search tool
+    FileSearch {
+        /// Vector store IDs to search
+        vector_store_ids: Option<Vec<String>>,
+    },
+    /// Computer use tool
+    ComputerUse {
+        /// Display width
+        display_width: u32,
+        /// Display height
+        display_height: u32,
+        /// Environment type
+        environment: String,
+    },
+}
+
+impl OpenAiBuiltInTool {
+    /// Convert to JSON for API requests
+    pub fn to_json(&self) -> serde_json::Value {
+        match self {
+            Self::WebSearch => serde_json::json!({
+                "type": "web_search_preview"
+            }),
+            Self::FileSearch { vector_store_ids } => {
+                let mut json = serde_json::json!({
+                    "type": "file_search"
+                });
+                if let Some(ids) = vector_store_ids {
+                    json["vector_store_ids"] = serde_json::Value::Array(
+                        ids.iter().map(|id| serde_json::Value::String(id.clone())).collect()
+                    );
+                }
+                json
+            }
+            Self::ComputerUse {
+                display_width,
+                display_height,
+                environment,
+            } => serde_json::json!({
+                "type": "computer_use_preview",
+                "display_width": display_width,
+                "display_height": display_height,
+                "environment": environment
+            }),
+        }
+    }
 }
 
 /// Chat request
@@ -496,6 +697,16 @@ impl ChatResponse {
     /// Gets the text content (alias for compatibility)
     pub fn content_text(&self) -> Option<&str> {
         self.text()
+    }
+
+    /// Gets thinking/reasoning content if available
+    pub fn thinking(&self) -> Option<&str> {
+        self.provider_data.get("thinking")
+            .and_then(|v| v.as_str())
+            .or_else(|| {
+                self.provider_data.get("reasoning")
+                    .and_then(|v| v.as_str())
+            })
     }
 
     /// Gets all text content
@@ -932,7 +1143,7 @@ pub struct ImageGenerationResponse {
 #[derive(Debug, Clone)]
 pub struct GeneratedImage {
     /// Image URL (if response_format is "url")
-    pub url: String,
+    pub url: Option<String>,
     /// Base64 encoded image data (if response_format is "b64_json")
     pub b64_json: Option<String>,
     /// Image format
@@ -943,6 +1154,8 @@ pub struct GeneratedImage {
     pub height: Option<u32>,
     /// Revised prompt (if prompt was enhanced)
     pub revised_prompt: Option<String>,
+    /// Additional metadata
+    pub metadata: HashMap<String, serde_json::Value>,
 }
 
 /// Embedding response
@@ -1146,16 +1359,6 @@ pub enum CompletionStreamEvent {
     Error { error: String },
 }
 
-// OpenAI-specific types
-/// OpenAI built-in tool
-#[derive(Debug, Clone)]
-pub struct OpenAiBuiltInTool {
-    /// Tool type
-    pub tool_type: String,
-    /// Tool configuration
-    pub config: HashMap<String, serde_json::Value>,
-}
-
 // Other placeholder types - to be completed in subsequent implementations
 pub type VisionRequest = ();
 pub type VisionResponse = ();
@@ -1169,41 +1372,6 @@ pub type CacheConfig = ();
 pub type ThinkingResponse = ();
 pub type SearchConfig = ();
 pub type ExecutionResponse = ();
-
-/// Tool definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Tool {
-    /// Tool type
-    pub r#type: ToolType,
-    /// Function definition
-    pub function: Option<FunctionDefinition>,
-}
-
-/// Tool type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ToolType {
-    #[serde(rename = "function")]
-    Function,
-    #[serde(rename = "code_interpreter")]
-    CodeInterpreter,
-    #[serde(rename = "file_search")]
-    FileSearch,
-    #[serde(rename = "web_search")]
-    WebSearch,
-}
-
-/// Function definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FunctionDefinition {
-    /// Function name
-    pub name: String,
-    /// Function description
-    pub description: Option<String>,
-    /// Parameters schema
-    pub parameters: Option<serde_json::Value>,
-    /// Whether strict mode is enabled
-    pub strict: Option<bool>,
-}
 
 #[cfg(test)]
 mod tests {

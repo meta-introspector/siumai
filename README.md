@@ -267,6 +267,71 @@ Each provider can have additional parameters:
 - `thinking_budget`: Thinking process budget
 - `system`: System message handling
 
+### OpenAI API Feature Examples
+
+#### Text Embedding
+
+```rust
+use siumai::providers::openai::{OpenAiConfig, OpenAiEmbeddings};
+use siumai::traits::EmbeddingCapability;
+
+let config = OpenAiConfig::new("your-api-key");
+let client = OpenAiEmbeddings::new(config, reqwest::Client::new());
+
+let texts = vec!["Hello, world!".to_string()];
+let response = client.embed(texts).await?;
+println!("Embedding dimension: {}", response.embeddings[0].len());
+```
+
+#### Text-to-Speech
+
+```rust
+use siumai::providers::openai::{OpenAiConfig, OpenAiAudio};
+use siumai::traits::AudioCapability;
+use siumai::types::TtsRequest;
+
+let config = OpenAiConfig::new("your-api-key");
+let client = OpenAiAudio::new(config, reqwest::Client::new());
+
+let request = TtsRequest {
+    text: "Hello, world!".to_string(),
+    voice: Some("alloy".to_string()),
+    format: Some("mp3".to_string()),
+    speed: Some(1.0),
+    model: Some("tts-1".to_string()),
+    extra_params: std::collections::HashMap::new(),
+};
+
+let response = client.text_to_speech(request).await?;
+std::fs::write("output.mp3", response.audio_data)?;
+```
+
+#### Image Generation
+
+```rust
+use siumai::providers::openai::{OpenAiConfig, OpenAiImages};
+use siumai::traits::ImageGenerationCapability;
+use siumai::types::ImageGenerationRequest;
+
+let config = OpenAiConfig::new("your-api-key");
+let client = OpenAiImages::new(config, reqwest::Client::new());
+
+let request = ImageGenerationRequest {
+    prompt: "A beautiful sunset".to_string(),
+    model: Some("dall-e-3".to_string()),
+    size: Some("1024x1024".to_string()),
+    count: 1,
+    ..Default::default()
+};
+
+let response = client.generate_images(request).await?;
+for image in response.images {
+    if let Some(url) = image.url {
+        println!("Image URL: {}", url);
+    }
+}
+```
+
 ## 🧪 Testing
 
 Run the test suite:

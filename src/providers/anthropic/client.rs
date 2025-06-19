@@ -12,6 +12,7 @@ use crate::traits::*;
 use crate::types::*;
 
 use super::chat::AnthropicChatCapability;
+use super::models::AnthropicModels;
 use super::types::AnthropicSpecificParams;
 use super::utils::get_default_models;
 
@@ -19,6 +20,8 @@ use super::utils::get_default_models;
 pub struct AnthropicClient {
     /// Chat capability implementation
     chat_capability: AnthropicChatCapability,
+    /// Models capability implementation
+    models_capability: AnthropicModels,
     /// Common parameters
     common_params: CommonParams,
     /// Anthropic-specific parameters
@@ -40,6 +43,13 @@ impl AnthropicClient {
         let specific_params = AnthropicSpecificParams::default();
 
         let chat_capability = AnthropicChatCapability::new(
+            api_key.clone(),
+            base_url.clone(),
+            http_client.clone(),
+            http_config.clone(),
+        );
+
+        let models_capability = AnthropicModels::new(
             api_key,
             base_url,
             http_client,
@@ -48,6 +58,7 @@ impl AnthropicClient {
 
         Self {
             chat_capability,
+            models_capability,
             common_params,
             anthropic_params,
             specific_params,
@@ -72,14 +83,25 @@ impl AnthropicClient {
     }
 
     /// Enable prompt caching
-    pub fn with_cache_control(mut self, cache_control: super::types::CacheControl) -> Self {
+    pub fn with_cache_control(mut self, cache_control: super::cache::CacheControl) -> Self {
         self.specific_params.cache_control = Some(cache_control);
         self
     }
 
-    /// Enable thinking mode
-    pub fn with_thinking_mode(mut self, enabled: bool) -> Self {
-        self.specific_params.thinking_mode = Some(enabled);
+    /// Enable thinking mode with specified budget tokens
+    pub fn with_thinking_mode(mut self, budget_tokens: Option<u32>) -> Self {
+        let config = if let Some(budget) = budget_tokens {
+            Some(super::thinking::ThinkingConfig::enabled(budget))
+        } else {
+            None // No thinking configuration means disabled
+        };
+        self.specific_params.thinking_config = config;
+        self
+    }
+
+    /// Enable thinking mode with default budget (10k tokens)
+    pub fn with_thinking_enabled(mut self) -> Self {
+        self.specific_params.thinking_config = Some(super::thinking::ThinkingConfig::enabled(10000));
         self
     }
 
@@ -97,9 +119,7 @@ impl AnthropicClient {
 
     /// Enable prompt caching with ephemeral type
     pub fn with_ephemeral_cache(self) -> Self {
-        self.with_cache_control(super::types::CacheControl {
-            r#type: "ephemeral".to_string(),
-        })
+        self.with_cache_control(super::cache::CacheControl::ephemeral())
     }
 }
 
@@ -119,6 +139,17 @@ impl ChatCapability for AnthropicClient {
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
         self.chat_capability.chat_stream(messages, tools).await
+    }
+}
+
+#[async_trait]
+impl ModelListingCapability for AnthropicClient {
+    async fn list_models(&self) -> Result<Vec<ModelInfo>, LlmError> {
+        self.models_capability.list_models().await
+    }
+
+    async fn get_model(&self, model_id: String) -> Result<ModelInfo, LlmError> {
+        self.models_capability.get_model(model_id).await
     }
 }
 
@@ -172,11 +203,12 @@ mod tests {
             HttpConfig::default(),
         )
         .with_beta_features(vec!["feature1".to_string(), "feature2".to_string()])
-        .with_thinking_mode(true)
+        .with_thinking_enabled()
         .with_ephemeral_cache();
 
         assert_eq!(client.specific_params().beta_features.len(), 2);
-        assert_eq!(client.specific_params().thinking_mode, Some(true));
+        assert!(client.specific_params().thinking_config.is_some());
+        assert!(client.specific_params().thinking_config.as_ref().unwrap().is_enabled());
         assert!(client.specific_params().cache_control.is_some());
     }
 

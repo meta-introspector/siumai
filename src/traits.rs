@@ -443,7 +443,7 @@ pub trait ImageGenerationCapability {
         };
 
         let response = self.generate_images(request).await?;
-        Ok(response.images.into_iter().map(|img| img.url).collect())
+        Ok(response.images.into_iter().filter_map(|img| img.url).collect())
     }
 }
 

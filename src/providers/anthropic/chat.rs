@@ -83,13 +83,24 @@ impl AnthropicChatCapability {
             request_id: None,
         };
 
+        // Extract thinking content if present
+        let mut provider_data = HashMap::new();
+        if let Some(thinking_content) = extract_thinking_content(&response.content) {
+            provider_data.insert("thinking".to_string(), serde_json::Value::String(thinking_content));
+        }
+
+        // Extract stop sequence if present
+        if let Some(stop_seq) = response.stop_sequence {
+            provider_data.insert("stop_sequence".to_string(), serde_json::Value::String(stop_seq));
+        }
+
         Ok(ChatResponse {
             content,
             tool_calls: None, // Tool calls require special handling
             usage,
             finish_reason,
             metadata,
-            provider_data: HashMap::new(),
+            provider_data,
         })
     }
 }
@@ -125,6 +136,17 @@ impl ChatCapability for AnthropicChatCapability {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
+
+            // Parse Anthropic error response according to official documentation
+            // https://docs.anthropic.com/en/api/errors
+            if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_text) {
+                if let Some(error_obj) = error_json.get("error") {
+                    let error_type = error_obj.get("type").and_then(|t| t.as_str()).unwrap_or("unknown");
+                    let error_message = error_obj.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error");
+
+                    return Err(map_anthropic_error(status.as_u16(), error_type, error_message, error_json.clone()));
+                }
+            }
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),

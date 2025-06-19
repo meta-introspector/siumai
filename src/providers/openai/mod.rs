@@ -51,12 +51,14 @@ pub mod utils;
 pub mod audio;
 pub mod chat;
 pub mod embeddings;
+pub mod images;
+pub mod responses;
 pub mod streaming;
+pub mod structured_output;
 
 // Future capability modules (placeholders)
 // pub mod files;
-// pub mod images;
-// pub mod models;
+pub mod models;
 // pub mod moderation;
 
 // Re-export main types for convenience
@@ -69,3 +71,5 @@ pub use types::*;
 pub use audio::OpenAiAudio;
 pub use chat::OpenAiChatCapability;
 pub use embeddings::OpenAiEmbeddings;
+pub use images::OpenAiImages;
+pub use models::OpenAiModels;

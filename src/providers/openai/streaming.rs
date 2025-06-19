@@ -382,25 +382,14 @@ impl OpenAiStreaming {
         let openai_tools: Vec<serde_json::Value> = tools
             .iter()
             .map(|tool| {
-                if let Some(function) = &tool.function {
-                    serde_json::json!({
-                        "type": "function",
-                        "function": {
-                            "name": function.name,
-                            "description": function.description,
-                            "parameters": function.parameters
-                        }
-                    })
-                } else {
-                    serde_json::json!({
-                        "type": "function",
-                        "function": {
-                            "name": "unknown",
-                            "description": "Unknown function",
-                            "parameters": {}
-                        }
-                    })
-                }
+                serde_json::json!({
+                    "type": tool.r#type,
+                    "function": {
+                        "name": tool.function.name,
+                        "description": tool.function.description,
+                        "parameters": tool.function.parameters
+                    }
+                })
             })
             .collect();
 

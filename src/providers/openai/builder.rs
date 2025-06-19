@@ -275,6 +275,7 @@ impl OpenAiBuilder {
             common_params: self.common_params,
             openai_params: self.openai_params,
             http_config: self.http_config,
+            web_search_config: crate::types::WebSearchConfig::default(),
         };
 
         // Create and return the client
