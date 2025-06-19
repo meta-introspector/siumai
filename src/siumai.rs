@@ -1,0 +1,344 @@
+//! Siumai LLM Interface
+//!
+//! This module provides the main siumai interface for calling different provider functionality,
+//! similar to llm_dart's approach. It uses dynamic dispatch to route calls to the
+//! appropriate provider implementation.
+
+use crate::client::LlmClient;
+use crate::error::LlmError;
+use crate::stream::ChatStream;
+use crate::traits::*;
+use crate::types::*;
+use std::any::Any;
+use std::collections::HashMap;
+
+/// The main siumai LLM provider that can dynamically dispatch to different capabilities
+///
+/// This is inspired by llm_dart's unified interface design, allowing you to
+/// call different provider functionality through a single interface.
+pub struct Siumai {
+    /// The underlying provider client
+    client: Box<dyn LlmClient>,
+    /// Capability registry for dynamic dispatch
+    capabilities: HashMap<String, Box<dyn Any + Send + Sync>>,
+    /// Provider-specific metadata
+    metadata: ProviderMetadata,
+}
+
+/// Metadata about the provider
+#[derive(Debug, Clone)]
+pub struct ProviderMetadata {
+    pub provider_type: ProviderType,
+    pub provider_name: String,
+    pub supported_models: Vec<String>,
+    pub capabilities: ProviderCapabilities,
+}
+
+impl Siumai {
+    /// Create a new siumai provider
+    pub fn new(client: Box<dyn LlmClient>) -> Self {
+        let metadata = ProviderMetadata {
+            provider_type: match client.provider_name() {
+                "openai" => ProviderType::OpenAi,
+                "anthropic" => ProviderType::Anthropic,
+                "gemini" => ProviderType::Gemini,
+                "xai" => ProviderType::XAI,
+                name => ProviderType::Custom(name.to_string()),
+            },
+            provider_name: client.provider_name().to_string(),
+            supported_models: client.supported_models(),
+            capabilities: client.capabilities(),
+        };
+
+        Self {
+            client,
+            capabilities: HashMap::new(),
+            metadata,
+        }
+    }
+
+    /// Register a capability implementation
+    pub fn register_capability<T: Any + Send + Sync>(
+        &mut self,
+        capability_name: &str,
+        implementation: T,
+    ) {
+        self.capabilities.insert(
+            capability_name.to_string(),
+            Box::new(implementation),
+        );
+    }
+
+    /// Get a capability implementation
+    pub fn get_capability<T: Any>(&self, capability_name: &str) -> Option<&T> {
+        self.capabilities
+            .get(capability_name)
+            .and_then(|cap| cap.downcast_ref::<T>())
+    }
+
+    /// Check if a capability is supported
+    pub fn supports(&self, capability: &str) -> bool {
+        self.metadata.capabilities.supports(capability)
+    }
+
+    /// Get provider metadata
+    pub fn metadata(&self) -> &ProviderMetadata {
+        &self.metadata
+    }
+
+    /// Get the underlying client
+    pub fn client(&self) -> &dyn LlmClient {
+        self.client.as_ref()
+    }
+
+    /// Execute a capability-specific operation
+    /// This provides a type-safe way to access provider capabilities
+    pub async fn with_capability<T, F, R>(&self, capability_name: &str, operation: F) -> Result<R, LlmError>
+    where
+        F: FnOnce(&T) -> R,
+        T: Any,
+    {
+        if !self.supports(capability_name) {
+            return Err(LlmError::UnsupportedOperation(
+                format!("Provider {} does not support {}", self.provider_name(), capability_name)
+            ));
+        }
+
+        let capability = self.get_capability::<T>(capability_name)
+            .ok_or_else(|| LlmError::InternalError(
+                format!("Capability {} not properly registered", capability_name)
+            ))?;
+
+        Ok(operation(capability))
+    }
+
+    /// Check if audio capability is available and execute operation
+    pub async fn with_audio<F, R>(&self, _operation: F) -> Result<R, LlmError>
+    where
+        F: FnOnce(&dyn AudioCapability) -> R,
+    {
+        if !self.supports("audio") {
+            return Err(LlmError::UnsupportedOperation(
+                format!("Provider {} does not support audio", self.provider_name())
+            ));
+        }
+
+        // For now, we'll return an error since we need proper capability registration
+        Err(LlmError::UnsupportedOperation(
+            "Audio capability access not yet implemented. Use provider-specific client.".to_string()
+        ))
+    }
+
+    /// Check if embedding capability is available and execute operation
+    pub async fn with_embedding<F, R>(&self, _operation: F) -> Result<R, LlmError>
+    where
+        F: FnOnce(&dyn EmbeddingCapability) -> R,
+    {
+        if !self.supports("embedding") {
+            return Err(LlmError::UnsupportedOperation(
+                format!("Provider {} does not support embedding", self.provider_name())
+            ));
+        }
+
+        Err(LlmError::UnsupportedOperation(
+            "Embedding capability access not yet implemented. Use provider-specific client.".to_string()
+        ))
+    }
+}
+
+#[async_trait::async_trait]
+impl ChatCapability for Siumai {
+    async fn chat_with_tools(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+    ) -> Result<ChatResponse, LlmError> {
+        self.client.chat_with_tools(messages, tools).await
+    }
+
+    async fn chat_stream(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+    ) -> Result<ChatStream, LlmError> {
+        self.client.chat_stream(messages, tools).await
+    }
+}
+
+impl LlmClient for Siumai {
+    fn provider_name(&self) -> &'static str {
+        // We need to return a static str, so we'll use a match
+        match self.metadata.provider_type {
+            ProviderType::OpenAi => "openai",
+            ProviderType::Anthropic => "anthropic",
+            ProviderType::Gemini => "gemini",
+            ProviderType::XAI => "xai",
+            ProviderType::Custom(_) => "custom",
+        }
+    }
+
+    fn supported_models(&self) -> Vec<String> {
+        self.metadata.supported_models.clone()
+    }
+
+    fn capabilities(&self) -> ProviderCapabilities {
+        self.metadata.capabilities.clone()
+    }
+}
+
+/// Builder for creating siumai providers with specific capabilities
+pub struct SiumaiBuilder {
+    provider_type: Option<ProviderType>,
+    api_key: Option<String>,
+    base_url: Option<String>,
+    model: Option<String>,
+    capabilities: Vec<String>,
+}
+
+impl SiumaiBuilder {
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self {
+            provider_type: None,
+            api_key: None,
+            base_url: None,
+            model: None,
+            capabilities: Vec::new(),
+        }
+    }
+
+    /// Set the provider type
+    pub fn provider(mut self, provider_type: ProviderType) -> Self {
+        self.provider_type = Some(provider_type);
+        self
+    }
+
+    /// Set the API key
+    pub fn api_key<S: Into<String>>(mut self, api_key: S) -> Self {
+        self.api_key = Some(api_key.into());
+        self
+    }
+
+    /// Set the base URL
+    pub fn base_url<S: Into<String>>(mut self, base_url: S) -> Self {
+        self.base_url = Some(base_url.into());
+        self
+    }
+
+    /// Set the model
+    pub fn model<S: Into<String>>(mut self, model: S) -> Self {
+        self.model = Some(model.into());
+        self
+    }
+
+    /// Enable a specific capability
+    pub fn with_capability<S: Into<String>>(mut self, capability: S) -> Self {
+        self.capabilities.push(capability.into());
+        self
+    }
+
+    /// Enable audio capability
+    pub fn with_audio(self) -> Self {
+        self.with_capability("audio")
+    }
+
+    /// Enable vision capability
+    pub fn with_vision(self) -> Self {
+        self.with_capability("vision")
+    }
+
+    /// Enable embedding capability
+    pub fn with_embedding(self) -> Self {
+        self.with_capability("embedding")
+    }
+
+    /// Enable image generation capability
+    pub fn with_image_generation(self) -> Self {
+        self.with_capability("image_generation")
+    }
+
+    /// Build the siumai provider
+    pub async fn build(self) -> Result<Siumai, LlmError> {
+        let _provider_type = self.provider_type.ok_or_else(|| {
+            LlmError::ConfigurationError("Provider type not specified".to_string())
+        })?;
+
+        // For now, we'll return an error since we need to implement the actual provider creation
+        // This would integrate with your existing builder pattern
+        Err(LlmError::UnsupportedOperation(
+            "Siumai builder not yet fully implemented. Use the existing llm() builder for now.".to_string()
+        ))
+    }
+}
+
+impl Default for SiumaiBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Convenience function to create a siumai provider builder
+///
+/// This provides a similar API to llm_dart's ai() function
+pub fn ai() -> SiumaiBuilder {
+    SiumaiBuilder::new()
+}
+
+/// Provider registry for dynamic provider creation
+pub struct ProviderRegistry {
+    factories: HashMap<String, Box<dyn ProviderFactory>>,
+}
+
+/// Factory trait for creating providers
+pub trait ProviderFactory: Send + Sync {
+    fn create_provider(&self, config: ProviderConfig) -> Result<Box<dyn LlmClient>, LlmError>;
+    fn supported_capabilities(&self) -> Vec<String>;
+}
+
+/// Configuration for provider creation
+#[derive(Debug, Clone)]
+pub struct ProviderConfig {
+    pub api_key: String,
+    pub base_url: Option<String>,
+    pub model: Option<String>,
+    pub capabilities: Vec<String>,
+}
+
+impl ProviderRegistry {
+    /// Create a new registry
+    pub fn new() -> Self {
+        Self {
+            factories: HashMap::new(),
+        }
+    }
+
+    /// Register a provider factory
+    pub fn register<S: Into<String>>(&mut self, name: S, factory: Box<dyn ProviderFactory>) {
+        self.factories.insert(name.into(), factory);
+    }
+
+    /// Create a provider by name
+    pub fn create_provider(
+        &self,
+        name: &str,
+        config: ProviderConfig,
+    ) -> Result<Siumai, LlmError> {
+        let factory = self.factories.get(name).ok_or_else(|| {
+            LlmError::ConfigurationError(format!("Unknown provider: {}", name))
+        })?;
+
+        let client = factory.create_provider(config)?;
+        Ok(Siumai::new(client))
+    }
+
+    /// Get supported providers
+    pub fn supported_providers(&self) -> Vec<String> {
+        self.factories.keys().cloned().collect()
+    }
+}
+
+impl Default for ProviderRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}

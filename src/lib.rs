@@ -56,6 +56,7 @@ pub mod retry_strategy;
 pub mod stream;
 pub mod traits;
 pub mod types;
+pub mod siumai;
 pub mod web_search;
 
 // Re-export main types and traits
@@ -87,8 +88,9 @@ pub mod prelude {
     pub use crate::stream::*;
     pub use crate::traits::*;
     pub use crate::types::*;
+    pub use crate::siumai::*;
     pub use crate::web_search::*;
-    pub use crate::{assistant, llm, system, tool, user};
+    pub use crate::{assistant, llm, siumai, system, tool, user};
 }
 
 /// Global entry point function - creates an LLM builder
@@ -109,6 +111,28 @@ pub mod prelude {
 /// ```
 pub fn llm() -> crate::builder::LlmBuilder {
     crate::builder::llm()
+}
+
+/// Siumai unified interface entry point
+///
+/// This creates a new SiumaiBuilder for building unified providers
+/// that can work with multiple LLM providers through a single interface.
+///
+/// # Example
+/// ```rust,no_run
+/// use siumai::siumai;
+///
+/// // Future API (when fully implemented)
+/// let provider = siumai()
+///     .provider(ProviderType::OpenAi)
+///     .api_key("your-api-key")
+///     .model("gpt-4")
+///     .with_audio()
+///     .build()
+///     .await?;
+/// ```
+pub fn siumai() -> crate::siumai::SiumaiBuilder {
+    crate::siumai::ai()
 }
 
 // Convenient macro definitions

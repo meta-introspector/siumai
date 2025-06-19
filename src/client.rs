@@ -1,6 +1,6 @@
 //! Client Module
 //!
-//! Defines a unified LLM client interface.
+//! Defines a unified LLM client interface with dynamic dispatch support.
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
@@ -67,6 +67,16 @@ impl ClientWrapper {
             Self::Custom(_) => ProviderType::Custom("unknown".to_string()),
         }
     }
+
+    /// Check if the client supports a specific capability
+    pub fn supports_capability(&self, capability: &str) -> bool {
+        self.client().capabilities().supports(capability)
+    }
+
+    /// Get all supported capabilities
+    pub fn get_capabilities(&self) -> ProviderCapabilities {
+        self.client().capabilities()
+    }
 }
 
 #[async_trait::async_trait]
@@ -85,6 +95,133 @@ impl ChatCapability for ClientWrapper {
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
         self.client().chat_stream(messages, tools).await
+    }
+}
+
+/// Unified LLM client that provides dynamic dispatch to different providers
+///
+/// This is similar to llm_dart's unified interface approach, allowing you to
+/// call different provider functionality through a single interface.
+pub struct UnifiedLlmClient {
+    inner: ClientWrapper,
+}
+
+impl UnifiedLlmClient {
+    /// Create a new unified client from a provider-specific client
+    pub fn new(client: ClientWrapper) -> Self {
+        Self { inner: client }
+    }
+
+    /// Create from an OpenAI client
+    pub fn from_openai(client: Box<dyn LlmClient>) -> Self {
+        Self::new(ClientWrapper::openai(client))
+    }
+
+    /// Create from an Anthropic client
+    pub fn from_anthropic(client: Box<dyn LlmClient>) -> Self {
+        Self::new(ClientWrapper::anthropic(client))
+    }
+
+    /// Create from a Gemini client
+    pub fn from_gemini(client: Box<dyn LlmClient>) -> Self {
+        Self::new(ClientWrapper::gemini(client))
+    }
+
+    /// Create from a custom client
+    pub fn from_custom(client: Box<dyn LlmClient>) -> Self {
+        Self::new(ClientWrapper::custom(client))
+    }
+
+    /// Get the provider name
+    pub fn provider_name(&self) -> &'static str {
+        self.inner.client().provider_name()
+    }
+
+    /// Get the provider type
+    pub fn provider_type(&self) -> ProviderType {
+        self.inner.provider_type()
+    }
+
+    /// Check if a capability is supported
+    pub fn supports(&self, capability: &str) -> bool {
+        self.inner.supports_capability(capability)
+    }
+
+    /// Get all capabilities
+    pub fn capabilities(&self) -> ProviderCapabilities {
+        self.inner.get_capabilities()
+    }
+
+    /// Try to cast to a specific capability trait
+    /// This enables dynamic dispatch to provider-specific features
+    pub fn as_audio_capability(&self) -> Option<&dyn AudioCapability> {
+        if self.supports("audio") {
+            // This would require some unsafe casting or a different approach
+            // For now, we'll return None and suggest using the provider-specific client
+            None
+        } else {
+            None
+        }
+    }
+
+    /// Try to cast to embedding capability
+    pub fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {
+        if self.supports("embedding") {
+            None // Similar to above
+        } else {
+            None
+        }
+    }
+
+    /// Try to cast to vision capability
+    pub fn as_vision_capability(&self) -> Option<&dyn VisionCapability> {
+        if self.supports("vision") {
+            None // Similar to above
+        } else {
+            None
+        }
+    }
+
+    /// Try to cast to image generation capability
+    pub fn as_image_generation_capability(&self) -> Option<&dyn ImageGenerationCapability> {
+        if self.supports("image_generation") {
+            None // Similar to above
+        } else {
+            None
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl ChatCapability for UnifiedLlmClient {
+    async fn chat_with_tools(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+    ) -> Result<ChatResponse, LlmError> {
+        self.inner.chat_with_tools(messages, tools).await
+    }
+
+    async fn chat_stream(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+    ) -> Result<ChatStream, LlmError> {
+        self.inner.chat_stream(messages, tools).await
+    }
+}
+
+impl LlmClient for UnifiedLlmClient {
+    fn provider_name(&self) -> &'static str {
+        self.inner.client().provider_name()
+    }
+
+    fn supported_models(&self) -> Vec<String> {
+        self.inner.client().supported_models()
+    }
+
+    fn capabilities(&self) -> ProviderCapabilities {
+        self.inner.client().capabilities()
     }
 }
 
