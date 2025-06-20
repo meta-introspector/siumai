@@ -42,6 +42,7 @@ impl Siumai {
                 "openai" => ProviderType::OpenAi,
                 "anthropic" => ProviderType::Anthropic,
                 "gemini" => ProviderType::Gemini,
+                "ollama" => ProviderType::Ollama,
                 "xai" => ProviderType::XAI,
                 name => ProviderType::Custom(name.to_string()),
             },
@@ -183,6 +184,7 @@ impl LlmClient for Siumai {
             ProviderType::Anthropic => "anthropic",
             ProviderType::Gemini => "gemini",
             ProviderType::XAI => "xai",
+            ProviderType::Ollama => "ollama",
             ProviderType::Custom(_) => "custom",
         }
     }
@@ -244,6 +246,7 @@ impl SiumaiBuilder {
             "openai" => ProviderType::OpenAi,
             "anthropic" => ProviderType::Anthropic,
             "gemini" => ProviderType::Gemini,
+            "ollama" => ProviderType::Ollama,
             "xai" => ProviderType::XAI,
             "deepseek" => ProviderType::Custom("deepseek".to_string()),
             "openrouter" => ProviderType::Custom("openrouter".to_string()),
@@ -273,6 +276,13 @@ impl SiumaiBuilder {
     pub fn gemini(mut self) -> Self {
         self.provider_type = Some(ProviderType::Gemini);
         self.provider_name = Some("gemini".to_string());
+        self
+    }
+
+    /// Create an Ollama provider (convenience method)
+    pub fn ollama(mut self) -> Self {
+        self.provider_type = Some(ProviderType::Ollama);
+        self.provider_name = Some("ollama".to_string());
         self
     }
 
@@ -435,6 +445,25 @@ impl SiumaiBuilder {
                 return Err(LlmError::UnsupportedOperation(
                     "xAI provider not yet implemented in unified interface".to_string(),
                 ));
+            },
+            ProviderType::Ollama => {
+                let base_url = self.base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+                let model = self.model.unwrap_or_else(|| "llama3.2:latest".to_string());
+
+                // Set model in common params
+                let mut common_params = self.common_params;
+                common_params.model = model.clone();
+
+                let config = crate::providers::ollama::config::OllamaConfig {
+                    base_url,
+                    model: Some(model),
+                    common_params,
+                    ollama_params: crate::providers::ollama::config::OllamaParams::default(),
+                    http_config: self.http_config,
+                };
+
+                let http_client = reqwest::Client::new();
+                Box::new(crate::providers::ollama::OllamaClient::new(config, http_client))
             },
             ProviderType::Custom(name) => {
                 match name.as_str() {

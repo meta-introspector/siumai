@@ -13,6 +13,7 @@ pub enum ProviderType {
     OpenAi,
     Anthropic,
     Gemini,
+    Ollama,
     XAI,
     Custom(String),
 }
@@ -23,6 +24,7 @@ impl std::fmt::Display for ProviderType {
             Self::OpenAi => write!(f, "openai"),
             Self::Anthropic => write!(f, "anthropic"),
             Self::Gemini => write!(f, "gemini"),
+            Self::Ollama => write!(f, "ollama"),
             Self::XAI => write!(f, "xai"),
             Self::Custom(name) => write!(f, "{}", name),
         }
@@ -197,7 +199,7 @@ pub enum MessageRole {
 }
 
 /// Message content - supports multimodality
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum MessageContent {
     /// Plain text
     Text(String),
@@ -243,7 +245,7 @@ impl MessageContent {
 }
 
 /// Content part
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ContentPart {
     Text {
         text: String,

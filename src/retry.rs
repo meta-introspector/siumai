@@ -131,6 +131,7 @@ impl RetryPolicy {
             ProviderType::Anthropic => Self::anthropic_policy(),
             ProviderType::Gemini => Self::gemini_policy(),
             ProviderType::XAI => Self::xai_policy(),
+            ProviderType::Ollama => Self::ollama_policy(),
             ProviderType::Custom(_) => Self::default(),
         }
     }
@@ -213,6 +214,28 @@ impl RetryPolicy {
                         // xAI uses OpenAI-compatible API, so similar retry logic
                         matches!(*code, 429 | 500 | 502 | 503 | 504)
                     }
+                    _ => error.is_retryable(),
+                }
+            }),
+        }
+    }
+
+    /// Ollama-specific retry policy
+    pub fn ollama_policy() -> Self {
+        Self {
+            max_attempts: 3,
+            initial_delay: Duration::from_millis(500),
+            max_delay: Duration::from_secs(30),
+            backoff_multiplier: 1.5,
+            use_jitter: true,
+            jitter_factor: 0.1,
+            retry_condition: Some(|error| {
+                match error {
+                    LlmError::ApiError { code, .. } => {
+                        // Ollama specific: retry on 429, 500, 502, 503, 504
+                        matches!(*code, 429 | 500 | 502 | 503 | 504)
+                    }
+                    LlmError::HttpError(_) => true, // Retry on HTTP errors (connection issues)
                     _ => error.is_retryable(),
                 }
             }),

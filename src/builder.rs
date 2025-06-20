@@ -49,6 +49,7 @@ use crate::types::*;
 // Import parameter types - these will be moved to providers modules later
 use crate::params::{AnthropicParams, OpenAiParams, ResponseFormat, ToolChoice};
 use crate::providers::*;
+use crate::providers::ollama::config::OllamaParams;
 
 
 
@@ -111,6 +112,22 @@ pub async fn quick_gemini() -> Result<crate::providers::gemini::GeminiClient, Ll
 pub async fn quick_gemini_with_model(model: &str) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
     LlmBuilder::new()
         .gemini()
+        .model(model)
+        .build()
+        .await
+}
+
+/// Quick Ollama client creation with minimal configuration.
+///
+/// Uses default Ollama settings (http://localhost:11434) and llama3.2 model.
+pub async fn quick_ollama() -> Result<crate::providers::ollama::OllamaClient, LlmError> {
+    quick_ollama_with_model("llama3.2").await
+}
+
+/// Quick Ollama client creation with custom model.
+pub async fn quick_ollama_with_model(model: &str) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
+    LlmBuilder::new()
+        .ollama()
         .model(model)
         .build()
         .await
@@ -343,6 +360,14 @@ impl LlmBuilder {
     /// Gemini-specific builder for further configuration
     pub fn gemini(self) -> GeminiBuilder {
         GeminiBuilder::new(self)
+    }
+
+    /// Create an Ollama client builder.
+    ///
+    /// # Returns
+    /// Ollama-specific builder for further configuration
+    pub fn ollama(self) -> OllamaBuilder {
+        OllamaBuilder::new(self)
     }
 
     /// Create an xAI client builder.
@@ -1082,6 +1107,206 @@ impl GeminiBuilder {
         }
 
         crate::providers::gemini::GeminiClient::new(config)
+    }
+}
+
+/// Ollama-specific builder
+pub struct OllamaBuilder {
+    base: LlmBuilder,
+    base_url: Option<String>,
+    model: Option<String>,
+    common_params: CommonParams,
+    ollama_params: OllamaParams,
+    http_config: HttpConfig,
+}
+
+impl OllamaBuilder {
+    /// Create a new Ollama builder
+    pub fn new(base: LlmBuilder) -> Self {
+        Self {
+            base,
+            base_url: None,
+            model: None,
+            common_params: CommonParams::default(),
+            ollama_params: OllamaParams::default(),
+            http_config: HttpConfig::default(),
+        }
+    }
+
+    /// Set the base URL for Ollama API
+    ///
+    /// # Arguments
+    /// * `url` - The base URL (e.g., "http://localhost:11434")
+    pub fn base_url<S: Into<String>>(mut self, url: S) -> Self {
+        self.base_url = Some(url.into());
+        self
+    }
+
+    /// Set the model to use
+    ///
+    /// # Arguments
+    /// * `model` - The model name (e.g., "llama3.2", "mistral:7b")
+    pub fn model<S: Into<String>>(mut self, model: S) -> Self {
+        self.model = Some(model.into());
+        self
+    }
+
+    /// Set the temperature for generation
+    ///
+    /// # Arguments
+    /// * `temperature` - Temperature value (0.0 to 2.0)
+    pub fn temperature(mut self, temperature: f32) -> Self {
+        self.common_params.temperature = Some(temperature);
+        self
+    }
+
+    /// Set the maximum number of tokens to generate
+    ///
+    /// # Arguments
+    /// * `max_tokens` - Maximum tokens to generate
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.common_params.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set the top-p value for nucleus sampling
+    ///
+    /// # Arguments
+    /// * `top_p` - Top-p value (0.0 to 1.0)
+    pub fn top_p(mut self, top_p: f32) -> Self {
+        self.common_params.top_p = Some(top_p);
+        self
+    }
+
+    /// Set how long to keep the model loaded in memory
+    ///
+    /// # Arguments
+    /// * `duration` - Duration string (e.g., "5m", "1h", "30s")
+    pub fn keep_alive<S: Into<String>>(mut self, duration: S) -> Self {
+        self.ollama_params.keep_alive = Some(duration.into());
+        self
+    }
+
+    /// Enable or disable raw mode (bypass templating)
+    ///
+    /// # Arguments
+    /// * `raw` - Whether to enable raw mode
+    pub fn raw(mut self, raw: bool) -> Self {
+        self.ollama_params.raw = Some(raw);
+        self
+    }
+
+    /// Set the output format
+    ///
+    /// # Arguments
+    /// * `format` - Format string ("json" or JSON schema)
+    pub fn format<S: Into<String>>(mut self, format: S) -> Self {
+        self.ollama_params.format = Some(format.into());
+        self
+    }
+
+    /// Add a model option
+    ///
+    /// # Arguments
+    /// * `key` - Option key
+    /// * `value` - Option value
+    pub fn option<K: Into<String>>(mut self, key: K, value: serde_json::Value) -> Self {
+        let mut options = self.ollama_params.options.unwrap_or_default();
+        options.insert(key.into(), value);
+        self.ollama_params.options = Some(options);
+        self
+    }
+
+    /// Set multiple model options at once
+    ///
+    /// # Arguments
+    /// * `options` - HashMap of options
+    pub fn options(mut self, options: std::collections::HashMap<String, serde_json::Value>) -> Self {
+        self.ollama_params.options = Some(options);
+        self
+    }
+
+    /// Enable or disable NUMA support
+    ///
+    /// # Arguments
+    /// * `numa` - Whether to enable NUMA support
+    pub fn numa(mut self, numa: bool) -> Self {
+        self.ollama_params.numa = Some(numa);
+        self
+    }
+
+    /// Set the context window size
+    ///
+    /// # Arguments
+    /// * `num_ctx` - Context window size
+    pub fn num_ctx(mut self, num_ctx: u32) -> Self {
+        self.ollama_params.num_ctx = Some(num_ctx);
+        self
+    }
+
+    /// Set the number of GPU layers to use
+    ///
+    /// # Arguments
+    /// * `num_gpu` - Number of GPU layers
+    pub fn num_gpu(mut self, num_gpu: u32) -> Self {
+        self.ollama_params.num_gpu = Some(num_gpu);
+        self
+    }
+
+    /// Set the batch size for processing
+    ///
+    /// # Arguments
+    /// * `num_batch` - Batch size
+    pub fn num_batch(mut self, num_batch: u32) -> Self {
+        self.ollama_params.num_batch = Some(num_batch);
+        self
+    }
+
+    /// Set the main GPU to use
+    ///
+    /// # Arguments
+    /// * `main_gpu` - Main GPU index
+    pub fn main_gpu(mut self, main_gpu: u32) -> Self {
+        self.ollama_params.main_gpu = Some(main_gpu);
+        self
+    }
+
+    /// Enable or disable memory mapping
+    ///
+    /// # Arguments
+    /// * `use_mmap` - Whether to use memory mapping
+    pub fn use_mmap(mut self, use_mmap: bool) -> Self {
+        self.ollama_params.use_mmap = Some(use_mmap);
+        self
+    }
+
+    /// Set the number of threads to use
+    ///
+    /// # Arguments
+    /// * `num_thread` - Number of threads
+    pub fn num_thread(mut self, num_thread: u32) -> Self {
+        self.ollama_params.num_thread = Some(num_thread);
+        self
+    }
+
+    /// Build the Ollama client
+    pub async fn build(self) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
+        let base_url = self.base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+
+        let mut config = crate::providers::ollama::OllamaConfig::builder()
+            .base_url(base_url)
+            .common_params(self.common_params)
+            .http_config(self.http_config)
+            .ollama_params(self.ollama_params);
+
+        if let Some(model) = self.model {
+            config = config.model(model);
+        }
+
+        let config = config.build()?;
+        let http_client = self.base.build_http_client()?;
+
+        Ok(crate::providers::ollama::OllamaClient::new(config, http_client))
     }
 }
 

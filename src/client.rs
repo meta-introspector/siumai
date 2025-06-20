@@ -313,6 +313,9 @@ impl ClientFactory {
             ProviderType::XAI => Err(LlmError::UnsupportedOperation(
                 "xAI client not yet implemented".to_string(),
             )),
+            ProviderType::Ollama => Err(LlmError::UnsupportedOperation(
+                "Ollama client not yet implemented in ClientWrapper".to_string(),
+            )),
             ProviderType::Custom(_) => Err(LlmError::UnsupportedOperation(
                 "Custom client not yet implemented".to_string(),
             )),

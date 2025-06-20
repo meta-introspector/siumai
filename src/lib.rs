@@ -94,7 +94,8 @@ pub mod prelude {
     pub use crate::{
         quick_openai, quick_openai_with_model,
         quick_anthropic, quick_anthropic_with_model,
-        quick_gemini, quick_gemini_with_model
+        quick_gemini, quick_gemini_with_model,
+        quick_ollama, quick_ollama_with_model
     };
 }
 

@@ -11,6 +11,7 @@ pub mod anthropic;
 pub mod common;
 pub mod gemini;
 pub mod mapper;
+pub mod ollama;
 pub mod openai;
 pub mod validator;
 

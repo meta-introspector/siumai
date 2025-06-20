@@ -80,6 +80,7 @@ impl ParameterMapperFactory {
             ProviderType::OpenAi => Box::new(crate::params::openai::OpenAiParameterMapper),
             ProviderType::Anthropic => Box::new(crate::params::anthropic::AnthropicParameterMapper),
             ProviderType::Gemini => Box::new(crate::params::gemini::GeminiParameterMapper),
+            ProviderType::Ollama => Box::new(crate::params::ollama::OllamaParameterMapper), // Ollama has its own specific format
             ProviderType::XAI => Box::new(crate::params::openai::OpenAiParameterMapper), // xAI uses OpenAI-compatible format
             ProviderType::Custom(_) => Box::new(crate::params::openai::OpenAiParameterMapper), // Default to OpenAI format
         }
@@ -91,6 +92,7 @@ impl ParameterMapperFactory {
             ProviderType::OpenAi,
             ProviderType::Anthropic,
             ProviderType::Gemini,
+            ProviderType::Ollama,
             ProviderType::XAI,
         ]
     }
@@ -102,6 +104,7 @@ impl ParameterMapperFactory {
             ProviderType::OpenAi
                 | ProviderType::Anthropic
                 | ProviderType::Gemini
+                | ProviderType::Ollama
                 | ProviderType::XAI
                 | ProviderType::Custom(_)
         )

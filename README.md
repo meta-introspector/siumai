@@ -17,7 +17,7 @@ Choose `Provider` when you need provider-specific features, or `Siumai::builder(
 
 ## 🌟 Features
 
-- **🔌 Multi-Provider Support**: OpenAI, Anthropic Claude, Google Gemini, and custom providers
+- **🔌 Multi-Provider Support**: OpenAI, Anthropic Claude, Google Gemini, Ollama, and custom providers
 - **🎯 Capability-Based Design**: Separate traits for chat, audio, vision, tools, and embeddings
 - **🔧 Builder Pattern**: Fluent API with method chaining for easy configuration
 - **🌊 Streaming Support**: Full streaming capabilities with event processing
@@ -36,7 +36,7 @@ Add Siumai to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-siumai = "0.1.0"
+siumai = "0.2.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -163,6 +163,14 @@ let anthropic_client = Provider::anthropic()
     .temperature(0.8)
     .build()
     .await?;
+
+// Ollama - with provider-specific features
+let ollama_client = Provider::ollama()
+    .base_url("http://localhost:11434")
+    .model("llama3.2:latest")
+    .temperature(0.7)
+    .build()
+    .await?;
 ```
 
 #### Unified Interface
@@ -183,6 +191,15 @@ let anthropic_unified = Siumai::builder()
     .api_key("sk-ant-...")
     .model("claude-3-5-sonnet-20241022")
     .temperature(0.8)
+    .build()
+    .await?;
+
+// Ollama through unified interface
+let ollama_unified = Siumai::builder()
+    .ollama()
+    .base_url("http://localhost:11434")
+    .model("llama3.2:latest")
+    .temperature(0.7)
     .build()
     .await?;
 ```
@@ -231,6 +248,16 @@ let anthropic_client = Provider::anthropic()
     .model("claude-3-5-sonnet-20241022")
     .cache_control(CacheControl::Ephemeral)
     .thinking_budget(1000)
+    .build()
+    .await?;
+
+// Ollama with local model management (provider-specific client)
+let ollama_client = Provider::ollama()
+    .base_url("http://localhost:11434")
+    .model("llama3.2:latest")
+    .keep_alive("10m")
+    .num_ctx(4096)
+    .num_gpu(1)
     .build()
     .await?;
 
@@ -332,9 +359,65 @@ Each provider can have additional parameters:
 - `presence_penalty`: Presence penalty
 
 **Anthropic:**
+
 - `cache_control`: Prompt caching settings
 - `thinking_budget`: Thinking process budget
 - `system`: System message handling
+
+**Ollama:**
+
+- `keep_alive`: Model memory duration
+- `raw`: Bypass templating
+- `format`: Output format (json, etc.)
+- `numa`: NUMA support
+- `num_ctx`: Context window size
+- `num_gpu`: GPU layers to use
+
+### Ollama Local AI Examples
+
+#### Basic Chat with Local Model
+
+```rust
+use siumai::prelude::*;
+
+// Connect to local Ollama instance
+let client = Provider::ollama()
+    .base_url("http://localhost:11434")
+    .model("llama3.2:latest")
+    .temperature(0.7)
+    .build()
+    .await?;
+
+let messages = vec![user!("Explain quantum computing in simple terms")];
+let response = client.chat_with_tools(messages, None).await?;
+println!("Ollama says: {}", response.content);
+```
+
+#### Advanced Ollama Configuration
+
+```rust
+use siumai::providers::ollama::{OllamaClient, OllamaConfig};
+
+let config = OllamaConfig::builder()
+    .base_url("http://localhost:11434")
+    .model("llama3.2:latest")
+    .keep_alive("10m")           // Keep model in memory
+    .num_ctx(4096)              // Context window
+    .num_gpu(1)                 // Use GPU acceleration
+    .numa(true)                 // Enable NUMA
+    .option("temperature", serde_json::Value::Number(
+        serde_json::Number::from_f64(0.8).unwrap()
+    ))
+    .build()?;
+
+let client = OllamaClient::new_with_config(config);
+
+// Generate text with streaming
+let mut stream = client.generate_stream("Write a haiku about AI".to_string()).await?;
+while let Some(event) = stream.next().await {
+    // Process streaming response
+}
+```
 
 ### OpenAI API Feature Examples
 

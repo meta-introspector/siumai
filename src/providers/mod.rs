@@ -4,12 +4,14 @@
 
 pub mod anthropic;
 pub mod gemini;
+pub mod ollama;
 pub mod openai;
 pub mod openai_compatible;
 
 // Re-export main types
 pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;
+pub use ollama::OllamaClient;
 pub use openai::OpenAiClient;
 pub use openai_compatible::{
     OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
@@ -118,6 +120,51 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
             ],
         },
         ProviderInfo {
+            provider_type: ProviderType::Ollama,
+            name: "Ollama",
+            description: "Local Ollama models with full control and privacy",
+            capabilities: ProviderCapabilities::new()
+                .with_chat()
+                .with_streaming()
+                .with_tools()
+                .with_vision()
+                .with_embedding()
+                .with_custom_feature("completion", true)
+                .with_custom_feature("model_management", true)
+                .with_custom_feature("local_models", true),
+            default_base_url: "http://localhost:11434",
+            supported_models: vec![
+                "llama3.2:latest",
+                "llama3.2:3b",
+                "llama3.2:1b",
+                "llama3.1:latest",
+                "llama3.1:8b",
+                "llama3.1:70b",
+                "mistral:latest",
+                "mistral:7b",
+                "codellama:latest",
+                "codellama:7b",
+                "codellama:13b",
+                "codellama:34b",
+                "phi3:latest",
+                "phi3:mini",
+                "phi3:medium",
+                "gemma:latest",
+                "gemma:2b",
+                "gemma:7b",
+                "qwen2:latest",
+                "qwen2:0.5b",
+                "qwen2:1.5b",
+                "qwen2:7b",
+                "qwen2:72b",
+                "deepseek-coder:latest",
+                "deepseek-coder:6.7b",
+                "deepseek-coder:33b",
+                "nomic-embed-text:latest",
+                "all-minilm:latest",
+            ],
+        },
+        ProviderInfo {
             provider_type: ProviderType::XAI,
             name: "xAI",
             description: "xAI Grok models with advanced reasoning capabilities",
@@ -155,6 +202,7 @@ pub fn get_default_model(provider_type: &ProviderType) -> Option<&'static str> {
         ProviderType::OpenAi => Some("gpt-4o"),
         ProviderType::Anthropic => Some("claude-3-5-sonnet-20241022"),
         ProviderType::Gemini => Some("gemini-1.5-flash"),
+        ProviderType::Ollama => Some("llama3.2:latest"),
         ProviderType::XAI => Some("grok-beta"),
         ProviderType::Custom(_) => None,
     }
@@ -219,6 +267,16 @@ impl ProviderFactory {
                 temperature: Some(0.7),
                 max_tokens: Some(8192),
                 top_p: Some(0.95),
+                stop_sequences: None,
+                seed: None,
+            },
+            ProviderType::Ollama => crate::types::CommonParams {
+                model: get_default_model(provider_type)
+                    .unwrap_or("llama3.2:latest")
+                    .to_string(),
+                temperature: Some(0.7),
+                max_tokens: Some(4096),
+                top_p: Some(0.9),
                 stop_sequences: None,
                 seed: None,
             },
