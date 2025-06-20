@@ -12,6 +12,10 @@ readme = "README.md"
 keywords = ["llm", "ai", "openai", "anthropic", "async"]
 categories = ["api-bindings"]
 
+exclude = [
+    "docs/*",
+]
+
 [dependencies]
 # Async traits
 async-trait = "0.1"
