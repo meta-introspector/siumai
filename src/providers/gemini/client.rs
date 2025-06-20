@@ -13,6 +13,7 @@ use crate::traits::*;
 use crate::types::*;
 
 use super::chat::GeminiChatCapability;
+use super::files::GeminiFiles;
 use super::models::GeminiModels;
 use super::types::{GeminiConfig, GenerationConfig, SafetySetting};
 
@@ -27,6 +28,8 @@ pub struct GeminiClient {
     pub chat_capability: GeminiChatCapability,
     /// Models capability implementation
     pub models_capability: GeminiModels,
+    /// Files capability implementation
+    pub files_capability: GeminiFiles,
 }
 
 impl GeminiClient {
@@ -45,11 +48,14 @@ impl GeminiClient {
 
         let models_capability = GeminiModels::new(config.clone(), http_client.clone());
 
+        let files_capability = GeminiFiles::new(config.clone(), http_client.clone());
+
         Ok(Self {
             http_client,
             config,
             chat_capability,
             models_capability,
+            files_capability,
         })
     }
 
@@ -202,6 +208,29 @@ impl ModelListingCapability for GeminiClient {
     }
 }
 
+#[async_trait]
+impl FileManagementCapability for GeminiClient {
+    async fn upload_file(&self, request: FileUploadRequest) -> Result<FileObject, LlmError> {
+        self.files_capability.upload_file(request).await
+    }
+
+    async fn list_files(&self, query: Option<FileListQuery>) -> Result<FileListResponse, LlmError> {
+        self.files_capability.list_files(query).await
+    }
+
+    async fn retrieve_file(&self, file_id: String) -> Result<FileObject, LlmError> {
+        self.files_capability.retrieve_file(file_id).await
+    }
+
+    async fn delete_file(&self, file_id: String) -> Result<FileDeleteResponse, LlmError> {
+        self.files_capability.delete_file(file_id).await
+    }
+
+    async fn get_file_content(&self, file_id: String) -> Result<Vec<u8>, LlmError> {
+        self.files_capability.get_file_content(file_id).await
+    }
+}
+
 impl LlmClient for GeminiClient {
     fn provider_name(&self) -> &'static str {
         "gemini"
@@ -225,6 +254,7 @@ impl LlmClient for GeminiClient {
             .with_streaming()
             .with_tools()
             .with_vision()
+            .with_file_management()
             .with_custom_feature("code_execution", true)
             .with_custom_feature("thinking_mode", true)
             .with_custom_feature("safety_settings", true)

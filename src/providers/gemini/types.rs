@@ -698,3 +698,114 @@ impl Part {
         }
     }
 }
+
+// File management types
+
+/// Gemini File object
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeminiFile {
+    /// Immutable. Identifier. The File resource name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Optional. The human-readable display name for the File.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+    /// Output only. MIME type of the file.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mime_type: Option<String>,
+    /// Output only. Size of the file in bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<String>,
+    /// Output only. The timestamp of when the File was created.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub create_time: Option<String>,
+    /// Output only. The timestamp of when the File was last updated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub update_time: Option<String>,
+    /// Output only. The timestamp of when the File will be deleted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_time: Option<String>,
+    /// Output only. SHA-256 hash of the uploaded bytes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sha256_hash: Option<String>,
+    /// Output only. The uri of the File.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uri: Option<String>,
+    /// Output only. Processing state of the File.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<GeminiFileState>,
+    /// Output only. Error status if File processing failed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<GeminiStatus>,
+    /// Output only. Metadata for a video.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub video_metadata: Option<VideoFileMetadata>,
+}
+
+/// Processing state of the File
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GeminiFileState {
+    #[serde(rename = "STATE_UNSPECIFIED")]
+    Unspecified,
+    #[serde(rename = "PROCESSING")]
+    Processing,
+    #[serde(rename = "ACTIVE")]
+    Active,
+    #[serde(rename = "FAILED")]
+    Failed,
+}
+
+/// Error status for file processing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeminiStatus {
+    /// The status code
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<i32>,
+    /// A developer-facing error message
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    /// A list of messages that carry the error details
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<Vec<serde_json::Value>>,
+}
+
+/// Metadata for a video file
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VideoFileMetadata {
+    /// Duration of the video
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub video_duration: Option<String>,
+}
+
+/// Request for CreateFile
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateFileRequest {
+    /// Optional. Metadata for the file to create.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<GeminiFile>,
+}
+
+/// Response for CreateFile
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateFileResponse {
+    /// Metadata for the created file.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<GeminiFile>,
+}
+
+/// Response for ListFiles
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListFilesResponse {
+    /// The list of Files.
+    #[serde(default)]
+    pub files: Vec<GeminiFile>,
+    /// A token that can be sent as page_token into a subsequent ListFiles call.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_page_token: Option<String>,
+}
+
+/// Response for DownloadFile
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DownloadFileResponse {
+    // This is typically just raw bytes, but we'll handle it in the implementation
+}

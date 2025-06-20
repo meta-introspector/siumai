@@ -7,6 +7,7 @@
 //! - `types.rs` - Gemini-specific type definitions based on OpenAPI spec
 //! - `chat.rs` - Chat completion capability implementation
 //! - `models.rs` - Model listing capability implementation
+//! - `files.rs` - File management capability implementation
 //! - `code_execution.rs` - Code execution feature implementation
 //!
 //! # Example Usage
@@ -28,6 +29,7 @@
 // Core modules
 pub mod chat;
 pub mod client;
+pub mod files;
 pub mod models;
 pub mod types;
 
@@ -37,5 +39,6 @@ pub mod code_execution;
 // Re-export main types for convenience
 pub use chat::GeminiChatCapability;
 pub use client::{GeminiBuilder, GeminiClient};
+pub use files::GeminiFiles;
 pub use models::GeminiModels;
 pub use types::*;

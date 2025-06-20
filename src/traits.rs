@@ -738,6 +738,7 @@ pub struct ProviderCapabilities {
     pub tools: bool,
     pub embedding: bool,
     pub streaming: bool,
+    pub file_management: bool,
     pub custom_features: HashMap<String, bool>,
 }
 
@@ -750,6 +751,7 @@ impl Default for ProviderCapabilities {
             tools: false,
             embedding: false,
             streaming: false,
+            file_management: false,
             custom_features: HashMap::new(),
         }
     }
@@ -797,6 +799,12 @@ impl ProviderCapabilities {
         self
     }
 
+    /// Enables file management capability.
+    pub fn with_file_management(mut self) -> Self {
+        self.file_management = true;
+        self
+    }
+
     /// Adds a custom feature.
     pub fn with_custom_feature(mut self, name: impl Into<String>, enabled: bool) -> Self {
         self.custom_features.insert(name.into(), enabled);
@@ -812,6 +820,7 @@ impl ProviderCapabilities {
             "tools" => self.tools,
             "embedding" => self.embedding,
             "streaming" => self.streaming,
+            "file_management" => self.file_management,
             _ => self.custom_features.get(feature).copied().unwrap_or(false),
         }
     }

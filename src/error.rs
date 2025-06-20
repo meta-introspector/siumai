@@ -95,6 +95,10 @@ pub enum LlmError {
     #[error("Unsupported operation: {0}")]
     UnsupportedOperation(String),
 
+    /// Processing error
+    #[error("Processing error: {0}")]
+    ProcessingError(String),
+
     /// Other errors
     #[error("Other error: {0}")]
     Other(String),
