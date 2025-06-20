@@ -221,10 +221,11 @@ impl CustomChatResponse {
     }
 
     /// Convert to standard ChatResponse
-    pub fn to_chat_response(&self, provider_name: &str) -> ChatResponse {
+    pub fn to_chat_response(&self, _provider_name: &str) -> ChatResponse {
         ChatResponse {
+            id: None,
             content: MessageContent::Text(self.content.clone()),
-            tool_calls: self.tool_calls.clone(),
+            model: None,
             usage: self.usage.clone(),
             finish_reason: self.finish_reason.as_ref().map(|r| match r.as_str() {
                 "stop" => FinishReason::Stop,
@@ -233,14 +234,9 @@ impl CustomChatResponse {
                 "content_filter" => FinishReason::ContentFilter,
                 _ => FinishReason::Other(r.clone()),
             }),
-            metadata: ResponseMetadata {
-                id: None,
-                model: None,
-                created: Some(chrono::Utc::now()),
-                provider: provider_name.to_string(),
-                request_id: None,
-            },
-            provider_data: self.metadata.clone(),
+            tool_calls: self.tool_calls.clone(),
+            thinking: None,
+            metadata: self.metadata.clone(),
         }
     }
 }

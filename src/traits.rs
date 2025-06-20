@@ -96,6 +96,161 @@ pub trait ChatCapability {
             .ok_or_else(|| LlmError::InternalError("No text in summary response".to_string()))
             .map(|s| s.to_string())
     }
+
+    // === Convenience Methods ===
+
+    /// Simple text completion - just send a prompt and get a response.
+    ///
+    /// # Arguments
+    /// * `prompt` - The text prompt to send
+    ///
+    /// # Returns
+    /// The response text
+    ///
+    /// # Example
+    /// ```rust
+    /// let response = client.ask("What is the capital of France?".to_string()).await?;
+    /// println!("{}", response);
+    /// ```
+    async fn ask(&self, prompt: String) -> Result<String, LlmError> {
+        let message = ChatMessage::user(prompt).build();
+        let response = self.chat(vec![message]).await?;
+        response
+            .content_text()
+            .ok_or_else(|| LlmError::InternalError("No text in response".to_string()))
+            .map(|s| s.to_string())
+    }
+
+    /// Simple system-prompted completion.
+    ///
+    /// # Arguments
+    /// * `system_prompt` - The system instruction
+    /// * `user_prompt` - The user prompt
+    ///
+    /// # Returns
+    /// The response text
+    ///
+    /// # Example
+    /// ```rust
+    /// let response = client.ask_with_system(
+    ///     "You are a helpful assistant that responds in JSON".to_string(),
+    ///     "List 3 colors".to_string()
+    /// ).await?;
+    /// ```
+    async fn ask_with_system(
+        &self,
+        system_prompt: String,
+        user_prompt: String,
+    ) -> Result<String, LlmError> {
+        let messages = vec![
+            ChatMessage::system(system_prompt).build(),
+            ChatMessage::user(user_prompt).build(),
+        ];
+        let response = self.chat(messages).await?;
+        response
+            .content_text()
+            .ok_or_else(|| LlmError::InternalError("No text in response".to_string()))
+            .map(|s| s.to_string())
+    }
+
+    /// Continue a conversation with a new user message.
+    ///
+    /// # Arguments
+    /// * `conversation` - Existing conversation messages
+    /// * `new_message` - New user message to add
+    ///
+    /// # Returns
+    /// The response and updated conversation
+    ///
+    /// # Example
+    /// ```rust
+    /// let mut conversation = vec![
+    ///     ChatMessage::system("You are a helpful assistant").build()
+    /// ];
+    ///
+    /// let (response, updated_conversation) = client
+    ///     .continue_conversation(conversation, "Hello!")
+    ///     .await?;
+    /// ```
+    async fn continue_conversation(
+        &self,
+        mut conversation: Vec<ChatMessage>,
+        new_message: String,
+    ) -> Result<(String, Vec<ChatMessage>), LlmError> {
+        conversation.push(ChatMessage::user(new_message).build());
+
+        let response = self.chat(conversation.clone()).await?;
+        let response_text = response
+            .content_text()
+            .ok_or_else(|| LlmError::InternalError("No text in response".to_string()))?
+            .to_string();
+
+        conversation.push(ChatMessage::assistant(response_text.clone()).build());
+
+        Ok((response_text, conversation))
+    }
+
+    /// Translate text to another language.
+    ///
+    /// # Arguments
+    /// * `text` - Text to translate
+    /// * `target_language` - Target language (e.g., "French", "Spanish", "中文")
+    ///
+    /// # Returns
+    /// Translated text
+    async fn translate(
+        &self,
+        text: String,
+        target_language: String,
+    ) -> Result<String, LlmError> {
+        let prompt = format!(
+            "Translate the following text to {}: {}",
+            target_language,
+            text
+        );
+        self.ask(prompt).await
+    }
+
+    /// Explain a concept in simple terms.
+    ///
+    /// # Arguments
+    /// * `concept` - The concept to explain
+    /// * `audience` - Target audience (e.g., "a 5-year-old", "a beginner programmer")
+    ///
+    /// # Returns
+    /// Simple explanation
+    async fn explain(
+        &self,
+        concept: String,
+        audience: Option<String>,
+    ) -> Result<String, LlmError> {
+        let audience_str = audience
+            .map(|a| format!(" to {}", a))
+            .unwrap_or_else(|| " in simple terms".to_string());
+
+        let prompt = format!("Explain {}{}", concept, audience_str);
+        self.ask(prompt).await
+    }
+
+    /// Generate creative content based on a prompt.
+    ///
+    /// # Arguments
+    /// * `content_type` - Type of content (e.g., "story", "poem", "email")
+    /// * `prompt` - Creative prompt
+    ///
+    /// # Returns
+    /// Generated content
+    async fn generate(
+        &self,
+        content_type: String,
+        prompt: String,
+    ) -> Result<String, LlmError> {
+        let system_prompt = format!(
+            "You are a creative writer. Generate a {} based on the user's prompt.",
+            content_type
+        );
+        self.ask_with_system(system_prompt, prompt).await
+    }
 }
 
 /// Unified audio processing capability interface.

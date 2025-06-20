@@ -64,6 +64,65 @@ pub fn llm() -> LlmBuilder {
     LlmBuilder::new()
 }
 
+/// Quick OpenAI client creation with minimal configuration.
+///
+/// Uses environment variable OPENAI_API_KEY and default settings.
+///
+/// # Example
+/// ```rust
+/// use siumai::quick_openai;
+///
+/// // Uses OPENAI_API_KEY env var and gpt-4o-mini model
+/// let client = quick_openai().await?;
+///
+/// // With custom model
+/// let client = quick_openai_with_model("gpt-4").await?;
+/// ```
+pub async fn quick_openai() -> Result<crate::providers::openai::OpenAiClient, LlmError> {
+    quick_openai_with_model("gpt-4o-mini").await
+}
+
+/// Quick OpenAI client creation with custom model.
+pub async fn quick_openai_with_model(model: &str) -> Result<crate::providers::openai::OpenAiClient, LlmError> {
+    llm()
+        .openai()
+        .model(model)
+        .build()
+        .await
+}
+
+/// Quick Anthropic client creation with minimal configuration.
+///
+/// Uses environment variable ANTHROPIC_API_KEY and default settings.
+pub async fn quick_anthropic() -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
+    quick_anthropic_with_model("claude-3-5-sonnet-20241022").await
+}
+
+/// Quick Anthropic client creation with custom model.
+pub async fn quick_anthropic_with_model(model: &str) -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
+    llm()
+        .anthropic()
+        .model(model)
+        .build()
+        .await
+}
+
+/// Quick Gemini client creation with minimal configuration.
+///
+/// Uses environment variable GEMINI_API_KEY and default settings.
+pub async fn quick_gemini() -> Result<crate::providers::gemini::GeminiClient, LlmError> {
+    quick_gemini_with_model("gemini-1.5-flash").await
+}
+
+/// Quick Gemini client creation with custom model.
+pub async fn quick_gemini_with_model(model: &str) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
+    llm()
+        .gemini()
+        .model(model)
+        .build()
+        .await
+}
+
 /// Core LLM builder that provides common configuration options.
 ///
 /// This builder allows setting up HTTP client configuration, timeouts,
@@ -115,6 +174,38 @@ impl LlmBuilder {
             cookie_store: None,
             // redirect_policy removed
         }
+    }
+
+    /// Create a builder with sensible defaults for production use.
+    ///
+    /// Sets reasonable timeouts, compression, and other production-ready settings.
+    pub fn with_defaults() -> Self {
+        Self::new()
+            .with_timeout(Duration::from_secs(60))
+            .with_connect_timeout(Duration::from_secs(10))
+            .with_user_agent("siumai/0.1.0")
+            .with_gzip(true)
+            .with_brotli(true)
+    }
+
+    /// Create a builder optimized for fast responses.
+    ///
+    /// Uses shorter timeouts suitable for interactive applications.
+    pub fn fast() -> Self {
+        Self::new()
+            .with_timeout(Duration::from_secs(30))
+            .with_connect_timeout(Duration::from_secs(5))
+            .with_user_agent("siumai/0.1.0")
+    }
+
+    /// Create a builder optimized for long-running operations.
+    ///
+    /// Uses longer timeouts suitable for batch processing or complex tasks.
+    pub fn long_running() -> Self {
+        Self::new()
+            .with_timeout(Duration::from_secs(300))
+            .with_connect_timeout(Duration::from_secs(30))
+            .with_user_agent("siumai/0.1.0")
     }
 
     /// Use a custom HTTP client.
@@ -259,6 +350,53 @@ impl LlmBuilder {
     /// xAI-specific builder for further configuration
     pub fn xai(self) -> GenericProviderBuilder {
         GenericProviderBuilder::new(self, ProviderType::XAI)
+    }
+
+    // OpenAI-Compatible Providers
+
+    /// Create a DeepSeek client builder (OpenAI-compatible).
+    ///
+    /// DeepSeek provides cost-effective AI with reasoning capabilities.
+    /// Uses OpenAI-compatible API with provider-specific optimizations.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::llm;
+    ///
+    /// let client = llm()
+    ///     .deepseek()
+    ///     .api_key("your-deepseek-api-key")
+    ///     .model("deepseek-reasoner")
+    ///     .reasoning(true)?
+    ///     .temperature(0.1)
+    ///     .build()
+    ///     .await?;
+    /// ```
+    pub fn deepseek(self) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::DeepSeekProvider> {
+        crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
+    }
+
+    /// Create an OpenRouter client builder (OpenAI-compatible).
+    ///
+    /// OpenRouter provides access to multiple AI models through a unified API.
+    /// Supports model routing and fallback strategies.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::llm;
+    ///
+    /// let client = llm()
+    ///     .openrouter()
+    ///     .api_key("your-openrouter-api-key")
+    ///     .model("openai/gpt-4")
+    ///     .site_url("https://myapp.com")?
+    ///     .app_name("My App")?
+    ///     .temperature(0.7)
+    ///     .build()
+    ///     .await?;
+    /// ```
+    pub fn openrouter(self) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::OpenRouterProvider> {
+        crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
     }
 
     /// Generic provider builder (for custom providers)
@@ -679,6 +817,8 @@ pub struct GeminiBuilder {
     safety_settings: Option<Vec<crate::providers::gemini::SafetySetting>>,
     /// JSON schema for structured output
     json_schema: Option<serde_json::Value>,
+    /// Thinking configuration
+    thinking_config: Option<crate::providers::gemini::ThinkingConfig>,
 }
 
 impl GeminiBuilder {
@@ -697,6 +837,7 @@ impl GeminiBuilder {
             candidate_count: None,
             safety_settings: None,
             json_schema: None,
+            thinking_config: None,
         }
     }
 
@@ -769,6 +910,52 @@ impl GeminiBuilder {
         self
     }
 
+    /// Set thinking budget in tokens
+    ///
+    /// - Use -1 for dynamic thinking (model decides)
+    /// - Use 0 to attempt to disable thinking (may not work on all models)
+    /// - Use positive values to set a specific token budget
+    ///
+    /// The actual supported range depends on the model being used.
+    pub fn thinking_budget(mut self, budget: i32) -> Self {
+        if self.thinking_config.is_none() {
+            self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::new());
+        }
+        if let Some(ref mut config) = self.thinking_config {
+            config.thinking_budget = Some(budget);
+        }
+        self
+    }
+
+    /// Enable or disable thought summaries in response
+    ///
+    /// This controls whether thinking summaries are included in the response,
+    /// not whether the model thinks internally.
+    pub fn thought_summaries(mut self, include: bool) -> Self {
+        if self.thinking_config.is_none() {
+            self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::new());
+        }
+        if let Some(ref mut config) = self.thinking_config {
+            config.include_thoughts = Some(include);
+        }
+        self
+    }
+
+    /// Enable dynamic thinking (model decides when and how much to think)
+    pub fn thinking(mut self) -> Self {
+        self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::dynamic());
+        self
+    }
+
+    /// Attempt to disable thinking
+    ///
+    /// Note: Not all models support disabling thinking. If the model doesn't
+    /// support it, the API will return an appropriate error.
+    pub fn disable_thinking(mut self) -> Self {
+        self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::disabled());
+        self
+    }
+
     /// Build the Gemini client
     pub async fn build(self) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
         let api_key = self.api_key.ok_or_else(|| {
@@ -779,6 +966,13 @@ impl GeminiBuilder {
 
         if let Some(base_url) = self.base_url {
             config = config.with_base_url(base_url);
+        }
+
+        // Basic validation of thinking configuration
+        if let Some(thinking_config) = &self.thinking_config {
+            thinking_config.validate().map_err(|e| {
+                crate::error::LlmError::ConfigurationError(format!("Invalid thinking configuration: {}", e))
+            })?;
         }
 
         if let Some(model) = self.model {
@@ -816,6 +1010,11 @@ impl GeminiBuilder {
             generation_config = generation_config.with_response_schema(schema);
             generation_config =
                 generation_config.with_response_mime_type("application/json".to_string());
+        }
+
+        // Apply thinking configuration to generation config
+        if let Some(thinking_config) = &self.thinking_config {
+            generation_config = generation_config.with_thinking_config(thinking_config.clone());
         }
 
         config = config.with_generation_config(generation_config);

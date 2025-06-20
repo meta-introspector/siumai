@@ -55,7 +55,7 @@ impl GeminiChatCapability {
         match &message.content {
             crate::types::MessageContent::Text(text) => {
                 if !text.is_empty() {
-                    parts.push(Part::Text { text: text.clone() });
+                    parts.push(Part::Text { text: text.clone(), thought: None });
                 }
             }
             _ => {
@@ -171,7 +171,7 @@ impl GeminiChatCapability {
         };
 
         Ok(GenerateContentRequest {
-            model: format!("models/{}", self.config.model),
+            model: self.config.model.clone(), // Don't add "models/" prefix here
             contents,
             system_instruction,
             tools: gemini_tools,
@@ -202,13 +202,24 @@ impl GeminiChatCapability {
         let mut tool_calls = Vec::new();
 
         // Process parts
+        let mut thinking_content = String::new();
+
         for part in &content.parts {
             match part {
-                Part::Text { text } => {
-                    if !text_content.is_empty() {
-                        text_content.push('\n');
+                Part::Text { text, thought } => {
+                    if thought.unwrap_or(false) {
+                        // This is thinking content - collect it separately
+                        if !thinking_content.is_empty() {
+                            thinking_content.push('\n');
+                        }
+                        thinking_content.push_str(&text);
+                    } else {
+                        // Regular text content
+                        if !text_content.is_empty() {
+                            text_content.push('\n');
+                        }
+                        text_content.push_str(&text);
                     }
-                    text_content.push_str(&text);
                 }
                 Part::FunctionCall { function_call } => {
                     let arguments = if let Some(args) = &function_call.args {
@@ -235,12 +246,11 @@ impl GeminiChatCapability {
         // Calculate usage
         let usage = if let Some(usage_metadata) = &response.usage_metadata {
             Some(Usage {
-                prompt_tokens: Some(usage_metadata.prompt_token_count.unwrap_or(0) as u32),
-                completion_tokens: Some(usage_metadata.candidates_token_count.unwrap_or(0) as u32),
-                total_tokens: Some(usage_metadata.total_token_count.unwrap_or(0) as u32),
-                cache_creation_tokens: None,
-                cache_hit_tokens: None,
-                reasoning_tokens: None,
+                prompt_tokens: usage_metadata.prompt_token_count.unwrap_or(0) as u32,
+                completion_tokens: usage_metadata.candidates_token_count.unwrap_or(0) as u32,
+                total_tokens: usage_metadata.total_token_count.unwrap_or(0) as u32,
+                cached_tokens: None,
+                reasoning_tokens: usage_metadata.thoughts_token_count.map(|t| t as u32),
             })
         } else {
             None
@@ -262,7 +272,7 @@ impl GeminiChatCapability {
         };
 
         // Create metadata
-        let metadata = ResponseMetadata {
+        let _metadata = ResponseMetadata {
             id: response.response_id.clone(),
             model: Some(self.config.model.clone()),
             created: Some(chrono::Utc::now()),
@@ -270,17 +280,29 @@ impl GeminiChatCapability {
             request_id: None,
         };
 
+        // Add thinking content to provider_data if present
+        let mut provider_data = std::collections::HashMap::new();
+        if !thinking_content.is_empty() {
+            provider_data.insert("thinking".to_string(), serde_json::Value::String(thinking_content.clone()));
+        }
+
         Ok(ChatResponse {
+            id: None, // Gemini doesn't provide response IDs
             content,
+            model: None, // Will be set from request context
+            usage,
+            finish_reason,
             tool_calls: if tool_calls.is_empty() {
                 None
             } else {
                 Some(tool_calls)
             },
-            usage,
-            finish_reason,
-            metadata,
-            provider_data: std::collections::HashMap::new(),
+            thinking: if thinking_content.is_empty() {
+                None
+            } else {
+                Some(thinking_content)
+            },
+            metadata: provider_data,
         })
     }
 
@@ -336,13 +358,83 @@ impl ChatCapability for GeminiChatCapability {
 
     async fn chat_stream(
         &self,
-        _messages: Vec<ChatMessage>,
-        _tools: Option<Vec<Tool>>,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // TODO: Implement streaming support properly
-        // For now, return an error indicating streaming is not yet implemented
-        Err(LlmError::UnsupportedOperation(
-            "Streaming not yet implemented for Gemini".to_string(),
-        ))
+        use futures::stream::StreamExt;
+        use crate::stream::ChatStreamEvent;
+
+        let request = self.build_request_body(&messages, tools.as_deref())?;
+
+        let url = format!(
+            "{}/models/{}:streamGenerateContent",
+            self.config.base_url, self.config.model
+        );
+
+        let response = self
+            .http_client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .header("x-goog-api-key", &self.config.api_key)
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("Gemini streaming API error: {} - {}", status_code, error_text),
+            ));
+        }
+
+        // Parse JSON stream (Gemini uses JSON lines, not SSE)
+        let stream = response
+            .bytes_stream()
+            .map(|result| {
+                result.map_err(|e| LlmError::HttpError(e.to_string()))
+            })
+            .filter_map(|chunk_result| async move {
+                match chunk_result {
+                    Ok(chunk) => {
+                        let text = String::from_utf8_lossy(&chunk);
+                        // Skip empty lines
+                        if text.trim().is_empty() {
+                            return None;
+                        }
+
+                        // Parse JSON response
+                        match serde_json::from_str::<GenerateContentResponse>(&text) {
+                            Ok(response) => {
+                                if let Some(candidate) = response.candidates.first() {
+                                    if let Some(content) = &candidate.content {
+                                        for part in &content.parts {
+                                            if let Part::Text { text, thought } = part {
+                                                // Handle both regular text and thought summaries
+                                                let event = if thought.unwrap_or(false) {
+                                                    ChatStreamEvent::ThinkingDelta { delta: text.clone() }
+                                                } else {
+                                                    ChatStreamEvent::ContentDelta { delta: text.clone(), index: None }
+                                                };
+                                                return Some(Ok(event));
+                                            }
+                                        }
+                                    }
+                                }
+                                Some(Ok(ChatStreamEvent::ContentDelta { delta: String::new(), index: None }))
+                            }
+                            Err(_) => {
+                                // Skip malformed JSON
+                                None
+                            }
+                        }
+                    }
+                    Err(e) => Some(Err(e)),
+                }
+            });
+
+        Ok(Box::pin(stream))
     }
 }

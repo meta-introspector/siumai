@@ -5,11 +5,16 @@
 pub mod anthropic;
 pub mod gemini;
 pub mod openai;
+pub mod openai_compatible;
 
 // Re-export main types
 pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;
 pub use openai::OpenAiClient;
+pub use openai_compatible::{
+    OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
+    DeepSeekProvider, OpenRouterProvider
+};
 
 use crate::traits::ProviderCapabilities;
 use crate::types::ProviderType;

@@ -81,9 +81,9 @@ impl AnthropicChatCapability {
         let finish_reason = parse_finish_reason(response.stop_reason.as_deref());
         let usage = create_usage_from_response(response.usage);
 
-        let metadata = ResponseMetadata {
-            id: Some(response.id),
-            model: Some(response.model),
+        let _metadata = ResponseMetadata {
+            id: Some(response.id.clone()),
+            model: Some(response.model.clone()),
             created: Some(chrono::Utc::now()), // Anthropic does not provide creation time
             provider: "anthropic".to_string(),
             request_id: None,
@@ -107,12 +107,14 @@ impl AnthropicChatCapability {
         }
 
         Ok(ChatResponse {
+            id: Some(response.id),
             content,
-            tool_calls: None, // Tool calls require special handling
+            model: Some(response.model),
             usage,
             finish_reason,
-            metadata,
-            provider_data,
+            tool_calls: None, // Tool calls require special handling
+            thinking: None, // Anthropic thinking will be handled separately
+            metadata: provider_data,
         })
     }
 }
@@ -131,6 +133,8 @@ impl ChatCapability for AnthropicChatCapability {
             common_params: CommonParams::default(),
             provider_params: None,
             http_config: None,
+            web_search: None,
+            stream: false,
         };
 
         let headers = build_headers(&self.api_key, &self.http_config.headers)?;

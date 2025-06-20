@@ -29,6 +29,8 @@ pub struct OpenAiClient {
     openai_params: OpenAiParams,
     /// OpenAI-specific configuration
     specific_params: OpenAiSpecificParams,
+    /// HTTP client for making requests
+    http_client: reqwest::Client,
 }
 
 impl OpenAiClient {
@@ -64,7 +66,14 @@ impl OpenAiClient {
             common_params: config.common_params,
             openai_params: config.openai_params,
             specific_params,
+            http_client,
         }
+    }
+
+    /// Creates a new OpenAI client with configuration (for OpenAI-compatible providers)
+    pub fn new_with_config(config: super::OpenAiConfig) -> Self {
+        let http_client = reqwest::Client::new();
+        Self::new(config, http_client)
     }
 
     /// Creates a new OpenAI client (legacy constructor for backward compatibility)
@@ -191,7 +200,7 @@ impl ModelListingCapability for OpenAiClient {
     }
 }
 
-impl LlmClient for OpenAiClient {
+impl LlmProvider for OpenAiClient {
     fn provider_name(&self) -> &'static str {
         "openai"
     }
@@ -211,6 +220,24 @@ impl LlmClient for OpenAiClient {
             .with_custom_feature("structured_output", true)
             .with_custom_feature("batch_processing", true)
     }
+
+    fn http_client(&self) -> &reqwest::Client {
+        &self.http_client
+    }
+}
+
+impl LlmClient for OpenAiClient {
+    fn provider_name(&self) -> &'static str {
+        LlmProvider::provider_name(self)
+    }
+
+    fn supported_models(&self) -> Vec<String> {
+        LlmProvider::supported_models(self)
+    }
+
+    fn capabilities(&self) -> ProviderCapabilities {
+        LlmProvider::capabilities(self)
+    }
 }
 
 #[cfg(test)]
@@ -223,8 +250,8 @@ mod tests {
         let config = OpenAiConfig::new("test-key");
         let client = OpenAiClient::new(config, reqwest::Client::new());
 
-        assert_eq!(client.provider_name(), "openai");
-        assert!(!client.supported_models().is_empty());
+        assert_eq!(LlmProvider::provider_name(&client), "openai");
+        assert!(!LlmProvider::supported_models(&client).is_empty());
     }
 
     #[test]
@@ -261,7 +288,7 @@ mod tests {
             None,
         );
 
-        assert_eq!(client.provider_name(), "openai");
-        assert!(!client.supported_models().is_empty());
+        assert_eq!(LlmProvider::provider_name(&client), "openai");
+        assert!(!LlmProvider::supported_models(&client).is_empty());
     }
 }

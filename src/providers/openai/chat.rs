@@ -122,17 +122,16 @@ impl OpenAiChatCapability {
         let finish_reason = parse_finish_reason(choice.finish_reason.as_deref());
 
         let usage = response.usage.map(|u| Usage {
-            prompt_tokens: u.prompt_tokens,
-            completion_tokens: u.completion_tokens,
-            total_tokens: u.total_tokens,
+            prompt_tokens: u.prompt_tokens.unwrap_or(0),
+            completion_tokens: u.completion_tokens.unwrap_or(0),
+            total_tokens: u.total_tokens.unwrap_or(0),
             reasoning_tokens: None, // Specific to OpenAI o1, requires special handling
-            cache_hit_tokens: None,
-            cache_creation_tokens: None,
+            cached_tokens: None,
         });
 
-        let metadata = ResponseMetadata {
-            id: Some(response.id),
-            model: Some(response.model),
+        let _metadata = ResponseMetadata {
+            id: Some(response.id.clone()),
+            model: Some(response.model.clone()),
             created: Some(
                 chrono::DateTime::from_timestamp(response.created as i64, 0)
                     .unwrap_or_else(chrono::Utc::now),
@@ -142,12 +141,14 @@ impl OpenAiChatCapability {
         };
 
         Ok(ChatResponse {
+            id: Some(response.id),
             content,
-            tool_calls,
+            model: Some(response.model),
             usage,
             finish_reason,
-            metadata,
-            provider_data: HashMap::new(),
+            tool_calls,
+            thinking: None, // OpenAI thinking will be handled separately
+            metadata: HashMap::new(),
         })
     }
 }
@@ -166,6 +167,8 @@ impl ChatCapability for OpenAiChatCapability {
             common_params: CommonParams::default(),
             provider_params: None,
             http_config: None,
+            web_search: None,
+            stream: false,
         };
 
         let headers = build_headers(
@@ -213,6 +216,8 @@ impl ChatCapability for OpenAiChatCapability {
             common_params: CommonParams::default(),
             provider_params: None,
             http_config: None,
+            web_search: None,
+            stream: true,
         };
 
         // Create streaming client

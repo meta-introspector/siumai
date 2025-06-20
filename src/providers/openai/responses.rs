@@ -239,22 +239,24 @@ impl OpenAiResponses {
                 prompt_tokens: usage_data
                     .get("input_tokens")
                     .and_then(|v| v.as_u64())
-                    .map(|v| v as u32),
+                    .map(|v| v as u32)
+                    .unwrap_or(0),
                 completion_tokens: usage_data
                     .get("output_tokens")
                     .and_then(|v| v.as_u64())
-                    .map(|v| v as u32),
+                    .map(|v| v as u32)
+                    .unwrap_or(0),
                 total_tokens: usage_data
                     .get("total_tokens")
                     .and_then(|v| v.as_u64())
-                    .map(|v| v as u32),
+                    .map(|v| v as u32)
+                    .unwrap_or(0),
                 reasoning_tokens: None,
-                cache_hit_tokens: None,
-                cache_creation_tokens: None,
+                cached_tokens: None,
             });
 
         // Extract metadata
-        let metadata = crate::types::ResponseMetadata {
+        let _metadata = crate::types::ResponseMetadata {
             id: response_data
                 .get("id")
                 .and_then(|v| v.as_str())
@@ -272,12 +274,17 @@ impl OpenAiResponses {
         }
 
         Ok(ChatResponse {
+            id: response_data
+                .get("id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             content: crate::types::MessageContent::Text(content),
-            tool_calls: None, // TODO: Extract tool calls from response
+            model: Some(self.config.common_params.model.clone()),
             usage,
             finish_reason: None, // TODO: Extract finish reason
-            metadata,
-            provider_data,
+            tool_calls: None, // TODO: Extract tool calls from response
+            thinking: provider_data.get("reasoning").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            metadata: provider_data,
         })
     }
 }
@@ -370,7 +377,7 @@ impl ChatCapability for OpenAiResponses {
                             .collect::<Vec<_>>()
                     }
                     Err(e) => vec![Ok(crate::stream::ChatStreamEvent::Error {
-                        error: LlmError::HttpError(e.to_string()),
+                        error: e.to_string(),
                     })],
                 }
             })
@@ -384,7 +391,7 @@ impl OpenAiResponses {
     /// Parse SSE chunk into stream events (static version)
     fn parse_sse_chunk_static(
         chunk: &str,
-        model_name: &str,
+        _model_name: &str,
     ) -> Vec<crate::stream::ChatStreamEvent> {
         let mut events = Vec::new();
 
@@ -393,22 +400,11 @@ impl OpenAiResponses {
                 let data = &line[6..]; // Remove "data: " prefix
 
                 if data == "[DONE]" {
-                    // Create a final response for stream end
-                    let response = ChatResponse {
-                        content: crate::types::MessageContent::Text(String::new()),
-                        tool_calls: None,
-                        usage: None,
+                    // Stream end event
+                    events.push(crate::stream::ChatStreamEvent::Done {
                         finish_reason: Some(crate::types::FinishReason::Stop),
-                        metadata: crate::types::ResponseMetadata {
-                            id: None,
-                            model: Some(model_name.to_string()),
-                            created: Some(chrono::Utc::now()),
-                            provider: "openai".to_string(),
-                            request_id: None,
-                        },
-                        provider_data: HashMap::new(),
-                    };
-                    events.push(crate::stream::ChatStreamEvent::StreamEnd { response });
+                        usage: None,
+                    });
                     continue;
                 }
 
@@ -426,28 +422,28 @@ impl OpenAiResponses {
                             delta.get("tool_calls").and_then(|tc| tc.as_array())
                         {
                             for (index, tool_call) in tool_calls.iter().enumerate() {
-                                let tool_call_delta = crate::stream::ToolCallDelta {
-                                    id: tool_call
-                                        .get("id")
-                                        .and_then(|id| id.as_str())
-                                        .map(|s| s.to_string()),
-                                    r#type: None, // Will be filled from function type
-                                    function: tool_call.get("function").map(|func| {
-                                        crate::stream::FunctionCallDelta {
-                                            name: func
-                                                .get("name")
-                                                .and_then(|n| n.as_str())
-                                                .map(|s| s.to_string()),
-                                            arguments: func
-                                                .get("arguments")
-                                                .and_then(|a| a.as_str())
-                                                .map(|s| s.to_string()),
-                                        }
-                                    }),
-                                };
+                                let id = tool_call
+                                    .get("id")
+                                    .and_then(|id| id.as_str())
+                                    .map(|s| s.to_string())
+                                    .unwrap_or_default();
+
+                                let function_name = tool_call
+                                    .get("function")
+                                    .and_then(|func| func.get("name"))
+                                    .and_then(|n| n.as_str())
+                                    .map(|s| s.to_string());
+
+                                let arguments_delta = tool_call
+                                    .get("function")
+                                    .and_then(|func| func.get("arguments"))
+                                    .and_then(|a| a.as_str())
+                                    .map(|s| s.to_string());
 
                                 events.push(crate::stream::ChatStreamEvent::ToolCallDelta {
-                                    tool_call: tool_call_delta,
+                                    id,
+                                    function_name,
+                                    arguments_delta,
                                     index: Some(index),
                                 });
                             }
@@ -460,23 +456,25 @@ impl OpenAiResponses {
                             prompt_tokens: usage
                                 .get("prompt_tokens")
                                 .and_then(|v| v.as_u64())
-                                .map(|v| v as u32),
+                                .map(|v| v as u32)
+                                .unwrap_or(0),
                             completion_tokens: usage
                                 .get("completion_tokens")
                                 .and_then(|v| v.as_u64())
-                                .map(|v| v as u32),
+                                .map(|v| v as u32)
+                                .unwrap_or(0),
                             total_tokens: usage
                                 .get("total_tokens")
                                 .and_then(|v| v.as_u64())
-                                .map(|v| v as u32),
+                                .map(|v| v as u32)
+                                .unwrap_or(0),
                             reasoning_tokens: usage
                                 .get("reasoning_tokens")
                                 .and_then(|v| v.as_u64())
                                 .map(|v| v as u32),
-                            cache_hit_tokens: None,
-                            cache_creation_tokens: None,
+                            cached_tokens: None,
                         };
-                        events.push(crate::stream::ChatStreamEvent::UsageUpdate {
+                        events.push(crate::stream::ChatStreamEvent::Usage {
                             usage: usage_info,
                         });
                     }

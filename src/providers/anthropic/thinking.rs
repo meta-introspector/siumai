@@ -181,7 +181,7 @@ impl ThinkingResponseParser {
     ) -> ChatResponse {
         if let Some(thinking) = thinking_content {
             response
-                .provider_data
+                .metadata
                 .insert("thinking".to_string(), serde_json::Value::String(thinking));
         }
         response
@@ -393,11 +393,9 @@ pub mod helpers {
     pub fn extract_and_analyze_thinking(
         response: &ChatResponse,
     ) -> Option<(String, ReasoningAnalysis)> {
-        if let Some(thinking_value) = response.provider_data.get("thinking") {
-            if let Some(thinking_content) = thinking_value.as_str() {
-                let analysis = ReasoningAnalyzer::analyze_reasoning(thinking_content);
-                return Some((thinking_content.to_string(), analysis));
-            }
+        if let Some(thinking_content) = response.thinking.as_ref() {
+            let analysis = ReasoningAnalyzer::analyze_reasoning(thinking_content);
+            return Some((thinking_content.to_string(), analysis));
         }
         None
     }

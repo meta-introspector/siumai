@@ -64,10 +64,15 @@ pub struct Content {
 
 /// A datatype containing media that is part of a multi-part Content message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
 pub enum Part {
     /// Text content
-    Text { text: String },
+    #[serde(rename_all = "camelCase")]
+    Text {
+        text: String,
+        /// Optional. Whether this is a thought summary (for thinking models)
+        #[serde(skip_serializing_if = "Option::is_none")]
+        thought: Option<bool>,
+    },
     /// Inline data (images, audio, etc.)
     InlineData { inline_data: Blob },
     /// File data
@@ -345,6 +350,30 @@ pub struct GenerationConfig {
     /// Optional. Output response schema of the generated candidate text.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_schema: Option<serde_json::Value>,
+    /// Optional. Configuration for thinking behavior.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_config: Option<ThinkingConfig>,
+}
+
+/// Configuration for thinking behavior in Gemini models.
+///
+/// Note: Different models have different thinking capabilities. The API will
+/// return appropriate errors if unsupported configurations are used.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThinkingConfig {
+    /// Thinking budget in tokens.
+    /// - Set to -1 for dynamic thinking (model decides when and how much to think)
+    /// - Set to 0 to attempt to disable thinking (may not work on all models)
+    /// - Set to specific value to limit thinking tokens
+    ///
+    /// The actual supported range depends on the specific model being used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking_budget: Option<i32>,
+
+    /// Whether to include thought summaries in the response.
+    /// This controls the visibility of thinking summaries, not the thinking process itself.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_thoughts: Option<bool>,
 }
 
 /// A set of the feedback metadata the prompt specified in GenerateContentRequest.content.
@@ -390,6 +419,9 @@ pub struct UsageMetadata {
     /// Number of tokens in the response candidate.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub candidates_token_count: Option<i32>,
+    /// Number of tokens used for thinking (only for thinking models).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thoughts_token_count: Option<i32>,
 }
 
 /// Tool details that the model may use to generate response.
@@ -542,6 +574,7 @@ impl GenerationConfig {
             top_k: None,
             response_mime_type: None,
             response_schema: None,
+            thinking_config: None,
         }
     }
 
@@ -592,9 +625,74 @@ impl GenerationConfig {
         self.response_schema = Some(schema);
         self
     }
+
+    /// Set thinking configuration
+    pub fn with_thinking_config(mut self, config: ThinkingConfig) -> Self {
+        self.thinking_config = Some(config);
+        self
+    }
 }
 
 impl Default for GenerationConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ThinkingConfig {
+    /// Create a new thinking configuration
+    pub fn new() -> Self {
+        Self {
+            thinking_budget: None,
+            include_thoughts: None,
+        }
+    }
+
+    /// Create thinking configuration with specific budget
+    pub fn with_budget(budget: i32) -> Self {
+        Self {
+            thinking_budget: Some(budget),
+            include_thoughts: None,
+        }
+    }
+
+    /// Create thinking configuration with thought summaries enabled
+    pub fn with_thoughts() -> Self {
+        Self {
+            thinking_budget: None,
+            include_thoughts: Some(true),
+        }
+    }
+
+    /// Create dynamic thinking configuration (model decides budget)
+    pub fn dynamic() -> Self {
+        Self {
+            thinking_budget: Some(-1),
+            include_thoughts: Some(true),
+        }
+    }
+
+    /// Create configuration that attempts to disable thinking
+    /// Note: Not all models support disabling thinking
+    pub fn disabled() -> Self {
+        Self {
+            thinking_budget: Some(0),
+            include_thoughts: Some(false),
+        }
+    }
+
+    /// Basic validation (only check for obviously invalid values)
+    pub fn validate(&self) -> Result<(), String> {
+        if let Some(budget) = self.thinking_budget {
+            if budget < -1 {
+                return Err("Thinking budget cannot be less than -1".to_string());
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Default for ThinkingConfig {
     fn default() -> Self {
         Self::new()
     }
@@ -640,7 +738,7 @@ impl Content {
     pub fn user_text(text: String) -> Self {
         Self {
             role: Some("user".to_string()),
-            parts: vec![Part::Text { text }],
+            parts: vec![Part::Text { text, thought: None }],
         }
     }
 
@@ -648,7 +746,7 @@ impl Content {
     pub fn model_text(text: String) -> Self {
         Self {
             role: Some("model".to_string()),
-            parts: vec![Part::Text { text }],
+            parts: vec![Part::Text { text, thought: None }],
         }
     }
 
@@ -656,7 +754,7 @@ impl Content {
     pub fn system_text(text: String) -> Self {
         Self {
             role: None, // System instructions don't have a role
-            parts: vec![Part::Text { text }],
+            parts: vec![Part::Text { text, thought: None }],
         }
     }
 }
@@ -664,7 +762,12 @@ impl Content {
 impl Part {
     /// Create a text part
     pub fn text(text: String) -> Self {
-        Self::Text { text }
+        Self::Text { text, thought: None }
+    }
+
+    /// Create a thought summary part
+    pub fn thought_summary(text: String) -> Self {
+        Self::Text { text, thought: Some(true) }
     }
 
     /// Create an inline data part

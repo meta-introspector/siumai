@@ -4,6 +4,35 @@
 
 use thiserror::Error;
 
+/// Error category for better error handling and recovery strategies.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ErrorCategory {
+    /// Network-related errors (connection, timeout, etc.)
+    Network,
+    /// Authentication and authorization errors
+    Authentication,
+    /// Rate limiting and quota errors
+    RateLimit,
+    /// Client-side errors (4xx HTTP status codes)
+    Client,
+    /// Server-side errors (5xx HTTP status codes)
+    Server,
+    /// Data parsing and serialization errors
+    Parsing,
+    /// Input validation errors
+    Validation,
+    /// Configuration errors
+    Configuration,
+    /// Unsupported operations or models
+    Unsupported,
+    /// Streaming-related errors
+    Stream,
+    /// Provider-specific errors
+    Provider,
+    /// Unknown or uncategorized errors
+    Unknown,
+}
+
 /// The primary error type for the LLM library.
 #[derive(Error, Debug, Clone)]
 pub enum LlmError {
@@ -193,6 +222,101 @@ impl LlmError {
             _ => None,
         }
     }
+
+    /// Gets the error category for better error handling.
+    pub fn category(&self) -> ErrorCategory {
+        match self {
+            Self::HttpError(_) | Self::ConnectionError(_) | Self::TimeoutError(_) => ErrorCategory::Network,
+            Self::AuthenticationError(_) | Self::MissingApiKey(_) => ErrorCategory::Authentication,
+            Self::RateLimitError(_) | Self::QuotaExceededError(_) => ErrorCategory::RateLimit,
+            Self::ApiError { code, .. } => {
+                match *code {
+                    400..=499 => ErrorCategory::Client,
+                    500..=599 => ErrorCategory::Server,
+                    _ => ErrorCategory::Unknown,
+                }
+            }
+            Self::JsonError(_) | Self::ParseError(_) => ErrorCategory::Parsing,
+            Self::InvalidInput(_) | Self::InvalidParameter(_) => ErrorCategory::Validation,
+            Self::ConfigurationError(_) => ErrorCategory::Configuration,
+            Self::ModelNotSupported(_) | Self::UnsupportedOperation(_) => ErrorCategory::Unsupported,
+            Self::StreamError(_) => ErrorCategory::Stream,
+            Self::ProviderError { .. } => ErrorCategory::Provider,
+            _ => ErrorCategory::Unknown,
+        }
+    }
+
+    /// Gets a user-friendly error message.
+    pub fn user_message(&self) -> String {
+        match self {
+            Self::AuthenticationError(_) | Self::MissingApiKey(_) => {
+                "Authentication failed. Please check your API key.".to_string()
+            }
+            Self::RateLimitError(_) => {
+                "Rate limit exceeded. Please wait before making more requests.".to_string()
+            }
+            Self::QuotaExceededError(_) => {
+                "API quota exceeded. Please check your usage limits.".to_string()
+            }
+            Self::ModelNotSupported(model) => {
+                format!("The model '{}' is not supported by this provider.", model)
+            }
+            Self::ConnectionError(_) | Self::TimeoutError(_) => {
+                "Network connection failed. Please check your internet connection and try again.".to_string()
+            }
+            Self::ApiError { code: 500..=599, .. } => {
+                "The service is temporarily unavailable. Please try again later.".to_string()
+            }
+            _ => self.to_string(),
+        }
+    }
+
+    /// Gets suggested recovery actions for the error.
+    pub fn recovery_suggestions(&self) -> Vec<String> {
+        match self {
+            Self::AuthenticationError(_) | Self::MissingApiKey(_) => {
+                vec![
+                    "Verify your API key is correct".to_string(),
+                    "Check if your API key has the required permissions".to_string(),
+                    "Ensure your API key is not expired".to_string(),
+                ]
+            }
+            Self::RateLimitError(_) => {
+                vec![
+                    "Wait before making more requests".to_string(),
+                    "Implement exponential backoff".to_string(),
+                    "Consider upgrading your API plan".to_string(),
+                ]
+            }
+            Self::QuotaExceededError(_) => {
+                vec![
+                    "Check your usage dashboard".to_string(),
+                    "Upgrade your API plan".to_string(),
+                    "Wait for quota reset".to_string(),
+                ]
+            }
+            Self::ConnectionError(_) | Self::TimeoutError(_) => {
+                vec![
+                    "Check your internet connection".to_string(),
+                    "Retry the request".to_string(),
+                    "Increase timeout settings".to_string(),
+                ]
+            }
+            Self::ModelNotSupported(_) => {
+                vec![
+                    "Use a supported model".to_string(),
+                    "Check the provider's model list".to_string(),
+                ]
+            }
+            Self::ApiError { code: 500..=599, .. } => {
+                vec![
+                    "Retry the request after a delay".to_string(),
+                    "Check the service status page".to_string(),
+                ]
+            }
+            _ => vec!["Check the error details and documentation".to_string()],
+        }
+    }
 }
 
 /// Result type alias.
@@ -240,5 +364,46 @@ mod tests {
 
         let api_401 = LlmError::api_error(401, "Unauthorized");
         assert!(api_401.is_auth_error());
+    }
+
+    #[test]
+    fn test_error_categories() {
+        let auth_error = LlmError::AuthenticationError("Invalid key".to_string());
+        assert_eq!(auth_error.category(), ErrorCategory::Authentication);
+
+        let rate_limit = LlmError::RateLimitError("Too many requests".to_string());
+        assert_eq!(rate_limit.category(), ErrorCategory::RateLimit);
+
+        let server_error = LlmError::api_error(500, "Internal server error");
+        assert_eq!(server_error.category(), ErrorCategory::Server);
+
+        let client_error = LlmError::api_error(400, "Bad request");
+        assert_eq!(client_error.category(), ErrorCategory::Client);
+
+        let parse_error = LlmError::JsonError("Invalid JSON".to_string());
+        assert_eq!(parse_error.category(), ErrorCategory::Parsing);
+    }
+
+    #[test]
+    fn test_user_messages() {
+        let auth_error = LlmError::AuthenticationError("Invalid key".to_string());
+        let user_msg = auth_error.user_message();
+        assert!(user_msg.contains("Authentication failed"));
+
+        let rate_limit = LlmError::RateLimitError("Too many requests".to_string());
+        let user_msg = rate_limit.user_message();
+        assert!(user_msg.contains("Rate limit exceeded"));
+    }
+
+    #[test]
+    fn test_recovery_suggestions() {
+        let auth_error = LlmError::AuthenticationError("Invalid key".to_string());
+        let suggestions = auth_error.recovery_suggestions();
+        assert!(!suggestions.is_empty());
+        assert!(suggestions.iter().any(|s| s.contains("API key")));
+
+        let rate_limit = LlmError::RateLimitError("Too many requests".to_string());
+        let suggestions = rate_limit.recovery_suggestions();
+        assert!(suggestions.iter().any(|s| s.contains("Wait")));
     }
 }

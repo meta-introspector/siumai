@@ -103,6 +103,27 @@ impl ProviderParams {
 
         Self { params }
     }
+
+    /// Quick setup for OpenAI-specific parameters.
+    pub fn openai() -> Self {
+        Self::new()
+            .with_param("frequency_penalty", 0.0)
+            .with_param("presence_penalty", 0.0)
+            .with_param("parallel_tool_calls", true)
+    }
+
+    /// Quick setup for Anthropic-specific parameters.
+    pub fn anthropic() -> Self {
+        Self::new()
+            .with_param("max_tokens", 4096)
+    }
+
+    /// Quick setup for Gemini-specific parameters.
+    pub fn gemini() -> Self {
+        Self::new()
+            .with_param("candidate_count", 1)
+            .with_param("top_k", 40)
+    }
 }
 
 impl Default for ProviderParams {
@@ -112,11 +133,13 @@ impl Default for ProviderParams {
 }
 
 /// HTTP configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpConfig {
     /// Request timeout
+    #[serde(with = "duration_option_serde")]
     pub timeout: Option<Duration>,
     /// Connection timeout
+    #[serde(with = "duration_option_serde")]
     pub connect_timeout: Option<Duration>,
     /// Custom headers
     pub headers: HashMap<String, String>,
@@ -124,6 +147,30 @@ pub struct HttpConfig {
     pub proxy: Option<String>,
     /// User agent
     pub user_agent: Option<String>,
+}
+
+// Helper module for Duration serialization
+mod duration_option_serde {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::time::Duration;
+
+    pub fn serialize<S>(duration: &Option<Duration>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match duration {
+            Some(d) => d.as_secs().serialize(serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let secs: Option<u64> = Option::deserialize(deserializer)?;
+        Ok(secs.map(Duration::from_secs))
+    }
 }
 
 impl Default for HttpConfig {
@@ -242,6 +289,21 @@ impl Default for MessageMetadata {
             custom: HashMap::new(),
         }
     }
+}
+
+/// Response metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResponseMetadata {
+    /// Response ID
+    pub id: Option<String>,
+    /// Model name
+    pub model: Option<String>,
+    /// Creation time
+    pub created: Option<chrono::DateTime<chrono::Utc>>,
+    /// Provider name
+    pub provider: String,
+    /// Request ID
+    pub request_id: Option<String>,
 }
 
 /// Chat message
@@ -477,6 +539,460 @@ pub enum WebSearchStrategy {
     External,
 }
 
+// === Chat Request and Response Types ===
+
+/// Chat request configuration
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ChatRequest {
+    /// The conversation messages
+    pub messages: Vec<ChatMessage>,
+    /// Optional tools to use in the chat
+    pub tools: Option<Vec<Tool>>,
+    /// Common parameters (for backward compatibility)
+    pub common_params: CommonParams,
+    /// Provider-specific parameters
+    pub provider_params: Option<ProviderParams>,
+    /// HTTP configuration (for backward compatibility)
+    pub http_config: Option<HttpConfig>,
+    /// Web search configuration
+    pub web_search: Option<WebSearchConfig>,
+    /// Stream the response
+    pub stream: bool,
+}
+
+impl ChatRequest {
+    /// Create a new chat request with messages
+    pub fn new(messages: Vec<ChatMessage>) -> Self {
+        Self {
+            messages,
+            tools: None,
+            common_params: CommonParams::default(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: false,
+        }
+    }
+
+    /// Create a builder for the chat request
+    pub fn builder() -> ChatRequestBuilder {
+        ChatRequestBuilder::new()
+    }
+
+    /// Add a message to the request
+    pub fn with_message(mut self, message: ChatMessage) -> Self {
+        self.messages.push(message);
+        self
+    }
+
+    /// Add multiple messages to the request
+    pub fn with_messages(mut self, messages: Vec<ChatMessage>) -> Self {
+        self.messages.extend(messages);
+        self
+    }
+
+    /// Add tools to the request
+    pub fn with_tools(mut self, tools: Vec<Tool>) -> Self {
+        self.tools = Some(tools);
+        self
+    }
+
+    /// Enable streaming
+    pub fn with_streaming(mut self, stream: bool) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Set common parameters
+    pub fn with_common_params(mut self, params: CommonParams) -> Self {
+        self.common_params = params;
+        self
+    }
+
+    /// Set model parameters (alias for common_params)
+    pub fn with_model_params(mut self, params: CommonParams) -> Self {
+        self.common_params = params;
+        self
+    }
+
+    /// Set provider-specific parameters
+    pub fn with_provider_params(mut self, params: ProviderParams) -> Self {
+        self.provider_params = Some(params);
+        self
+    }
+
+    /// Set HTTP configuration
+    pub fn with_http_config(mut self, config: HttpConfig) -> Self {
+        self.http_config = Some(config);
+        self
+    }
+
+    /// Enable web search
+    pub fn with_web_search(mut self, config: WebSearchConfig) -> Self {
+        self.web_search = Some(config);
+        self
+    }
+}
+
+/// Chat request builder
+#[derive(Debug, Clone)]
+pub struct ChatRequestBuilder {
+    messages: Vec<ChatMessage>,
+    tools: Option<Vec<Tool>>,
+    common_params: CommonParams,
+    provider_params: Option<ProviderParams>,
+    http_config: Option<HttpConfig>,
+    web_search: Option<WebSearchConfig>,
+    stream: bool,
+}
+
+impl ChatRequestBuilder {
+    /// Create a new chat request builder
+    pub fn new() -> Self {
+        Self {
+            messages: Vec::new(),
+            tools: None,
+            common_params: CommonParams::default(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: false,
+        }
+    }
+
+    /// Add a message to the request
+    pub fn message(mut self, message: ChatMessage) -> Self {
+        self.messages.push(message);
+        self
+    }
+
+    /// Add multiple messages to the request
+    pub fn messages(mut self, messages: Vec<ChatMessage>) -> Self {
+        self.messages.extend(messages);
+        self
+    }
+
+    /// Add tools to the request
+    pub fn tools(mut self, tools: Vec<Tool>) -> Self {
+        self.tools = Some(tools);
+        self
+    }
+
+    /// Enable streaming
+    pub fn stream(mut self, stream: bool) -> Self {
+        self.stream = stream;
+        self
+    }
+
+    /// Set common parameters
+    pub fn common_params(mut self, params: CommonParams) -> Self {
+        self.common_params = params;
+        self
+    }
+
+    /// Set model parameters (alias for common_params)
+    pub fn model_params(mut self, params: CommonParams) -> Self {
+        self.common_params = params;
+        self
+    }
+
+    /// Set provider-specific parameters
+    pub fn provider_params(mut self, params: ProviderParams) -> Self {
+        self.provider_params = Some(params);
+        self
+    }
+
+    /// Set HTTP configuration
+    pub fn http_config(mut self, config: HttpConfig) -> Self {
+        self.http_config = Some(config);
+        self
+    }
+
+    /// Enable web search
+    pub fn web_search(mut self, config: WebSearchConfig) -> Self {
+        self.web_search = Some(config);
+        self
+    }
+
+    /// Build the chat request
+    pub fn build(self) -> ChatRequest {
+        ChatRequest {
+            messages: self.messages,
+            tools: self.tools,
+            common_params: self.common_params,
+            provider_params: self.provider_params,
+            http_config: self.http_config,
+            web_search: self.web_search,
+            stream: self.stream,
+        }
+    }
+}
+
+impl Default for ChatRequestBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Chat response from the provider
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatResponse {
+    /// Response ID
+    pub id: Option<String>,
+    /// The response content
+    pub content: MessageContent,
+    /// Model used for the response
+    pub model: Option<String>,
+    /// Usage statistics
+    pub usage: Option<Usage>,
+    /// Finish reason
+    pub finish_reason: Option<FinishReason>,
+    /// Tool calls in the response
+    pub tool_calls: Option<Vec<ToolCall>>,
+    /// Thinking content (if available)
+    pub thinking: Option<String>,
+    /// Provider-specific metadata
+    pub metadata: HashMap<String, serde_json::Value>,
+}
+
+impl ChatResponse {
+    /// Create a new chat response
+    pub fn new(content: MessageContent) -> Self {
+        Self {
+            id: None,
+            content,
+            model: None,
+            usage: None,
+            finish_reason: None,
+            tool_calls: None,
+            thinking: None,
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Get the text content of the response
+    pub fn content_text(&self) -> Option<&str> {
+        self.content.text()
+    }
+
+    /// Get all text content of the response
+    pub fn text(&self) -> Option<String> {
+        Some(self.content.all_text())
+    }
+
+    /// Check if the response has tool calls
+    pub fn has_tool_calls(&self) -> bool {
+        self.tool_calls.as_ref().map_or(false, |calls| !calls.is_empty())
+    }
+
+    /// Get tool calls
+    pub fn get_tool_calls(&self) -> Option<&Vec<ToolCall>> {
+        self.tool_calls.as_ref()
+    }
+
+    /// Check if the response has thinking content
+    pub fn has_thinking(&self) -> bool {
+        self.thinking.is_some()
+    }
+
+    /// Get thinking content
+    pub fn get_thinking(&self) -> Option<&str> {
+        self.thinking.as_deref()
+    }
+}
+
+/// Usage statistics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Usage {
+    /// Input tokens used
+    pub prompt_tokens: u32,
+    /// Output tokens generated
+    pub completion_tokens: u32,
+    /// Total tokens used
+    pub total_tokens: u32,
+    /// Cached tokens (if applicable)
+    pub cached_tokens: Option<u32>,
+    /// Reasoning tokens (for models like o1)
+    pub reasoning_tokens: Option<u32>,
+}
+
+impl Usage {
+    /// Create new usage statistics
+    pub fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
+        Self {
+            prompt_tokens,
+            completion_tokens,
+            total_tokens: prompt_tokens + completion_tokens,
+            cached_tokens: None,
+            reasoning_tokens: None,
+        }
+    }
+
+    /// Merge usage statistics
+    pub fn merge(&mut self, other: &Usage) {
+        self.prompt_tokens += other.prompt_tokens;
+        self.completion_tokens += other.completion_tokens;
+        self.total_tokens += other.total_tokens;
+        if let Some(other_cached) = other.cached_tokens {
+            self.cached_tokens = Some(self.cached_tokens.unwrap_or(0) + other_cached);
+        }
+        if let Some(other_reasoning) = other.reasoning_tokens {
+            self.reasoning_tokens = Some(self.reasoning_tokens.unwrap_or(0) + other_reasoning);
+        }
+    }
+}
+
+/// Finish reason for the response
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FinishReason {
+    /// Natural completion
+    Stop,
+    /// Maximum tokens reached
+    Length,
+    /// Tool call requested
+    ToolCalls,
+    /// Content filtered
+    ContentFilter,
+    /// Function call (deprecated, use tool_calls)
+    FunctionCall,
+    /// Model stopped due to stop sequence
+    StopSequence,
+    /// Error occurred
+    Error,
+    /// Other reason
+    Other(String),
+}
+
+// === Streaming Types ===
+
+/// Chat streaming event
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChatStreamEvent {
+    /// Content delta (incremental text)
+    ContentDelta {
+        /// The incremental text content
+        delta: String,
+        /// Index of the choice (for multiple responses)
+        index: Option<usize>,
+    },
+    /// Tool call delta
+    ToolCallDelta {
+        /// Tool call ID
+        id: String,
+        /// Function name (if this is the start of a tool call)
+        function_name: Option<String>,
+        /// Incremental arguments
+        arguments_delta: Option<String>,
+        /// Index of the choice
+        index: Option<usize>,
+    },
+    /// Thinking content delta (for models that support thinking)
+    ThinkingDelta {
+        /// The incremental thinking content
+        delta: String,
+    },
+    /// Reasoning content delta (for models like OpenAI o1)
+    ReasoningDelta {
+        /// The incremental reasoning content
+        delta: String,
+    },
+    /// Usage statistics (usually sent at the end)
+    Usage {
+        /// Token usage information
+        usage: Usage,
+    },
+    /// Usage statistics update (alias for Usage)
+    UsageUpdate {
+        /// Token usage information
+        usage: Usage,
+    },
+    /// Stream start event with metadata
+    StreamStart {
+        /// Response metadata
+        metadata: ResponseMetadata,
+    },
+    /// Stream finished
+    Done {
+        /// Final finish reason
+        finish_reason: Option<FinishReason>,
+        /// Final usage statistics
+        usage: Option<Usage>,
+    },
+    /// Stream end event with final response
+    StreamEnd {
+        /// Final response
+        response: ChatResponse,
+    },
+    /// Error occurred during streaming
+    Error {
+        /// Error message
+        error: String,
+    },
+}
+
+/// Audio streaming event
+#[derive(Debug, Clone)]
+pub enum AudioStreamEvent {
+    /// Audio data chunk
+    AudioDelta {
+        /// Audio data bytes
+        data: Vec<u8>,
+        /// Audio format
+        format: String,
+    },
+    /// Metadata about the audio
+    Metadata {
+        /// Sample rate
+        sample_rate: Option<u32>,
+        /// Duration estimate
+        duration: Option<f32>,
+        /// Additional metadata
+        metadata: HashMap<String, serde_json::Value>,
+    },
+    /// Stream finished
+    Done {
+        /// Total duration
+        duration: Option<f32>,
+        /// Final metadata
+        metadata: HashMap<String, serde_json::Value>,
+    },
+    /// Error occurred during streaming
+    Error {
+        /// Error message
+        error: String,
+    },
+}
+
+/// Completion streaming event (for non-chat completions)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CompletionStreamEvent {
+    /// Text delta
+    TextDelta {
+        /// The incremental text
+        text: String,
+        /// Index of the completion
+        index: Option<usize>,
+    },
+    /// Usage statistics
+    Usage {
+        /// Token usage information
+        usage: Usage,
+    },
+    /// Stream finished
+    Done {
+        /// Final finish reason
+        finish_reason: Option<FinishReason>,
+        /// Final usage statistics
+        usage: Option<Usage>,
+    },
+    /// Error occurred
+    Error {
+        /// Error message
+        error: String,
+    },
+}
+
 /// Web search result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebSearchResult {
@@ -592,249 +1108,7 @@ impl OpenAiBuiltInTool {
     }
 }
 
-/// Chat request
-#[derive(Debug, Clone)]
-pub struct ChatRequest {
-    /// List of messages
-    pub messages: Vec<ChatMessage>,
-    /// Tools available for the model to call
-    pub tools: Option<Vec<Tool>>,
-    /// Common parameters
-    pub common_params: CommonParams,
-    /// Provider-specific parameters
-    pub provider_params: Option<ProviderParams>,
-    /// HTTP configuration
-    pub http_config: Option<HttpConfig>,
-}
 
-impl ChatRequest {
-    /// Creates a request builder
-    pub fn builder() -> ChatRequestBuilder {
-        ChatRequestBuilder::new()
-    }
-}
-
-impl Default for ChatRequest {
-    fn default() -> Self {
-        Self {
-            messages: Vec::new(),
-            tools: None,
-            common_params: CommonParams::default(),
-            provider_params: None,
-            http_config: None,
-        }
-    }
-}
-
-/// Chat request builder
-#[derive(Debug, Clone)]
-pub struct ChatRequestBuilder {
-    messages: Vec<ChatMessage>,
-    tools: Option<Vec<Tool>>,
-    common_params: CommonParams,
-    provider_params: Option<ProviderParams>,
-    http_config: Option<HttpConfig>,
-}
-
-impl ChatRequestBuilder {
-    pub fn new() -> Self {
-        Self {
-            messages: Vec::new(),
-            tools: None,
-            common_params: CommonParams::default(),
-            provider_params: None,
-            http_config: None,
-        }
-    }
-
-    /// Adds a message
-    pub fn message(mut self, message: ChatMessage) -> Self {
-        self.messages.push(message);
-        self
-    }
-
-    /// Adds multiple messages
-    pub fn messages(mut self, messages: Vec<ChatMessage>) -> Self {
-        self.messages.extend(messages);
-        self
-    }
-
-    /// Sets tools
-    pub fn tools(mut self, tools: Vec<Tool>) -> Self {
-        self.tools = Some(tools);
-        self
-    }
-
-    /// Adds a tool
-    pub fn tool(mut self, tool: Tool) -> Self {
-        if self.tools.is_none() {
-            self.tools = Some(Vec::new());
-        }
-        self.tools.as_mut().unwrap().push(tool);
-        self
-    }
-
-    /// Sets common parameters
-    pub fn common_params(mut self, params: CommonParams) -> Self {
-        self.common_params = params;
-        self
-    }
-
-    /// Sets provider parameters
-    pub fn provider_params(mut self, params: ProviderParams) -> Self {
-        self.provider_params = Some(params);
-        self
-    }
-
-    /// Builds the request
-    pub fn build(self) -> ChatRequest {
-        ChatRequest {
-            messages: self.messages,
-            tools: self.tools,
-            common_params: self.common_params,
-            provider_params: self.provider_params,
-            http_config: self.http_config,
-        }
-    }
-}
-
-/// Chat response
-#[derive(Debug, Clone)]
-pub struct ChatResponse {
-    /// Response content
-    pub content: MessageContent,
-    /// Tool calls
-    pub tool_calls: Option<Vec<ToolCall>>,
-    /// Usage statistics
-    pub usage: Option<Usage>,
-    /// Finish reason
-    pub finish_reason: Option<FinishReason>,
-    /// Response metadata
-    pub metadata: ResponseMetadata,
-    /// Provider-specific data
-    pub provider_data: HashMap<String, serde_json::Value>,
-}
-
-impl ChatResponse {
-    /// Gets the text content
-    pub fn text(&self) -> Option<&str> {
-        match &self.content {
-            MessageContent::Text(text) => Some(text),
-            MessageContent::MultiModal(parts) => parts.iter().find_map(|part| {
-                if let ContentPart::Text { text } = part {
-                    Some(text.as_str())
-                } else {
-                    None
-                }
-            }),
-        }
-    }
-
-    /// Gets the text content (alias for compatibility)
-    pub fn content_text(&self) -> Option<&str> {
-        self.text()
-    }
-
-    /// Gets thinking/reasoning content if available
-    pub fn thinking(&self) -> Option<&str> {
-        self.provider_data
-            .get("thinking")
-            .and_then(|v| v.as_str())
-            .or_else(|| self.provider_data.get("reasoning").and_then(|v| v.as_str()))
-    }
-
-    /// Gets all text content
-    pub fn all_text(&self) -> String {
-        match &self.content {
-            MessageContent::Text(text) => text.clone(),
-            MessageContent::MultiModal(parts) => parts
-                .iter()
-                .filter_map(|part| {
-                    if let ContentPart::Text { text } = part {
-                        Some(text.as_str())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>()
-                .join("\n"),
-        }
-    }
-
-    /// Checks if there are any tool calls
-    pub fn has_tool_calls(&self) -> bool {
-        self.tool_calls
-            .as_ref()
-            .map_or(false, |calls| !calls.is_empty())
-    }
-}
-
-/// Finish reason
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum FinishReason {
-    /// Normal completion
-    Stop,
-    /// Reached maximum length
-    Length,
-    /// Tool calls
-    ToolCalls,
-    /// Content filtered
-    ContentFilter,
-    /// Function call (for compatibility)
-    FunctionCall,
-    /// Other reason
-    Other(String),
-}
-
-/// Response metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseMetadata {
-    /// Response ID
-    pub id: Option<String>,
-    /// Model name
-    pub model: Option<String>,
-    /// Creation time
-    pub created: Option<chrono::DateTime<chrono::Utc>>,
-    /// Provider name
-    pub provider: String,
-    /// Request ID
-    pub request_id: Option<String>,
-}
-
-/// Usage statistics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Usage {
-    /// Input tokens
-    pub prompt_tokens: Option<u32>,
-    /// Output tokens
-    pub completion_tokens: Option<u32>,
-    /// Total tokens
-    pub total_tokens: Option<u32>,
-    /// Reasoning tokens (OpenAI o1-specific)
-    pub reasoning_tokens: Option<u32>,
-    /// Cache hit tokens (Anthropic-specific)
-    pub cache_hit_tokens: Option<u32>,
-    /// Cache creation tokens (Anthropic-specific)
-    pub cache_creation_tokens: Option<u32>,
-}
-
-impl Usage {
-    /// Merges usage statistics
-    pub fn merge(&mut self, other: &Usage) {
-        if let Some(other_prompt) = other.prompt_tokens {
-            self.prompt_tokens = Some(self.prompt_tokens.unwrap_or(0) + other_prompt);
-        }
-        if let Some(other_completion) = other.completion_tokens {
-            self.completion_tokens = Some(self.completion_tokens.unwrap_or(0) + other_completion);
-        }
-        if let Some(other_total) = other.total_tokens {
-            self.total_tokens = Some(self.total_tokens.unwrap_or(0) + other_total);
-        }
-        if let Some(other_reasoning) = other.reasoning_tokens {
-            self.reasoning_tokens = Some(self.reasoning_tokens.unwrap_or(0) + other_reasoning);
-        }
-    }
-}
 
 // Audio-related types
 /// Text-to-speech request
@@ -1081,22 +1355,7 @@ use std::pin::Pin;
 /// Audio stream for streaming TTS
 pub type AudioStream = Pin<Box<dyn Stream<Item = Result<AudioStreamEvent, LlmError>> + Send>>;
 
-/// Audio stream events
-#[derive(Debug, Clone)]
-pub enum AudioStreamEvent {
-    /// Audio data chunk
-    AudioData { data: Vec<u8> },
-    /// Stream metadata
-    Metadata {
-        format: String,
-        sample_rate: Option<u32>,
-        duration: Option<f32>,
-    },
-    /// Stream completed
-    Complete,
-    /// Stream error
-    Error { error: String },
-}
+
 
 // Image generation types
 /// Image generation request
@@ -1383,16 +1642,7 @@ pub struct CompletionResponse {
 pub type CompletionStream =
     Pin<Box<dyn Stream<Item = Result<CompletionStreamEvent, LlmError>> + Send>>;
 
-/// Completion stream events
-#[derive(Debug, Clone)]
-pub enum CompletionStreamEvent {
-    /// Text delta
-    TextDelta { delta: String },
-    /// Completion finished
-    Complete { response: CompletionResponse },
-    /// Stream error
-    Error { error: String },
-}
+
 
 // Other placeholder types - to be completed in subsequent implementations
 pub type VisionRequest = ();

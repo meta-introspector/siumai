@@ -166,18 +166,20 @@ impl HuggingFaceProvider {
             prompt_tokens: usage_data
                 .get("prompt_tokens")
                 .and_then(|v| v.as_u64())
-                .map(|v| v as u32),
+                .map(|v| v as u32)
+                .unwrap_or(0),
             completion_tokens: usage_data
                 .get("completion_tokens")
                 .and_then(|v| v.as_u64())
-                .map(|v| v as u32),
+                .map(|v| v as u32)
+                .unwrap_or(0),
             total_tokens: usage_data
                 .get("total_tokens")
                 .and_then(|v| v.as_u64())
-                .map(|v| v as u32),
+                .map(|v| v as u32)
+                .unwrap_or(0),
             reasoning_tokens: None,
-            cache_hit_tokens: None,
-            cache_creation_tokens: None,
+            cached_tokens: None,
         });
 
         let mut response = CustomChatResponse::new(content);

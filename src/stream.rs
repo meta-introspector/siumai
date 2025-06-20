@@ -13,31 +13,8 @@ use crate::types::*;
 /// Chat Stream - Main interface for streaming responses
 pub type ChatStream = Pin<Box<dyn Stream<Item = Result<ChatStreamEvent, LlmError>> + Send>>;
 
-/// Chat Stream Events
-///
-/// Represents different types of events that can occur during streaming
-#[derive(Debug, Clone)]
-pub enum ChatStreamEvent {
-    /// Content delta event - incremental text content
-    ContentDelta { delta: String, index: Option<usize> },
-    /// Tool call delta event - incremental tool call information
-    ToolCallDelta {
-        tool_call: ToolCallDelta,
-        index: Option<usize>,
-    },
-    /// Thinking process delta (DeepSeek/Anthropic specific)
-    ThinkingDelta { delta: String },
-    /// Reasoning process delta (OpenAI o1 specific)
-    ReasoningDelta { delta: String },
-    /// Usage statistics update
-    UsageUpdate { usage: Usage },
-    /// Stream start event with metadata
-    StreamStart { metadata: ResponseMetadata },
-    /// Stream completion event with final response
-    StreamEnd { response: ChatResponse },
-    /// Error event
-    Error { error: LlmError },
-}
+// Re-export ChatStreamEvent from types module to avoid duplication
+pub use crate::types::ChatStreamEvent;
 
 /// Tool Call Delta
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,24 +67,24 @@ impl StreamProcessor {
                     index,
                 }
             }
-            ChatStreamEvent::ToolCallDelta { tool_call, index } => {
-                let id = tool_call.id.clone().unwrap_or_default();
+            ChatStreamEvent::ToolCallDelta { id, function_name, arguments_delta, index } => {
+                let call_id = id.clone();
                 let builder = self
                     .tool_calls
-                    .entry(id.clone())
+                    .entry(call_id.clone())
                     .or_insert_with(ToolCallBuilder::new);
 
-                if let Some(function) = tool_call.function {
-                    if let Some(name) = function.name {
-                        builder.name.push_str(&name);
-                    }
-                    if let Some(args) = function.arguments {
-                        builder.arguments.push_str(&args);
-                    }
+                builder.id = call_id.clone();
+
+                if let Some(name) = function_name {
+                    builder.name.push_str(&name);
+                }
+                if let Some(args) = arguments_delta {
+                    builder.arguments.push_str(&args);
                 }
 
                 ProcessedEvent::ToolCallUpdate {
-                    id,
+                    id: call_id,
                     current_state: builder.clone(),
                     index,
                 }
@@ -126,6 +103,16 @@ impl StreamProcessor {
                     accumulated: self.reasoning_buffer.clone(),
                 }
             }
+            ChatStreamEvent::Usage { usage } => {
+                if let Some(ref mut current) = self.current_usage {
+                    current.merge(&usage);
+                } else {
+                    self.current_usage = Some(usage.clone());
+                }
+                ProcessedEvent::UsageUpdate {
+                    usage: self.current_usage.clone().unwrap(),
+                }
+            }
             ChatStreamEvent::UsageUpdate { usage } => {
                 if let Some(ref mut current) = self.current_usage {
                     current.merge(&usage);
@@ -136,25 +123,48 @@ impl StreamProcessor {
                     usage: self.current_usage.clone().unwrap(),
                 }
             }
-            ChatStreamEvent::StreamStart { metadata } => ProcessedEvent::StreamStart { metadata },
-            ChatStreamEvent::StreamEnd { response } => ProcessedEvent::StreamEnd { response },
-            ChatStreamEvent::Error { error } => ProcessedEvent::Error { error },
+            ChatStreamEvent::StreamStart { metadata } => {
+                ProcessedEvent::StreamStart { metadata }
+            }
+            ChatStreamEvent::StreamEnd { response } => {
+                ProcessedEvent::StreamEnd { response }
+            }
+            ChatStreamEvent::Done { finish_reason, usage } => {
+                if let Some(usage) = usage {
+                    if let Some(ref mut current) = self.current_usage {
+                        current.merge(&usage);
+                    } else {
+                        self.current_usage = Some(usage);
+                    }
+                }
+                ProcessedEvent::StreamEnd {
+                    response: self.build_final_response_with_finish_reason(finish_reason)
+                }
+            }
+            ChatStreamEvent::Error { error } => ProcessedEvent::Error {
+                error: LlmError::InternalError(error)
+            },
         }
     }
 
     /// Build the final response
-    pub fn build_final_response(&self, metadata: ResponseMetadata) -> ChatResponse {
-        let mut provider_data = HashMap::new();
+    pub fn build_final_response(&self) -> ChatResponse {
+        self.build_final_response_with_finish_reason(None)
+    }
+
+    /// Build the final response with finish reason
+    pub fn build_final_response_with_finish_reason(&self, finish_reason: Option<FinishReason>) -> ChatResponse {
+        let mut metadata = HashMap::new();
 
         if !self.thinking_buffer.is_empty() {
-            provider_data.insert(
+            metadata.insert(
                 "thinking".to_string(),
                 serde_json::Value::String(self.thinking_buffer.clone()),
             );
         }
 
         if !self.reasoning_buffer.is_empty() {
-            provider_data.insert(
+            metadata.insert(
                 "reasoning".to_string(),
                 serde_json::Value::String(self.reasoning_buffer.clone()),
             );
@@ -171,13 +181,21 @@ impl StreamProcessor {
             None
         };
 
+        let thinking = if !self.thinking_buffer.is_empty() {
+            Some(self.thinking_buffer.clone())
+        } else {
+            None
+        };
+
         ChatResponse {
+            id: None,
             content: MessageContent::Text(self.buffer.clone()),
-            tool_calls,
+            model: None,
             usage: self.current_usage.clone(),
-            finish_reason: None, // Needs to be obtained from the final event
+            finish_reason,
+            tool_calls,
+            thinking,
             metadata,
-            provider_data,
         }
     }
 }
@@ -269,18 +287,18 @@ pub async fn collect_stream_response(mut stream: ChatStream) -> Result<ChatRespo
     use futures::StreamExt;
 
     let mut processor = StreamProcessor::new();
-    let mut metadata = None;
+    let mut _metadata = None;
 
     while let Some(event) = stream.next().await {
         match event? {
             ChatStreamEvent::StreamStart { metadata: meta } => {
-                metadata = Some(meta);
+                _metadata = Some(meta);
             }
             ChatStreamEvent::StreamEnd { response } => {
                 return Ok(response);
             }
             ChatStreamEvent::Error { error } => {
-                return Err(error);
+                return Err(LlmError::InternalError(error));
             }
             event => {
                 processor.process_event(event);
@@ -288,15 +306,7 @@ pub async fn collect_stream_response(mut stream: ChatStream) -> Result<ChatRespo
         }
     }
 
-    let metadata = metadata.unwrap_or_else(|| ResponseMetadata {
-        id: None,
-        model: None,
-        created: Some(chrono::Utc::now()),
-        provider: "unknown".to_string(),
-        request_id: None,
-    });
-
-    Ok(processor.build_final_response(metadata))
+    Ok(processor.build_final_response())
 }
 
 #[cfg(test)]

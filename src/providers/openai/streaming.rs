@@ -6,8 +6,8 @@ use futures::{Stream, StreamExt};
 use serde::Deserialize;
 
 use crate::error::LlmError;
-use crate::stream::{ChatStream, ChatStreamEvent, FunctionCallDelta, ToolCallDelta};
-use crate::types::{ChatRequest, ResponseMetadata, ToolType, Usage};
+use crate::stream::{ChatStream, ChatStreamEvent};
+use crate::types::{ChatRequest, ResponseMetadata, Usage};
 
 use super::config::OpenAiConfig;
 
@@ -297,16 +297,15 @@ impl OpenAiStreaming {
     fn convert_openai_response(&self, response: OpenAiStreamResponse) -> ChatStreamEvent {
         // Handle usage information (final chunk)
         if let Some(usage) = response.usage {
-            return ChatStreamEvent::UsageUpdate {
+            return ChatStreamEvent::Usage {
                 usage: Usage {
-                    prompt_tokens: Some(usage.prompt_tokens),
-                    completion_tokens: usage.completion_tokens,
-                    total_tokens: usage.total_tokens,
+                    prompt_tokens: usage.prompt_tokens,
+                    completion_tokens: usage.completion_tokens.unwrap_or(0),
+                    total_tokens: usage.total_tokens.unwrap_or(0),
                     reasoning_tokens: usage
                         .completion_tokens_details
                         .and_then(|d| d.reasoning_tokens),
-                    cache_hit_tokens: usage.prompt_tokens_details.and_then(|d| d.cached_tokens),
-                    cache_creation_tokens: None, // Not provided by OpenAI
+                    cached_tokens: usage.prompt_tokens_details.and_then(|d| d.cached_tokens),
                 },
             };
         }
@@ -332,17 +331,9 @@ impl OpenAiStreaming {
             if let Some(tool_calls) = delta.tool_calls {
                 if let Some(tool_call) = tool_calls.into_iter().next() {
                     return ChatStreamEvent::ToolCallDelta {
-                        tool_call: ToolCallDelta {
-                            id: tool_call.id,
-                            r#type: tool_call.r#type.map(|t| match t.as_str() {
-                                "function" => ToolType::Function,
-                                _ => ToolType::Function, // Default fallback
-                            }),
-                            function: tool_call.function.map(|f| FunctionCallDelta {
-                                name: f.name,
-                                arguments: f.arguments,
-                            }),
-                        },
+                        id: tool_call.id.unwrap_or_default(),
+                        function_name: tool_call.function.as_ref().and_then(|f| f.name.clone()),
+                        arguments_delta: tool_call.function.as_ref().and_then(|f| f.arguments.clone()),
                         index: Some(choice.index),
                     };
                 }

@@ -225,12 +225,11 @@ pub fn extract_thinking_content(content_blocks: &[AnthropicContentBlock]) -> Opt
 /// Create Anthropic usage from response
 pub fn create_usage_from_response(usage: Option<AnthropicUsage>) -> Option<Usage> {
     usage.map(|u| Usage {
-        prompt_tokens: Some(u.input_tokens),
-        completion_tokens: Some(u.output_tokens),
-        total_tokens: Some(u.input_tokens + u.output_tokens),
+        prompt_tokens: u.input_tokens,
+        completion_tokens: u.output_tokens,
+        total_tokens: u.input_tokens + u.output_tokens,
         reasoning_tokens: None,
-        cache_hit_tokens: u.cache_read_input_tokens,
-        cache_creation_tokens: u.cache_creation_input_tokens,
+        cached_tokens: u.cache_read_input_tokens,
     })
 }
 

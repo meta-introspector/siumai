@@ -91,6 +91,11 @@ pub mod prelude {
     pub use crate::types::*;
     pub use crate::web_search::*;
     pub use crate::{assistant, llm, provider, system, tool, user};
+    pub use crate::{
+        quick_openai, quick_openai_with_model,
+        quick_anthropic, quick_anthropic_with_model,
+        quick_gemini, quick_gemini_with_model
+    };
 }
 
 /// Global entry point function - creates an LLM builder
@@ -112,6 +117,14 @@ pub mod prelude {
 pub fn llm() -> crate::builder::LlmBuilder {
     crate::builder::llm()
 }
+
+// Re-export convenience functions and builder
+pub use crate::builder::{
+    LlmBuilder,
+    quick_openai, quick_openai_with_model,
+    quick_anthropic, quick_anthropic_with_model,
+    quick_gemini, quick_gemini_with_model
+};
 
 /// Siumai unified interface entry point
 ///
