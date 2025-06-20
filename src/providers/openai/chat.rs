@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::error::LlmError;
-use crate::params::{OpenAiParameterMapper, ParameterMapper, OpenAiParams};
+use crate::params::{OpenAiParameterMapper, OpenAiParams, ParameterMapper};
 use crate::stream::ChatStream;
 use crate::traits::ChatCapability;
 use crate::types::*;
@@ -47,7 +47,10 @@ impl OpenAiChatCapability {
     }
 
     /// Build the chat request body
-    fn build_chat_request_body(&self, request: &ChatRequest) -> Result<serde_json::Value, LlmError> {
+    fn build_chat_request_body(
+        &self,
+        request: &ChatRequest,
+    ) -> Result<serde_json::Value, LlmError> {
         // Map common parameters
         let mut body = self
             .parameter_mapper

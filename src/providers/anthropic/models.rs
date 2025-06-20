@@ -10,7 +10,7 @@ use crate::error::LlmError;
 use crate::traits::ModelListingCapability;
 use crate::types::ModelInfo;
 
-use super::types::{AnthropicModelsResponse, AnthropicModelInfo};
+use super::types::{AnthropicModelInfo, AnthropicModelsResponse};
 use super::utils::{build_headers, map_anthropic_error};
 
 /// Anthropic Models API implementation
@@ -64,24 +64,30 @@ impl AnthropicModels {
             url.push_str(&query_params.join("&"));
         }
 
-        let response = self
-            .http_client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url).headers(headers).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            
+
             // Parse Anthropic error response
             if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_text) {
                 if let Some(error_obj) = error_json.get("error") {
-                    let error_type = error_obj.get("type").and_then(|t| t.as_str()).unwrap_or("unknown");
-                    let error_message = error_obj.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error");
-                    
-                    return Err(map_anthropic_error(status.as_u16(), error_type, error_message, error_json.clone()));
+                    let error_type = error_obj
+                        .get("type")
+                        .and_then(|t| t.as_str())
+                        .unwrap_or("unknown");
+                    let error_message = error_obj
+                        .get("message")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("Unknown error");
+
+                    return Err(map_anthropic_error(
+                        status.as_u16(),
+                        error_type,
+                        error_message,
+                        error_json.clone(),
+                    ));
                 }
             }
 
@@ -101,24 +107,30 @@ impl AnthropicModels {
         let headers = build_headers(&self.api_key, &self.http_config.headers)?;
         let url = format!("{}/v1/models/{}", self.base_url, model_id);
 
-        let response = self
-            .http_client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url).headers(headers).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            
+
             // Parse Anthropic error response
             if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_text) {
                 if let Some(error_obj) = error_json.get("error") {
-                    let error_type = error_obj.get("type").and_then(|t| t.as_str()).unwrap_or("unknown");
-                    let error_message = error_obj.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error");
-                    
-                    return Err(map_anthropic_error(status.as_u16(), error_type, error_message, error_json.clone()));
+                    let error_type = error_obj
+                        .get("type")
+                        .and_then(|t| t.as_str())
+                        .unwrap_or("unknown");
+                    let error_message = error_obj
+                        .get("message")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("Unknown error");
+
+                    return Err(map_anthropic_error(
+                        status.as_u16(),
+                        error_type,
+                        error_message,
+                        error_json.clone(),
+                    ));
                 }
             }
 
@@ -142,8 +154,10 @@ impl ModelListingCapability for AnthropicModels {
 
         // Fetch all models with pagination
         loop {
-            let response = self.list_models_paginated(None, after_id, Some(100)).await?;
-            
+            let response = self
+                .list_models_paginated(None, after_id, Some(100))
+                .await?;
+
             for model in response.data {
                 all_models.push(convert_anthropic_model_to_model_info(model));
             }
@@ -166,7 +180,8 @@ impl ModelListingCapability for AnthropicModels {
 /// Convert Anthropic model info to our ModelInfo structure
 fn convert_anthropic_model_to_model_info(anthropic_model: AnthropicModelInfo) -> ModelInfo {
     // Parse creation date
-    let created = anthropic_model.created_at
+    let created = anthropic_model
+        .created_at
         .parse::<DateTime<Utc>>()
         .map(|dt| dt.timestamp() as u64)
         .ok();
@@ -175,7 +190,7 @@ fn convert_anthropic_model_to_model_info(anthropic_model: AnthropicModelInfo) ->
     let capabilities = determine_model_capabilities(&anthropic_model.id);
 
     // Estimate context window and costs based on model type
-    let (context_window, max_output_tokens, input_cost, output_cost) = 
+    let (context_window, max_output_tokens, input_cost, output_cost) =
         estimate_model_specs(&anthropic_model.id);
 
     ModelInfo {
@@ -202,9 +217,10 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
     }
 
     // All Claude 3+ models support vision (including Claude 4)
-    if model_id.contains("claude-3") ||
-       model_id.contains("claude-sonnet-4") ||
-       model_id.contains("claude-opus-4") {
+    if model_id.contains("claude-3")
+        || model_id.contains("claude-sonnet-4")
+        || model_id.contains("claude-opus-4")
+    {
         capabilities.push("vision".to_string());
         capabilities.push("multimodal".to_string());
     }
@@ -220,21 +236,37 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
 fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64>, Option<f64>) {
     match model_id {
         // Claude 4 models
-        id if id.contains("claude-sonnet-4") => (Some(200000), Some(8192), Some(0.000003), Some(0.000015)),
-        id if id.contains("claude-opus-4") => (Some(200000), Some(8192), Some(0.000015), Some(0.000075)),
-        
+        id if id.contains("claude-sonnet-4") => {
+            (Some(200000), Some(8192), Some(0.000003), Some(0.000015))
+        }
+        id if id.contains("claude-opus-4") => {
+            (Some(200000), Some(8192), Some(0.000015), Some(0.000075))
+        }
+
         // Claude 3.7 models
-        id if id.contains("claude-3-7-sonnet") => (Some(200000), Some(8192), Some(0.000003), Some(0.000015)),
-        
+        id if id.contains("claude-3-7-sonnet") => {
+            (Some(200000), Some(8192), Some(0.000003), Some(0.000015))
+        }
+
         // Claude 3.5 models
-        id if id.contains("claude-3-5-sonnet") => (Some(200000), Some(8192), Some(0.000003), Some(0.000015)),
-        id if id.contains("claude-3-5-haiku") => (Some(200000), Some(8192), Some(0.00000025), Some(0.00000125)),
-        
+        id if id.contains("claude-3-5-sonnet") => {
+            (Some(200000), Some(8192), Some(0.000003), Some(0.000015))
+        }
+        id if id.contains("claude-3-5-haiku") => {
+            (Some(200000), Some(8192), Some(0.00000025), Some(0.00000125))
+        }
+
         // Claude 3 models
-        id if id.contains("claude-3-opus") => (Some(200000), Some(4096), Some(0.000015), Some(0.000075)),
-        id if id.contains("claude-3-sonnet") => (Some(200000), Some(4096), Some(0.000003), Some(0.000015)),
-        id if id.contains("claude-3-haiku") => (Some(200000), Some(4096), Some(0.00000025), Some(0.00000125)),
-        
+        id if id.contains("claude-3-opus") => {
+            (Some(200000), Some(4096), Some(0.000015), Some(0.000075))
+        }
+        id if id.contains("claude-3-sonnet") => {
+            (Some(200000), Some(4096), Some(0.000003), Some(0.000015))
+        }
+        id if id.contains("claude-3-haiku") => {
+            (Some(200000), Some(4096), Some(0.00000025), Some(0.00000125))
+        }
+
         // Default for unknown models
         _ => (Some(200000), Some(4096), None, None),
     }
@@ -254,7 +286,8 @@ mod tests {
 
     #[test]
     fn test_model_specs() {
-        let (context, max_output, input_cost, output_cost) = estimate_model_specs("claude-3-5-sonnet-20241022");
+        let (context, max_output, input_cost, output_cost) =
+            estimate_model_specs("claude-3-5-sonnet-20241022");
         assert_eq!(context, Some(200000));
         assert_eq!(max_output, Some(8192));
         assert!(input_cost.is_some());

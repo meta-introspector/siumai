@@ -33,20 +33,23 @@ mod tests {
     fn test_multimodal_message_creation() {
         // Test creating multimodal messages with images - use user_builder for complex messages
         let multimodal_msg = user_builder!("Analyze this image")
-            .with_image("https://example.com/image.jpg".to_string(), Some("high".to_string()))
+            .with_image(
+                "https://example.com/image.jpg".to_string(),
+                Some("high".to_string()),
+            )
             .build();
-        
+
         match multimodal_msg.content {
             MessageContent::MultiModal(parts) => {
                 assert_eq!(parts.len(), 2);
-                
+
                 // Check text part
                 if let ContentPart::Text { text } = &parts[0] {
                     assert_eq!(text, "Analyze this image");
                 } else {
                     panic!("Expected text part");
                 }
-                
+
                 // Check image part
                 if let ContentPart::Image { image_url, detail } = &parts[1] {
                     assert_eq!(image_url, "https://example.com/image.jpg");
@@ -66,7 +69,7 @@ mod tests {
             system!("You are a helpful assistant"),
             user!("What is the capital of France?"),
         ];
-        
+
         let request = ChatRequest::builder()
             .messages(messages)
             .common_params(CommonParams {
@@ -78,7 +81,7 @@ mod tests {
                 seed: Some(42),
             })
             .build();
-        
+
         assert_eq!(request.messages.len(), 2);
         assert_eq!(request.common_params.model, "gpt-4");
         assert_eq!(request.common_params.temperature, Some(0.7));
@@ -92,17 +95,17 @@ mod tests {
             .with_param("temperature", 0.8)
             .with_param("max_tokens", 2000)
             .with_param("custom_setting", "value");
-        
+
         // Test parameter retrieval
         let temp: Option<f64> = provider_params.get("temperature");
         assert_eq!(temp, Some(0.8));
-        
+
         let tokens: Option<u32> = provider_params.get("max_tokens");
         assert_eq!(tokens, Some(2000));
-        
+
         let custom: Option<String> = provider_params.get("custom_setting");
         assert_eq!(custom, Some("value".to_string()));
-        
+
         // Test non-existent parameter
         let missing: Option<String> = provider_params.get("non_existent");
         assert_eq!(missing, None);
@@ -117,7 +120,7 @@ mod tests {
             .with_tools()
             .with_vision()
             .with_custom_feature("structured_output", true);
-        
+
         assert!(capabilities.supports("chat"));
         assert!(capabilities.supports("streaming"));
         assert!(capabilities.supports("tools"));
@@ -134,15 +137,15 @@ mod tests {
         assert_eq!(api_error.status_code(), Some(404));
         assert!(!api_error.is_retryable());
         assert!(!api_error.is_auth_error());
-        
+
         let auth_error = LlmError::AuthenticationError("Invalid API key".to_string());
         assert!(auth_error.is_auth_error());
         assert!(!auth_error.is_retryable());
-        
+
         let rate_limit_error = LlmError::RateLimitError("Too many requests".to_string());
         assert!(rate_limit_error.is_retryable());
         assert!(rate_limit_error.is_rate_limit_error());
-        
+
         let server_error = LlmError::api_error(500, "Internal server error");
         assert!(server_error.is_retryable());
         assert_eq!(server_error.status_code(), Some(500));
@@ -153,10 +156,15 @@ mod tests {
         // Test HTTP configuration
         let mut http_config = HttpConfig::default();
         http_config.timeout = Some(Duration::from_secs(60));
-        http_config.headers.insert("Custom-Header".to_string(), "value".to_string());
-        
+        http_config
+            .headers
+            .insert("Custom-Header".to_string(), "value".to_string());
+
         assert_eq!(http_config.timeout, Some(Duration::from_secs(60)));
-        assert_eq!(http_config.headers.get("Custom-Header"), Some(&"value".to_string()));
+        assert_eq!(
+            http_config.headers.get("Custom-Header"),
+            Some(&"value".to_string())
+        );
         assert!(http_config.user_agent.is_some());
     }
 
@@ -171,7 +179,7 @@ mod tests {
             cache_hit_tokens: None,
             cache_creation_tokens: None,
         };
-        
+
         let usage2 = Usage {
             prompt_tokens: Some(200),
             completion_tokens: Some(75),
@@ -180,9 +188,9 @@ mod tests {
             cache_hit_tokens: Some(10),
             cache_creation_tokens: Some(5),
         };
-        
+
         usage1.merge(&usage2);
-        
+
         assert_eq!(usage1.prompt_tokens, Some(300));
         assert_eq!(usage1.completion_tokens, Some(125));
         assert_eq!(usage1.total_tokens, Some(425));
@@ -193,31 +201,35 @@ mod tests {
     fn test_stream_processor() {
         // Test stream event processing
         let mut processor = StreamProcessor::new();
-        
+
         // Process content delta
         let content_event = ChatStreamEvent::ContentDelta {
             delta: "Hello".to_string(),
             index: None,
         };
-        
+
         let processed = processor.process_event(content_event);
         match processed {
-            ProcessedEvent::ContentUpdate { delta, accumulated, .. } => {
+            ProcessedEvent::ContentUpdate {
+                delta, accumulated, ..
+            } => {
                 assert_eq!(delta, "Hello");
                 assert_eq!(accumulated, "Hello");
             }
             _ => panic!("Expected ContentUpdate"),
         }
-        
+
         // Process another content delta
         let content_event2 = ChatStreamEvent::ContentDelta {
             delta: " World".to_string(),
             index: None,
         };
-        
+
         let processed2 = processor.process_event(content_event2);
         match processed2 {
-            ProcessedEvent::ContentUpdate { delta, accumulated, .. } => {
+            ProcessedEvent::ContentUpdate {
+                delta, accumulated, ..
+            } => {
                 assert_eq!(delta, " World");
                 assert_eq!(accumulated, "Hello World");
             }
@@ -227,24 +239,27 @@ mod tests {
 
     #[test]
     fn test_provider_info() {
-        use siumai::providers::{get_supported_providers, get_provider_info, is_model_supported};
-        
+        use siumai::providers::{get_provider_info, get_supported_providers, is_model_supported};
+
         // Test getting supported providers
         let providers = get_supported_providers();
         assert!(!providers.is_empty());
-        
+
         // Test OpenAI provider info
         let openai_info = get_provider_info(&ProviderType::OpenAi);
         assert!(openai_info.is_some());
-        
+
         let openai = openai_info.unwrap();
         assert_eq!(openai.name, "OpenAI");
         assert!(openai.capabilities.supports("chat"));
         assert!(openai.capabilities.supports("streaming"));
-        
+
         // Test model support
         assert!(is_model_supported(&ProviderType::OpenAi, "gpt-4"));
-        assert!(is_model_supported(&ProviderType::Anthropic, "claude-3-5-sonnet-20241022"));
+        assert!(is_model_supported(
+            &ProviderType::Anthropic,
+            "claude-3-5-sonnet-20241022"
+        ));
         assert!(!is_model_supported(&ProviderType::OpenAi, "claude-3-opus"));
     }
 
@@ -301,10 +316,8 @@ mod tests {
             seed: Some(42),
         };
 
-        let result = EnhancedParameterValidator::validate_for_provider(
-            &params,
-            &ProviderType::OpenAi,
-        );
+        let result =
+            EnhancedParameterValidator::validate_for_provider(&params, &ProviderType::OpenAi);
 
         assert!(result.is_ok());
         let report = result.unwrap();
@@ -335,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_error_classification() {
-        use siumai::error_handling::{ErrorClassifier, ErrorContext, ErrorCategory};
+        use siumai::error_handling::{ErrorCategory, ErrorClassifier, ErrorContext};
 
         let error = LlmError::ApiError {
             code: 429,
@@ -359,13 +372,14 @@ mod builder_tests {
     fn test_llm_builder_creation() {
         // Test basic builder creation
         let builder = llm();
-        
+
         // Test OpenAI builder
-        let _openai_builder = builder.openai()
+        let _openai_builder = builder
+            .openai()
             .model("gpt-4")
             .temperature(0.7)
             .max_tokens(1000);
-        
+
         // We can't actually build without API key, but we can test the builder pattern
         assert!(true); // Placeholder assertion
     }
@@ -377,15 +391,13 @@ mod builder_tests {
             .timeout(Duration::from_secs(60))
             .build()
             .unwrap();
-        
+
         let builder = llm()
             .with_http_client(custom_client)
             .with_timeout(Duration::from_secs(30));
-        
-        let _openai_builder = builder.openai()
-            .model("gpt-4")
-            .temperature(0.8);
-        
+
+        let _openai_builder = builder.openai().model("gpt-4").temperature(0.8);
+
         assert!(true); // Placeholder assertion
     }
 }

@@ -4,10 +4,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::common::{ParameterConverter, ParameterValidator};
+use super::mapper::{ParameterConstraints, ParameterMapper};
 use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderParams, ProviderType};
-use super::common::{ParameterValidator, ParameterConverter};
-use super::mapper::{ParameterMapper, ParameterConstraints};
 
 /// Gemini Parameter Mapper
 pub struct GeminiParameterMapper;
@@ -50,7 +50,8 @@ impl ParameterMapper for GeminiParameterMapper {
             for (key, value) in &provider.params {
                 // Convert parameter names to Gemini format if needed
                 let gemini_key = ParameterConverter::convert_param_name(key, &ProviderType::Gemini);
-                let gemini_value = ParameterConverter::convert_param_value(value, key, &ProviderType::Gemini);
+                let gemini_value =
+                    ParameterConverter::convert_param_value(value, key, &ProviderType::Gemini);
                 base_obj.insert(gemini_key, gemini_value);
             }
         }
@@ -224,14 +225,22 @@ impl GeminiParamsBuilder {
         self
     }
 
-    pub fn add_safety_setting(mut self, category: SafetyCategory, threshold: SafetyThreshold) -> Self {
+    pub fn add_safety_setting(
+        mut self,
+        category: SafetyCategory,
+        threshold: SafetyThreshold,
+    ) -> Self {
         if self.params.safety_settings.is_none() {
             self.params.safety_settings = Some(Vec::new());
         }
-        self.params.safety_settings.as_mut().unwrap().push(SafetySetting {
-            category,
-            threshold,
-        });
+        self.params
+            .safety_settings
+            .as_mut()
+            .unwrap()
+            .push(SafetySetting {
+                category,
+                threshold,
+            });
         self
     }
 
@@ -315,8 +324,14 @@ mod tests {
         let params = GeminiParamsBuilder::new()
             .top_k(20)
             .candidate_count(2)
-            .add_safety_setting(SafetyCategory::Harassment, SafetyThreshold::BlockMediumAndAbove)
-            .add_safety_setting(SafetyCategory::HateSpeech, SafetyThreshold::BlockHighAndAbove)
+            .add_safety_setting(
+                SafetyCategory::Harassment,
+                SafetyThreshold::BlockMediumAndAbove,
+            )
+            .add_safety_setting(
+                SafetyCategory::HateSpeech,
+                SafetyThreshold::BlockHighAndAbove,
+            )
             .stream(false)
             .build();
 

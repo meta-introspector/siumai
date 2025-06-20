@@ -4,8 +4,8 @@
 //! The siumai interface provides a clean, type-safe way to work with different LLM providers
 //! while maintaining the flexibility to switch between them dynamically.
 
-use siumai::prelude::*;
 use futures_util::stream::StreamExt;
+use siumai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -133,7 +133,7 @@ async fn provider_comparison_example() -> Result<(), Box<dyn std::error::Error>>
 
     for (i, provider) in providers.iter().enumerate() {
         println!("Provider {}: {}", i + 1, provider.provider_name());
-        
+
         let messages = vec![user!(test_message)];
         match provider.chat(messages).await {
             Ok(response) => {
@@ -203,7 +203,10 @@ async fn task_based_selection_example() -> Result<(), Box<dyn std::error::Error>
     println!("For image generation: {}", image_provider.provider_name());
 
     let reasoning_provider = select_provider_for_task("reasoning").await?;
-    println!("For reasoning tasks: {}", reasoning_provider.provider_name());
+    println!(
+        "For reasoning tasks: {}",
+        reasoning_provider.provider_name()
+    );
 
     let fast_provider = select_provider_for_task("fast_inference").await?;
     println!("For fast inference: {}", fast_provider.provider_name());
@@ -264,7 +267,7 @@ async fn fallback_strategy_example() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------");
 
     let message = "Explain quantum computing in simple terms.";
-    
+
     match chat_with_fallback(message).await {
         Ok(response) => {
             println!("✅ Success: {}", truncate_text(&response, 100));
@@ -287,7 +290,7 @@ async fn chat_with_fallback(message: &str) -> Result<String, Box<dyn std::error:
 
     for (provider_name, model) in provider_configs {
         println!("Trying {} with model {}...", provider_name, model);
-        
+
         match provider_name {
             "openai" => {
                 if let Ok(client) = llm()

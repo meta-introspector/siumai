@@ -122,7 +122,8 @@ impl RetryStrategy {
                 // Decorrelated jitter: delay = random(base_delay, delay * 3)
                 let min_delay = self.base_delay.as_millis();
                 let max_delay = (delay.as_millis() * 3).min(self.max_delay.as_millis());
-                let jitter_ms = min_delay + ((max_delay - min_delay) as f64 * rand::random::<f64>()) as u128;
+                let jitter_ms =
+                    min_delay + ((max_delay - min_delay) as f64 * rand::random::<f64>()) as u128;
                 Duration::from_millis(jitter_ms as u64)
             }
         }
@@ -231,14 +232,14 @@ impl RateLimitHandler {
                 // Extract retry-after header if available
                 let retry_after = self.extract_retry_after(message);
                 let delay = retry_after.unwrap_or(self.config.default_delay);
-                
+
                 self.state.last_rate_limit = Some(Instant::now());
                 self.state.consecutive_rate_limits += 1;
-                
+
                 // Apply exponential backoff for consecutive rate limits
                 let backoff_delay = delay * 2_u32.pow(self.state.consecutive_rate_limits.min(5));
                 let final_delay = backoff_delay.min(self.config.max_delay);
-                
+
                 sleep(final_delay).await;
                 Ok(())
             }
@@ -256,7 +257,7 @@ impl RateLimitHandler {
                 }
             }
         }
-        
+
         // Try to parse "Retry-After: X" patterns
         if let Some(seconds_str) = message.split("Retry-After: ").nth(1) {
             if let Some(seconds_str) = seconds_str.split('\n').next() {
@@ -265,7 +266,7 @@ impl RateLimitHandler {
                 }
             }
         }
-        
+
         None
     }
 
@@ -335,7 +336,7 @@ impl RetryExecutor {
         Fut: std::future::Future<Output = Result<T, LlmError>>,
     {
         let mut last_error = None;
-        
+
         for attempt in 0..self.strategy.max_attempts {
             match operation().await {
                 Ok(result) => {
@@ -347,19 +348,19 @@ impl RetryExecutor {
                 }
                 Err(error) => {
                     last_error = Some(error.clone());
-                    
+
                     // Check if error is retryable
                     if !self.strategy.is_retryable(&error) {
                         return Err(error);
                     }
-                    
+
                     // Handle rate limits
                     if let Some(ref mut handler) = self.rate_limit_handler {
                         if let Err(rate_limit_error) = handler.handle_rate_limit(&error).await {
                             return Err(rate_limit_error);
                         }
                     }
-                    
+
                     // Don't delay after the last attempt
                     if attempt < self.strategy.max_attempts - 1 {
                         let delay = self.strategy.calculate_delay(attempt);
@@ -368,11 +369,10 @@ impl RetryExecutor {
                 }
             }
         }
-        
+
         // Return the last error if all attempts failed
-        Err(last_error.unwrap_or_else(|| {
-            LlmError::InternalError("All retry attempts failed".to_string())
-        }))
+        Err(last_error
+            .unwrap_or_else(|| LlmError::InternalError("All retry attempts failed".to_string())))
     }
 }
 
@@ -487,12 +487,15 @@ impl FailoverManager {
         let mut available_providers: Vec<_> = providers
             .iter()
             .filter_map(|name| {
-                let health = self.provider_health
+                let health = self
+                    .provider_health
                     .entry(name.clone())
                     .or_insert_with(|| ProviderHealth::new(name.clone()));
 
                 if health.should_retry(&self.config) {
-                    let priority = self.config.provider_priorities
+                    let priority = self
+                        .config
+                        .provider_priorities
                         .get(name)
                         .copied()
                         .unwrap_or(0);
@@ -514,7 +517,8 @@ impl FailoverManager {
 
     /// Record a provider failure
     pub fn record_failure(&mut self, provider: &str) {
-        let health = self.provider_health
+        let health = self
+            .provider_health
             .entry(provider.to_string())
             .or_insert_with(|| ProviderHealth::new(provider.to_string()));
 
@@ -523,7 +527,8 @@ impl FailoverManager {
 
     /// Record a provider success
     pub fn record_success(&mut self, provider: &str) {
-        let health = self.provider_health
+        let health = self
+            .provider_health
             .entry(provider.to_string())
             .or_insert_with(|| ProviderHealth::new(provider.to_string()));
 
@@ -610,8 +615,12 @@ mod tests {
     #[test]
     fn test_failover_manager() {
         let mut config = FailoverConfig::default();
-        config.provider_priorities.insert("provider1".to_string(), 10);
-        config.provider_priorities.insert("provider2".to_string(), 5);
+        config
+            .provider_priorities
+            .insert("provider1".to_string(), 10);
+        config
+            .provider_priorities
+            .insert("provider2".to_string(), 5);
 
         let mut manager = FailoverManager::new(config);
         let providers = vec!["provider1".to_string(), "provider2".to_string()];

@@ -11,14 +11,14 @@ use crate::types::*;
 use super::{OpenAiClient, OpenAiConfig};
 
 /// OpenAI-specific builder for configuring OpenAI clients.
-/// 
+///
 /// This builder provides OpenAI-specific configuration options while
 /// inheriting common HTTP and timeout settings from the base LlmBuilder.
-/// 
+///
 /// # Example
 /// ```rust,no_run
 /// use siumai::llm;
-/// 
+///
 /// let client = llm()
 ///     .openai()
 ///     .api_key("your-api-key")
@@ -52,7 +52,7 @@ pub struct OpenAiBuilder {
 
 impl OpenAiBuilder {
     /// Create a new OpenAI builder from the base LLM builder.
-    /// 
+    ///
     /// # Arguments
     /// * `base` - The base LLM builder with HTTP configuration
     pub fn new(base: LlmBuilder) -> Self {
@@ -72,10 +72,10 @@ impl OpenAiBuilder {
     // === Authentication and Connection ===
 
     /// Set the OpenAI API key.
-    /// 
+    ///
     /// If not provided, the builder will attempt to read from the
     /// `OPENAI_API_KEY` environment variable.
-    /// 
+    ///
     /// # Arguments
     /// * `key` - The OpenAI API key
     pub fn api_key<S: Into<String>>(mut self, key: S) -> Self {
@@ -84,9 +84,9 @@ impl OpenAiBuilder {
     }
 
     /// Set a custom base URL for the OpenAI API.
-    /// 
+    ///
     /// This is useful for using OpenAI-compatible APIs or proxies.
-    /// 
+    ///
     /// # Arguments
     /// * `url` - The base URL (e.g., "https://api.openai.com/v1")
     pub fn base_url<S: Into<String>>(mut self, url: S) -> Self {
@@ -95,7 +95,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the OpenAI organization ID.
-    /// 
+    ///
     /// # Arguments
     /// * `org` - The organization ID
     pub fn organization<S: Into<String>>(mut self, org: S) -> Self {
@@ -104,7 +104,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the OpenAI project ID.
-    /// 
+    ///
     /// # Arguments
     /// * `project` - The project ID
     pub fn project<S: Into<String>>(mut self, project: S) -> Self {
@@ -115,7 +115,7 @@ impl OpenAiBuilder {
     // === Model and Common Parameters ===
 
     /// Set the model to use.
-    /// 
+    ///
     /// # Arguments
     /// * `model` - The model name (e.g., "gpt-4", "gpt-3.5-turbo")
     pub fn model<S: Into<String>>(mut self, model: S) -> Self {
@@ -126,7 +126,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the temperature for randomness in responses.
-    /// 
+    ///
     /// # Arguments
     /// * `temp` - Temperature value (0.0 to 2.0)
     pub fn temperature(mut self, temp: f32) -> Self {
@@ -135,7 +135,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the maximum number of tokens to generate.
-    /// 
+    ///
     /// # Arguments
     /// * `tokens` - Maximum number of tokens
     pub fn max_tokens(mut self, tokens: u32) -> Self {
@@ -144,7 +144,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the top_p parameter for nucleus sampling.
-    /// 
+    ///
     /// # Arguments
     /// * `top_p` - Top-p value (0.0 to 1.0)
     pub fn top_p(mut self, top_p: f32) -> Self {
@@ -153,7 +153,7 @@ impl OpenAiBuilder {
     }
 
     /// Set stop sequences that will halt generation.
-    /// 
+    ///
     /// # Arguments
     /// * `sequences` - List of stop sequences
     pub fn stop_sequences(mut self, sequences: Vec<String>) -> Self {
@@ -162,7 +162,7 @@ impl OpenAiBuilder {
     }
 
     /// Set a random seed for reproducible outputs.
-    /// 
+    ///
     /// # Arguments
     /// * `seed` - Random seed value
     pub fn seed(mut self, seed: u64) -> Self {
@@ -173,7 +173,7 @@ impl OpenAiBuilder {
     // === OpenAI-Specific Parameters ===
 
     /// Set the response format.
-    /// 
+    ///
     /// # Arguments
     /// * `format` - The response format (text, json_object, etc.)
     pub fn response_format(mut self, format: ResponseFormat) -> Self {
@@ -182,7 +182,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the tool choice strategy.
-    /// 
+    ///
     /// # Arguments
     /// * `choice` - The tool choice strategy
     pub fn tool_choice(mut self, choice: ToolChoice) -> Self {
@@ -191,7 +191,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the frequency penalty.
-    /// 
+    ///
     /// # Arguments
     /// * `penalty` - Frequency penalty (-2.0 to 2.0)
     pub fn frequency_penalty(mut self, penalty: f32) -> Self {
@@ -200,7 +200,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the presence penalty.
-    /// 
+    ///
     /// # Arguments
     /// * `penalty` - Presence penalty (-2.0 to 2.0)
     pub fn presence_penalty(mut self, penalty: f32) -> Self {
@@ -209,7 +209,7 @@ impl OpenAiBuilder {
     }
 
     /// Set the user ID for tracking purposes.
-    /// 
+    ///
     /// # Arguments
     /// * `user` - User identifier
     pub fn user<S: Into<String>>(mut self, user: S) -> Self {
@@ -218,7 +218,7 @@ impl OpenAiBuilder {
     }
 
     /// Enable or disable parallel tool calls.
-    /// 
+    ///
     /// # Arguments
     /// * `enabled` - Whether to enable parallel tool calls
     pub fn parallel_tool_calls(mut self, enabled: bool) -> Self {
@@ -229,7 +229,7 @@ impl OpenAiBuilder {
     // === HTTP Configuration ===
 
     /// Set HTTP configuration options.
-    /// 
+    ///
     /// # Arguments
     /// * `config` - HTTP configuration
     pub fn with_http_config(mut self, config: HttpConfig) -> Self {
@@ -240,10 +240,10 @@ impl OpenAiBuilder {
     // === Build Method ===
 
     /// Build the OpenAI client with the configured settings.
-    /// 
+    ///
     /// # Returns
     /// A configured OpenAI client ready for use
-    /// 
+    ///
     /// # Errors
     /// Returns an error if:
     /// - API key is not provided and not found in environment
@@ -255,7 +255,8 @@ impl OpenAiBuilder {
             .api_key
             .or_else(|| std::env::var("OPENAI_API_KEY").ok())
             .ok_or(LlmError::MissingApiKey(
-                "OpenAI API key not provided and OPENAI_API_KEY environment variable not set".to_string(),
+                "OpenAI API key not provided and OPENAI_API_KEY environment variable not set"
+                    .to_string(),
             ))?;
 
         // Set default base URL if not provided

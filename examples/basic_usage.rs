@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Example 1: Basic Message Creation
-/// 
+///
 /// Demonstrates how to create different types of messages using convenience macros
 fn basic_message_creation() {
     println!("📝 Example 1: Basic Message Creation");
@@ -62,7 +62,7 @@ fn basic_message_creation() {
 }
 
 /// Example 2: Multimodal Messages
-/// 
+///
 /// Shows how to create messages with multiple content types (text + images)
 fn multimodal_message_example() {
     println!("🖼️  Example 2: Multimodal Messages");
@@ -71,7 +71,10 @@ fn multimodal_message_example() {
     // Create a multimodal message with text and image
     // For complex messages with additional parameters, use the builder pattern
     let multimodal_msg = ChatMessage::user("What do you see in this image?")
-        .with_image("https://example.com/rust-logo.png".to_string(), Some("high".to_string()))
+        .with_image(
+            "https://example.com/rust-logo.png".to_string(),
+            Some("high".to_string()),
+        )
         .build();
 
     match &multimodal_msg.content {
@@ -81,10 +84,20 @@ fn multimodal_message_example() {
                 match part {
                     ContentPart::Text { text } => println!("  Part {}: Text - {}", i + 1, text),
                     ContentPart::Image { image_url, detail } => {
-                        println!("  Part {}: Image - {} (detail: {:?})", i + 1, image_url, detail);
+                        println!(
+                            "  Part {}: Image - {} (detail: {:?})",
+                            i + 1,
+                            image_url,
+                            detail
+                        );
                     }
                     ContentPart::Audio { audio_url, format } => {
-                        println!("  Part {}: Audio - {} (format: {})", i + 1, audio_url, format);
+                        println!(
+                            "  Part {}: Audio - {} (format: {})",
+                            i + 1,
+                            audio_url,
+                            format
+                        );
                     }
                 }
             }
@@ -96,7 +109,7 @@ fn multimodal_message_example() {
 }
 
 /// Example 3: Chat Request Building
-/// 
+///
 /// Demonstrates building complete chat requests with parameters
 fn chat_request_building() {
     println!("🔧 Example 3: Chat Request Building");
@@ -130,7 +143,10 @@ fn chat_request_building() {
         .provider_params(provider_params)
         .build();
 
-    println!("Chat request created with {} messages", request.messages.len());
+    println!(
+        "Chat request created with {} messages",
+        request.messages.len()
+    );
     println!("Model: {}", request.common_params.model);
     println!("Temperature: {:?}", request.common_params.temperature);
     println!("Max tokens: {:?}", request.common_params.max_tokens);
@@ -139,7 +155,7 @@ fn chat_request_building() {
 }
 
 /// Example 4: Provider Configuration
-/// 
+///
 /// Shows how to work with different LLM providers and their capabilities
 fn provider_configuration_example() {
     println!("🏢 Example 4: Provider Configuration");
@@ -152,7 +168,8 @@ fn provider_configuration_example() {
     for provider in &providers {
         println!("  📋 {}: {}", provider.name, provider.description);
         println!("     Default URL: {}", provider.default_base_url);
-        println!("     Capabilities: Chat={}, Streaming={}, Tools={}, Vision={}",
+        println!(
+            "     Capabilities: Chat={}, Streaming={}, Tools={}, Vision={}",
             provider.capabilities.chat,
             provider.capabilities.streaming,
             provider.capabilities.tools,
@@ -164,16 +181,22 @@ fn provider_configuration_example() {
 
     // Check model support
     let is_gpt4_supported = siumai::providers::is_model_supported(&ProviderType::OpenAi, "gpt-4");
-    let is_claude_supported = siumai::providers::is_model_supported(&ProviderType::Anthropic, "claude-3-5-sonnet-20241022");
+    let is_claude_supported = siumai::providers::is_model_supported(
+        &ProviderType::Anthropic,
+        "claude-3-5-sonnet-20241022",
+    );
 
     println!("GPT-4 supported by OpenAI: {}", is_gpt4_supported);
-    println!("Claude 3.5 Sonnet supported by Anthropic: {}", is_claude_supported);
+    println!(
+        "Claude 3.5 Sonnet supported by Anthropic: {}",
+        is_claude_supported
+    );
 
     println!();
 }
 
 /// Example 5: Error Handling
-/// 
+///
 /// Demonstrates different types of errors and their properties
 fn error_handling_example() {
     println!("⚠️  Example 5: Error Handling");
@@ -201,13 +224,13 @@ fn error_handling_example() {
 }
 
 /// Example 6: Parameter Mapping
-/// 
+///
 /// Shows how parameters are mapped between common format and provider-specific format
 fn parameter_mapping_example() {
     println!("🔄 Example 6: Parameter Mapping");
     println!("-------------------------------");
 
-    use siumai::params::{OpenAiParameterMapper, AnthropicParameterMapper, ParameterMapper};
+    use siumai::params::{AnthropicParameterMapper, OpenAiParameterMapper, ParameterMapper};
 
     // Common parameters
     let common_params = CommonParams {
@@ -222,18 +245,24 @@ fn parameter_mapping_example() {
     // Map to OpenAI format
     let openai_mapper = OpenAiParameterMapper;
     let openai_params = openai_mapper.map_common_params(&common_params);
-    println!("OpenAI format: {}", serde_json::to_string_pretty(&openai_params).unwrap());
+    println!(
+        "OpenAI format: {}",
+        serde_json::to_string_pretty(&openai_params).unwrap()
+    );
 
     // Map to Anthropic format
     let anthropic_mapper = AnthropicParameterMapper;
     let anthropic_params = anthropic_mapper.map_common_params(&common_params);
-    println!("Anthropic format: {}", serde_json::to_string_pretty(&anthropic_params).unwrap());
+    println!(
+        "Anthropic format: {}",
+        serde_json::to_string_pretty(&anthropic_params).unwrap()
+    );
 
     println!();
 }
 
 /// Example 7: Stream Processing (Conceptual)
-/// 
+///
 /// Demonstrates how stream processing would work (without actual streaming)
 fn stream_processing_example() {
     println!("🌊 Example 7: Stream Processing (Conceptual)");
@@ -278,11 +307,22 @@ fn stream_processing_example() {
     for (i, event) in events.into_iter().enumerate() {
         let processed = processor.process_event(event);
         match processed {
-            ProcessedEvent::ContentUpdate { delta, accumulated, .. } => {
-                println!("  Event {}: Content delta '{}' -> accumulated '{}'", i + 1, delta, accumulated);
+            ProcessedEvent::ContentUpdate {
+                delta, accumulated, ..
+            } => {
+                println!(
+                    "  Event {}: Content delta '{}' -> accumulated '{}'",
+                    i + 1,
+                    delta,
+                    accumulated
+                );
             }
             ProcessedEvent::UsageUpdate { usage } => {
-                println!("  Event {}: Usage update - {} total tokens", i + 1, usage.total_tokens.unwrap_or(0));
+                println!(
+                    "  Event {}: Usage update - {} total tokens",
+                    i + 1,
+                    usage.total_tokens.unwrap_or(0)
+                );
             }
             _ => {
                 println!("  Event {}: Other event type", i + 1);

@@ -34,13 +34,15 @@ impl ProviderFeatures {
 
     /// Enable a simple feature
     pub fn enable_feature<S: Into<String>>(mut self, name: S) -> Self {
-        self.features.insert(name.into(), FeatureConfig::Boolean(true));
+        self.features
+            .insert(name.into(), FeatureConfig::Boolean(true));
         self
     }
 
     /// Disable a feature
     pub fn disable_feature<S: Into<String>>(mut self, name: S) -> Self {
-        self.features.insert(name.into(), FeatureConfig::Boolean(false));
+        self.features
+            .insert(name.into(), FeatureConfig::Boolean(false));
         self
     }
 
@@ -53,11 +55,10 @@ impl ProviderFeatures {
     pub fn is_feature_enabled(&self, name: &str) -> bool {
         match self.get_feature(name) {
             Some(FeatureConfig::Boolean(enabled)) => *enabled,
-            Some(FeatureConfig::Object(obj)) => {
-                obj.get("enabled")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false)
-            }
+            Some(FeatureConfig::Object(obj)) => obj
+                .get("enabled")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
             _ => false,
         }
     }
@@ -151,7 +152,7 @@ impl ProviderFeatureRegistry {
     ) {
         let provider_key = provider.into();
         let feature_name = name.into();
-        
+
         self.features
             .entry(provider_key)
             .or_insert_with(HashMap::new)
@@ -166,7 +167,10 @@ impl ProviderFeatureRegistry {
     }
 
     /// Get all features for a provider
-    pub fn get_provider_features(&self, provider: &str) -> Option<&HashMap<String, FeatureDefinition>> {
+    pub fn get_provider_features(
+        &self,
+        provider: &str,
+    ) -> Option<&HashMap<String, FeatureDefinition>> {
         self.features.get(provider)
     }
 
@@ -351,8 +355,16 @@ mod tests {
         assert!(!features.is_feature_enabled("nonexistent"));
 
         let params = features.to_request_params();
-        assert_eq!(params.get("structured_output"), Some(&serde_json::Value::Bool(true)));
-        assert_eq!(params.get("temperature"), Some(&serde_json::Value::Number(serde_json::Number::from_f64(0.7).unwrap())));
+        assert_eq!(
+            params.get("structured_output"),
+            Some(&serde_json::Value::Bool(true))
+        );
+        assert_eq!(
+            params.get("temperature"),
+            Some(&serde_json::Value::Number(
+                serde_json::Number::from_f64(0.7).unwrap()
+            ))
+        );
     }
 
     #[test]
@@ -374,14 +386,26 @@ mod tests {
 
         // Valid configuration
         let config = FeatureConfig::boolean(true);
-        assert!(registry.validate_feature_config("openai", "web_search", &config).is_ok());
+        assert!(
+            registry
+                .validate_feature_config("openai", "web_search", &config)
+                .is_ok()
+        );
 
         // Invalid configuration type
         let config = FeatureConfig::string("invalid");
-        assert!(registry.validate_feature_config("openai", "web_search", &config).is_err());
+        assert!(
+            registry
+                .validate_feature_config("openai", "web_search", &config)
+                .is_err()
+        );
 
         // Unknown feature
         let config = FeatureConfig::boolean(true);
-        assert!(registry.validate_feature_config("openai", "unknown_feature", &config).is_err());
+        assert!(
+            registry
+                .validate_feature_config("openai", "unknown_feature", &config)
+                .is_err()
+        );
     }
 }

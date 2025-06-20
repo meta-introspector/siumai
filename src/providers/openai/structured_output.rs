@@ -146,7 +146,11 @@ impl ResponseFormat {
                     "strict": strict
                 }
             }),
-            Self::JsonSchema { name, schema, strict } => serde_json::json!({
+            Self::JsonSchema {
+                name,
+                schema,
+                strict,
+            } => serde_json::json!({
                 "type": "json_schema",
                 "json_schema": {
                     "name": name,
@@ -177,7 +181,9 @@ impl StructuredOutputValidator {
                         return Self::validate_json_string(text, schema);
                     }
                 }
-                return Err(LlmError::ParseError("No text content found in multimodal response".to_string()));
+                return Err(LlmError::ParseError(
+                    "No text content found in multimodal response".to_string(),
+                ));
             }
         };
 
@@ -211,16 +217,17 @@ impl StructuredOutputValidator {
                     if !value.is_object() {
                         return Err(LlmError::ParseError("Expected object type".to_string()));
                     }
-                    
+
                     // Check required properties
                     if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
                         let obj = value.as_object().unwrap();
                         for req_prop in required {
                             if let Some(prop_name) = req_prop.as_str() {
                                 if !obj.contains_key(prop_name) {
-                                    return Err(LlmError::ParseError(
-                                        format!("Missing required property: {}", prop_name)
-                                    ));
+                                    return Err(LlmError::ParseError(format!(
+                                        "Missing required property: {}",
+                                        prop_name
+                                    )));
                                 }
                             }
                         }
@@ -332,7 +339,10 @@ pub mod patterns {
     /// Create a classification response schema
     pub fn classification_schema(categories: Vec<String>) -> serde_json::Value {
         let mut properties = HashMap::new();
-        properties.insert("category".to_string(), SchemaBuilder::string_enum(categories));
+        properties.insert(
+            "category".to_string(),
+            SchemaBuilder::string_enum(categories),
+        );
         properties.insert("confidence".to_string(), SchemaBuilder::number());
         properties.insert("reasoning".to_string(), SchemaBuilder::string());
 
@@ -351,7 +361,10 @@ pub mod patterns {
     pub fn summary_schema() -> serde_json::Value {
         let mut properties = HashMap::new();
         properties.insert("summary".to_string(), SchemaBuilder::string());
-        properties.insert("key_points".to_string(), SchemaBuilder::array(SchemaBuilder::string()));
+        properties.insert(
+            "key_points".to_string(),
+            SchemaBuilder::array(SchemaBuilder::string()),
+        );
         properties.insert("word_count".to_string(), SchemaBuilder::integer());
 
         SchemaBuilder::object_with_required(
@@ -365,12 +378,12 @@ pub mod patterns {
         let mut properties = HashMap::new();
         properties.insert("answer".to_string(), SchemaBuilder::string());
         properties.insert("confidence".to_string(), SchemaBuilder::number());
-        properties.insert("sources".to_string(), SchemaBuilder::array(SchemaBuilder::string()));
+        properties.insert(
+            "sources".to_string(),
+            SchemaBuilder::array(SchemaBuilder::string()),
+        );
 
-        SchemaBuilder::object_with_required(
-            properties,
-            vec!["answer".to_string()],
-        )
+        SchemaBuilder::object_with_required(properties, vec!["answer".to_string()])
     }
 }
 
@@ -422,23 +435,34 @@ mod tests {
         properties.insert("name".to_string(), SchemaBuilder::string());
         properties.insert("age".to_string(), SchemaBuilder::integer());
 
-        let schema = SchemaBuilder::object_with_required(
-            properties,
-            vec!["name".to_string()],
-        );
+        let schema = SchemaBuilder::object_with_required(properties, vec!["name".to_string()]);
 
         assert_eq!(schema["type"], "object");
         assert!(schema["properties"]["name"].is_object());
-        assert!(schema["required"].as_array().unwrap().contains(&serde_json::Value::String("name".to_string())));
+        assert!(
+            schema["required"]
+                .as_array()
+                .unwrap()
+                .contains(&serde_json::Value::String("name".to_string()))
+        );
     }
 
     #[test]
     fn test_classification_pattern() {
-        let categories = vec!["positive".to_string(), "negative".to_string(), "neutral".to_string()];
+        let categories = vec![
+            "positive".to_string(),
+            "negative".to_string(),
+            "neutral".to_string(),
+        ];
         let schema = patterns::classification_schema(categories);
 
         assert_eq!(schema["type"], "object");
         assert!(schema["properties"]["category"]["enum"].is_array());
-        assert!(schema["required"].as_array().unwrap().contains(&serde_json::Value::String("category".to_string())));
+        assert!(
+            schema["required"]
+                .as_array()
+                .unwrap()
+                .contains(&serde_json::Value::String("category".to_string()))
+        );
     }
 }

@@ -60,15 +60,15 @@ struct OpenAiEmbeddingUsage {
 }
 
 /// OpenAI embeddings capability implementation.
-/// 
+///
 /// This struct provides the OpenAI-specific implementation of text embeddings
 /// using the OpenAI Embeddings API.
-/// 
+///
 /// # Supported Models
 /// - text-embedding-3-small (1536 dimensions)
 /// - text-embedding-3-large (3072 dimensions, configurable)
 /// - text-embedding-ada-002 (1536 dimensions, legacy)
-/// 
+///
 /// # API Reference
 /// https://platform.openai.com/docs/api-reference/embeddings
 #[derive(Debug, Clone)]
@@ -81,7 +81,7 @@ pub struct OpenAiEmbeddings {
 
 impl OpenAiEmbeddings {
     /// Create a new OpenAI embeddings instance.
-    /// 
+    ///
     /// # Arguments
     /// * `config` - OpenAI configuration
     /// * `http_client` - HTTP client for making requests
@@ -98,9 +98,12 @@ impl OpenAiEmbeddings {
     }
 
     /// Make an embeddings API request.
-    async fn make_request(&self, request: OpenAiEmbeddingRequest) -> Result<OpenAiEmbeddingResponse, LlmError> {
+    async fn make_request(
+        &self,
+        request: OpenAiEmbeddingRequest,
+    ) -> Result<OpenAiEmbeddingResponse, LlmError> {
         let url = format!("{}/embeddings", self.config.base_url);
-        
+
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
@@ -145,7 +148,7 @@ impl OpenAiEmbeddings {
         // Sort embeddings by index to maintain order
         let mut embeddings_with_index: Vec<_> = openai_response.data.into_iter().collect();
         embeddings_with_index.sort_by_key(|obj| obj.index);
-        
+
         let embeddings: Vec<Vec<f32>> = embeddings_with_index
             .into_iter()
             .map(|obj| obj.embedding)
@@ -232,7 +235,7 @@ mod tests {
         let config = OpenAiConfig::new("test-key");
         let client = reqwest::Client::new();
         let embeddings = OpenAiEmbeddings::new(config, client);
-        
+
         assert_eq!(embeddings.embedding_dimension(), 1536);
         assert_eq!(embeddings.max_tokens_per_embedding(), 8192);
     }
@@ -242,7 +245,7 @@ mod tests {
         let config = OpenAiConfig::new("test-key");
         let client = reqwest::Client::new();
         let embeddings = OpenAiEmbeddings::new(config, client);
-        
+
         let models = embeddings.supported_embedding_models();
         assert!(models.contains(&"text-embedding-3-small".to_string()));
         assert!(models.contains(&"text-embedding-3-large".to_string()));

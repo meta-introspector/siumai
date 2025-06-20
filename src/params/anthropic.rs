@@ -5,10 +5,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use super::common::{ParameterMapper as CommonMapper, ParameterValidator};
+use super::mapper::{ParameterConstraints, ParameterMapper};
 use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderParams, ProviderType};
-use super::common::{ParameterValidator, ParameterMapper as CommonMapper};
-use super::mapper::{ParameterMapper, ParameterConstraints};
 
 /// Anthropic Parameter Mapper
 pub struct AnthropicParameterMapper;
@@ -302,7 +302,10 @@ mod tests {
 
         assert!(params.cache_control.is_some());
         assert_eq!(params.thinking_budget, Some(30000));
-        assert_eq!(params.system, Some("You are a helpful assistant".to_string()));
+        assert_eq!(
+            params.system,
+            Some("You are a helpful assistant".to_string())
+        );
         assert!(params.metadata.is_some());
         assert_eq!(params.metadata.as_ref().unwrap().len(), 2);
         assert_eq!(params.stream, Some(false));

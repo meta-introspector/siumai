@@ -99,7 +99,11 @@ impl ParameterMapperFactory {
     pub fn has_mapper(provider_type: &ProviderType) -> bool {
         matches!(
             provider_type,
-            ProviderType::OpenAi | ProviderType::Anthropic | ProviderType::Gemini | ProviderType::XAI | ProviderType::Custom(_)
+            ProviderType::OpenAi
+                | ProviderType::Anthropic
+                | ProviderType::Gemini
+                | ProviderType::XAI
+                | ProviderType::Custom(_)
         )
     }
 }
@@ -115,15 +119,15 @@ impl ParameterMappingUtils {
         provider_type: &ProviderType,
     ) -> Result<serde_json::Value, LlmError> {
         let mapper = ParameterMapperFactory::create_mapper(provider_type);
-        
+
         let mut result = mapper.map_common_params(common_params);
-        
+
         if let Some(provider_params) = provider_params {
             result = mapper.merge_provider_params(result, provider_params);
         }
-        
+
         mapper.validate_params(&result)?;
-        
+
         Ok(result)
     }
 
@@ -173,7 +177,9 @@ mod tests {
         assert!(ParameterMapperFactory::has_mapper(&ProviderType::OpenAi));
         assert!(ParameterMapperFactory::has_mapper(&ProviderType::Anthropic));
         assert!(ParameterMapperFactory::has_mapper(&ProviderType::Gemini));
-        assert!(ParameterMapperFactory::has_mapper(&ProviderType::Custom("test".to_string())));
+        assert!(ParameterMapperFactory::has_mapper(&ProviderType::Custom(
+            "test".to_string()
+        )));
     }
 
     #[test]

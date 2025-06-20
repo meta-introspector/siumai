@@ -6,12 +6,12 @@
 //! - 语音转文本 (Speech-to-Text)
 //! - 图像生成 (Image Generation)
 
-use std::env;
 use siumai::{
-    providers::openai::{OpenAiConfig, OpenAiEmbeddings, OpenAiAudio, OpenAiImages},
-    traits::{EmbeddingCapability, AudioCapability, ImageGenerationCapability},
-    types::{TtsRequest, ImageGenerationRequest},
+    providers::openai::{OpenAiAudio, OpenAiConfig, OpenAiEmbeddings, OpenAiImages},
+    traits::{AudioCapability, EmbeddingCapability, ImageGenerationCapability},
+    types::{ImageGenerationRequest, TtsRequest},
 };
+use std::env;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,15 +34,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. 文本嵌入示例
     println!("\n📊 1. 文本嵌入示例");
     println!("------------------");
-    
+
     let embeddings_client = OpenAiEmbeddings::new(config.clone(), http_client.clone());
-    
+
     let texts = vec![
         "Hello, world!".to_string(),
         "你好，世界！".to_string(),
         "Rust is a great programming language.".to_string(),
     ];
-    
+
     match embeddings_client.embed(texts.clone()).await {
         Ok(response) => {
             println!("✅ 成功生成 {} 个文本的嵌入向量", response.embeddings.len());
@@ -58,9 +58,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. 文本转语音示例
     println!("\n🎵 2. 文本转语音示例");
     println!("--------------------");
-    
+
     let audio_client = OpenAiAudio::new(config.clone(), http_client.clone());
-    
+
     let tts_request = TtsRequest {
         text: "Hello, this is a test of the text-to-speech functionality in Siumai.".to_string(),
         voice: Some("alloy".to_string()),
@@ -69,13 +69,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         model: Some("tts-1".to_string()),
         extra_params: std::collections::HashMap::new(),
     };
-    
+
     match audio_client.text_to_speech(tts_request).await {
         Ok(response) => {
             println!("✅ 成功生成语音");
             println!("📄 音频格式: {}", response.format);
             println!("📏 音频大小: {} 字节", response.audio_data.len());
-            
+
             // 保存音频文件
             if let Err(e) = std::fs::write("output.mp3", &response.audio_data) {
                 println!("⚠️  保存音频文件失败: {}", e);
@@ -89,9 +89,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 3. 图像生成示例
     println!("\n🎨 3. 图像生成示例");
     println!("------------------");
-    
+
     let images_client = OpenAiImages::new(config.clone(), http_client.clone());
-    
+
     let image_request = ImageGenerationRequest {
         prompt: "A beautiful sunset over mountains, digital art style".to_string(),
         negative_prompt: None,
@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         response_format: Some("url".to_string()),
         extra_params: std::collections::HashMap::new(),
     };
-    
+
     match images_client.generate_images(image_request).await {
         Ok(response) => {
             println!("✅ 成功生成 {} 张图像", response.images.len());
@@ -126,8 +126,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. 显示支持的功能
     println!("\n📋 4. 支持的功能");
     println!("----------------");
-    
-    println!("🔍 嵌入模型: {:?}", embeddings_client.supported_embedding_models());
+
+    println!(
+        "🔍 嵌入模型: {:?}",
+        embeddings_client.supported_embedding_models()
+    );
     println!("🎵 音频功能: {:?}", audio_client.supported_features());
     println!("🎨 图像尺寸: {:?}", images_client.get_supported_sizes());
     println!("📄 图像格式: {:?}", images_client.get_supported_formats());

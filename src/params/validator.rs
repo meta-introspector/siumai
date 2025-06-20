@@ -3,9 +3,9 @@
 //! This module provides comprehensive parameter validation for all providers,
 //! including cross-provider compatibility checks and parameter optimization.
 
+use super::mapper::ParameterMapperFactory;
 use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderType};
-use super::mapper::ParameterMapperFactory;
 
 /// Enhanced parameter validator with cross-provider support
 pub struct EnhancedParameterValidator;
@@ -19,12 +19,14 @@ impl EnhancedParameterValidator {
         let mapper = ParameterMapperFactory::create_mapper(provider_type);
         let constraints = mapper.get_param_constraints();
         let supported_params = mapper.supported_params();
-        
+
         let mut report = ValidationReport::new(provider_type.clone());
-        
+
         // Validate temperature
         if let Some(temp) = params.temperature {
-            if temp < constraints.temperature_min as f32 || temp > constraints.temperature_max as f32 {
+            if temp < constraints.temperature_min as f32
+                || temp > constraints.temperature_max as f32
+            {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "temperature".to_string(),
                     value: temp.to_string(),
@@ -36,11 +38,13 @@ impl EnhancedParameterValidator {
                 report.add_valid_param("temperature".to_string());
             }
         }
-        
+
         // Validate max_tokens
         if let Some(max_tokens) = params.max_tokens {
             let max_tokens_u64 = max_tokens as u64;
-            if max_tokens_u64 < constraints.max_tokens_min || max_tokens_u64 > constraints.max_tokens_max {
+            if max_tokens_u64 < constraints.max_tokens_min
+                || max_tokens_u64 > constraints.max_tokens_max
+            {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "max_tokens".to_string(),
                     value: max_tokens.to_string(),
@@ -52,7 +56,7 @@ impl EnhancedParameterValidator {
                 report.add_valid_param("max_tokens".to_string());
             }
         }
-        
+
         // Validate top_p
         if let Some(top_p) = params.top_p {
             if top_p < constraints.top_p_min as f32 || top_p > constraints.top_p_max as f32 {
@@ -67,7 +71,7 @@ impl EnhancedParameterValidator {
                 report.add_valid_param("top_p".to_string());
             }
         }
-        
+
         // Validate model name
         if !params.model.is_empty() {
             if Self::is_model_supported(&params.model, provider_type) {
@@ -80,7 +84,7 @@ impl EnhancedParameterValidator {
                 });
             }
         }
-        
+
         // Validate stop sequences
         if let Some(stop_sequences) = &params.stop_sequences {
             if stop_sequences.len() > Self::max_stop_sequences(provider_type) {
@@ -93,7 +97,7 @@ impl EnhancedParameterValidator {
                 report.add_valid_param("stop_sequences".to_string());
             }
         }
-        
+
         // Check for unsupported parameters
         let used_params = Self::extract_used_params(params);
         for param in used_params {
@@ -104,7 +108,7 @@ impl EnhancedParameterValidator {
                 });
             }
         }
-        
+
         if report.has_errors() {
             Err(LlmError::InvalidParameter(format!(
                 "Parameter validation failed for {:?}: {}",
@@ -115,7 +119,7 @@ impl EnhancedParameterValidator {
             Ok(report)
         }
     }
-    
+
     /// Cross-provider parameter compatibility check
     pub fn check_cross_provider_compatibility(
         params: &CommonParams,
@@ -123,21 +127,25 @@ impl EnhancedParameterValidator {
         target_provider: &ProviderType,
     ) -> CompatibilityReport {
         let mut report = CompatibilityReport::new(source_provider.clone(), target_provider.clone());
-        
+
         let source_mapper = ParameterMapperFactory::create_mapper(source_provider);
         let target_mapper = ParameterMapperFactory::create_mapper(target_provider);
-        
+
         let _source_constraints = source_mapper.get_param_constraints();
         let target_constraints = target_mapper.get_param_constraints();
-        
+
         // Check temperature compatibility
         if let Some(temp) = params.temperature {
-            if temp < target_constraints.temperature_min as f32 || temp > target_constraints.temperature_max as f32 {
+            if temp < target_constraints.temperature_min as f32
+                || temp > target_constraints.temperature_max as f32
+            {
                 report.add_incompatibility(ParameterIncompatibility {
                     parameter: "temperature".to_string(),
                     issue: format!(
                         "Value {} is outside target provider range [{}, {}]",
-                        temp, target_constraints.temperature_min, target_constraints.temperature_max
+                        temp,
+                        target_constraints.temperature_min,
+                        target_constraints.temperature_max
                     ),
                     suggestion: Some(format!(
                         "Clamp to range [{}, {}]",
@@ -146,11 +154,12 @@ impl EnhancedParameterValidator {
                 });
             }
         }
-        
+
         // Check model compatibility
         if !params.model.is_empty() {
             if !Self::is_model_supported(&params.model, target_provider) {
-                let suggested_model = Self::suggest_alternative_model(&params.model, target_provider);
+                let suggested_model =
+                    Self::suggest_alternative_model(&params.model, target_provider);
                 report.add_incompatibility(ParameterIncompatibility {
                     parameter: "model".to_string(),
                     issue: format!("Model '{}' not supported by target provider", params.model),
@@ -158,18 +167,19 @@ impl EnhancedParameterValidator {
                 });
             }
         }
-        
+
         report
     }
-    
+
     /// Optimize parameters for a specific provider
     pub fn optimize_for_provider(
         params: &mut CommonParams,
         provider_type: &ProviderType,
     ) -> OptimizationReport {
         let mut report = OptimizationReport::new(provider_type.clone());
-        let constraints = ParameterMapperFactory::create_mapper(provider_type).get_param_constraints();
-        
+        let constraints =
+            ParameterMapperFactory::create_mapper(provider_type).get_param_constraints();
+
         // Optimize temperature
         if let Some(temp) = params.temperature {
             let optimal_temp = temp.clamp(
@@ -186,14 +196,12 @@ impl EnhancedParameterValidator {
                 params.temperature = Some(optimal_temp);
             }
         }
-        
+
         // Optimize max_tokens
         if let Some(max_tokens) = params.max_tokens {
             let max_tokens_u64 = max_tokens as u64;
-            let optimal_tokens = max_tokens_u64.clamp(
-                constraints.max_tokens_min,
-                constraints.max_tokens_max,
-            ) as u32;
+            let optimal_tokens =
+                max_tokens_u64.clamp(constraints.max_tokens_min, constraints.max_tokens_max) as u32;
             if optimal_tokens != max_tokens {
                 report.add_optimization(ParameterOptimization {
                     parameter: "max_tokens".to_string(),
@@ -204,13 +212,11 @@ impl EnhancedParameterValidator {
                 params.max_tokens = Some(optimal_tokens);
             }
         }
-        
+
         // Optimize top_p
         if let Some(top_p) = params.top_p {
-            let optimal_top_p = top_p.clamp(
-                constraints.top_p_min as f32,
-                constraints.top_p_max as f32,
-            );
+            let optimal_top_p =
+                top_p.clamp(constraints.top_p_min as f32, constraints.top_p_max as f32);
             if optimal_top_p != top_p {
                 report.add_optimization(ParameterOptimization {
                     parameter: "top_p".to_string(),
@@ -221,12 +227,12 @@ impl EnhancedParameterValidator {
                 params.top_p = Some(optimal_top_p);
             }
         }
-        
+
         report
     }
-    
+
     // Helper methods
-    
+
     fn is_model_supported(model: &str, provider_type: &ProviderType) -> bool {
         match provider_type {
             ProviderType::OpenAi => model.starts_with("gpt-") || model.starts_with("o1-"),
@@ -236,21 +242,25 @@ impl EnhancedParameterValidator {
             ProviderType::Custom(_) => true, // Assume custom providers handle their own validation
         }
     }
-    
+
     fn suggest_alternative_model(model: &str, provider_type: &ProviderType) -> Option<String> {
         match provider_type {
             ProviderType::OpenAi => {
-                if model.contains("4") { Some("gpt-4".to_string()) }
-                else if model.contains("3.5") { Some("gpt-3.5-turbo".to_string()) }
-                else { Some("gpt-4".to_string()) }
-            },
+                if model.contains("4") {
+                    Some("gpt-4".to_string())
+                } else if model.contains("3.5") {
+                    Some("gpt-3.5-turbo".to_string())
+                } else {
+                    Some("gpt-4".to_string())
+                }
+            }
             ProviderType::Anthropic => Some("claude-3-5-sonnet-20241022".to_string()),
             ProviderType::Gemini => Some("gemini-1.5-pro".to_string()),
             ProviderType::XAI => Some("grok-beta".to_string()),
             ProviderType::Custom(_) => None,
         }
     }
-    
+
     fn max_stop_sequences(provider_type: &ProviderType) -> usize {
         match provider_type {
             ProviderType::OpenAi => 4,
@@ -260,17 +270,29 @@ impl EnhancedParameterValidator {
             ProviderType::Custom(_) => 10,
         }
     }
-    
+
     fn extract_used_params(params: &CommonParams) -> Vec<String> {
         let mut used = Vec::new();
-        
-        if !params.model.is_empty() { used.push("model".to_string()); }
-        if params.temperature.is_some() { used.push("temperature".to_string()); }
-        if params.max_tokens.is_some() { used.push("max_tokens".to_string()); }
-        if params.top_p.is_some() { used.push("top_p".to_string()); }
-        if params.stop_sequences.is_some() { used.push("stop_sequences".to_string()); }
-        if params.seed.is_some() { used.push("seed".to_string()); }
-        
+
+        if !params.model.is_empty() {
+            used.push("model".to_string());
+        }
+        if params.temperature.is_some() {
+            used.push("temperature".to_string());
+        }
+        if params.max_tokens.is_some() {
+            used.push("max_tokens".to_string());
+        }
+        if params.top_p.is_some() {
+            used.push("top_p".to_string());
+        }
+        if params.stop_sequences.is_some() {
+            used.push("stop_sequences".to_string());
+        }
+        if params.seed.is_some() {
+            used.push("seed".to_string());
+        }
+
         used
     }
 }
@@ -293,25 +315,26 @@ impl ValidationReport {
             valid_params: Vec::new(),
         }
     }
-    
+
     pub fn add_error(&mut self, error: ValidationError) {
         self.errors.push(error);
     }
-    
+
     pub fn add_warning(&mut self, warning: ValidationWarning) {
         self.warnings.push(warning);
     }
-    
+
     pub fn add_valid_param(&mut self, param: String) {
         self.valid_params.push(param);
     }
-    
+
     pub fn has_errors(&self) -> bool {
         !self.errors.is_empty()
     }
-    
+
     pub fn error_summary(&self) -> String {
-        self.errors.iter()
+        self.errors
+            .iter()
             .map(|e| format!("{:?}", e))
             .collect::<Vec<_>>()
             .join("; ")
@@ -375,11 +398,11 @@ impl CompatibilityReport {
             incompatibilities: Vec::new(),
         }
     }
-    
+
     pub fn add_incompatibility(&mut self, incompatibility: ParameterIncompatibility) {
         self.incompatibilities.push(incompatibility);
     }
-    
+
     pub fn is_compatible(&self) -> bool {
         self.incompatibilities.is_empty()
     }
@@ -407,11 +430,11 @@ impl OptimizationReport {
             optimizations: Vec::new(),
         }
     }
-    
+
     pub fn add_optimization(&mut self, optimization: ParameterOptimization) {
         self.optimizations.push(optimization);
     }
-    
+
     pub fn has_optimizations(&self) -> bool {
         !self.optimizations.is_empty()
     }

@@ -16,11 +16,17 @@ pub struct ParameterValidator;
 
 impl ParameterValidator {
     /// Validates temperature parameter
-    pub fn validate_temperature(temp: f64, min: f64, max: f64, provider: &str) -> Result<(), LlmError> {
+    pub fn validate_temperature(
+        temp: f64,
+        min: f64,
+        max: f64,
+        provider: &str,
+    ) -> Result<(), LlmError> {
         if temp < min || temp > max {
-            return Err(LlmError::InvalidParameter(
-                format!("temperature must be between {} and {} for {}", min, max, provider),
-            ));
+            return Err(LlmError::InvalidParameter(format!(
+                "temperature must be between {} and {} for {}",
+                min, max, provider
+            )));
         }
         Ok(())
     }
@@ -36,11 +42,17 @@ impl ParameterValidator {
     }
 
     /// Validates max_tokens parameter
-    pub fn validate_max_tokens(max_tokens: u64, min: u64, max: u64, provider: &str) -> Result<(), LlmError> {
+    pub fn validate_max_tokens(
+        max_tokens: u64,
+        min: u64,
+        max: u64,
+        provider: &str,
+    ) -> Result<(), LlmError> {
         if max_tokens < min || max_tokens > max {
-            return Err(LlmError::InvalidParameter(
-                format!("max_tokens must be between {} and {} for {}", min, max, provider),
-            ));
+            return Err(LlmError::InvalidParameter(format!(
+                "max_tokens must be between {} and {} for {}",
+                min, max, provider
+            )));
         }
         Ok(())
     }
@@ -54,9 +66,10 @@ impl ParameterValidator {
         provider: &str,
     ) -> Result<(), LlmError> {
         if value < min || value > max {
-            return Err(LlmError::InvalidParameter(
-                format!("{} must be between {} and {} for {}", param_name, min, max, provider),
-            ));
+            return Err(LlmError::InvalidParameter(format!(
+                "{} must be between {} and {} for {}",
+                param_name, min, max, provider
+            )));
         }
         Ok(())
     }
@@ -109,9 +122,9 @@ impl ParameterMapper {
         stop_sequences: &Option<Vec<String>>,
         field_name: &str,
     ) -> Option<(String, serde_json::Value)> {
-        stop_sequences.as_ref().map(|stop| {
-            (field_name.to_string(), stop.clone().into())
-        })
+        stop_sequences
+            .as_ref()
+            .map(|stop| (field_name.to_string(), stop.clone().into()))
     }
 }
 

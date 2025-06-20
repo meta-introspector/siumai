@@ -3,9 +3,9 @@
 //! This module provides comprehensive retry functionality for LLM API calls,
 //! including exponential backoff, jitter, and provider-specific retry policies.
 
+use rand::Rng;
 use std::time::Duration;
 use tokio::time::sleep;
-use rand::Rng;
 
 use crate::error::LlmError;
 use crate::types::ProviderType;
@@ -102,11 +102,11 @@ impl RetryPolicy {
 
     /// Calculate delay for a given attempt
     pub fn calculate_delay(&self, attempt: u32) -> Duration {
-        let base_delay = self.initial_delay.as_millis() as f64
-            * self.backoff_multiplier.powi(attempt as i32);
-        
+        let base_delay =
+            self.initial_delay.as_millis() as f64 * self.backoff_multiplier.powi(attempt as i32);
+
         let delay = Duration::from_millis(base_delay as u64).min(self.max_delay);
-        
+
         if self.use_jitter {
             self.add_jitter(delay)
         } else {
@@ -119,7 +119,7 @@ impl RetryPolicy {
         let mut rng = rand::thread_rng();
         let jitter_range = delay.as_millis() as f64 * self.jitter_factor;
         let jitter = rng.gen_range(-jitter_range..=jitter_range);
-        
+
         let new_delay = delay.as_millis() as f64 + jitter;
         Duration::from_millis(new_delay.max(0.0) as u64)
     }
@@ -238,30 +238,30 @@ impl RetryExecutor {
         Fut: std::future::Future<Output = Result<T, LlmError>>,
     {
         let mut last_error = None;
-        
+
         for attempt in 0..self.policy.max_attempts {
             match operation().await {
                 Ok(result) => return Ok(result),
                 Err(error) => {
                     last_error = Some(error.clone());
-                    
+
                     // Check if we should retry
                     if !self.policy.should_retry(&error) {
                         return Err(error);
                     }
-                    
+
                     // If this is the last attempt, don't wait
                     if attempt == self.policy.max_attempts - 1 {
                         break;
                     }
-                    
+
                     // Calculate and apply delay
                     let delay = self.policy.calculate_delay(attempt);
                     sleep(delay).await;
                 }
             }
         }
-        
+
         // Return the last error if all attempts failed
         Err(last_error.unwrap_or_else(|| {
             LlmError::InternalError("Retry executor failed without error".to_string())
@@ -280,35 +280,35 @@ impl RetryExecutor {
         H: FnMut(&LlmError, u32) -> bool, // Returns true to continue retrying
     {
         let mut last_error = None;
-        
+
         for attempt in 0..self.policy.max_attempts {
             match operation().await {
                 Ok(result) => return Ok(result),
                 Err(error) => {
                     last_error = Some(error.clone());
-                    
+
                     // Check with custom error handler
                     if !error_handler(&error, attempt) {
                         return Err(error);
                     }
-                    
+
                     // Check if we should retry according to policy
                     if !self.policy.should_retry(&error) {
                         return Err(error);
                     }
-                    
+
                     // If this is the last attempt, don't wait
                     if attempt == self.policy.max_attempts - 1 {
                         break;
                     }
-                    
+
                     // Calculate and apply delay
                     let delay = self.policy.calculate_delay(attempt);
                     sleep(delay).await;
                 }
             }
         }
-        
+
         // Return the last error if all attempts failed
         Err(last_error.unwrap_or_else(|| {
             LlmError::InternalError("Retry executor failed without error".to_string())
@@ -343,33 +343,35 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     #[tokio::test]
     async fn test_retry_success_on_second_attempt() {
         let counter = Arc::new(AtomicU32::new(0));
         let counter_clone = counter.clone();
-        
+
         let policy = RetryPolicy::new().with_max_attempts(3);
         let executor = RetryExecutor::new(policy);
-        
-        let result = executor.execute(|| {
-            let counter = counter_clone.clone();
-            async move {
-                let count = counter.fetch_add(1, Ordering::SeqCst);
-                if count == 0 {
-                    Err(LlmError::ApiError {
-                        code: 500,
-                        message: "Server error".to_string(),
-                        details: None,
-                    })
-                } else {
-                    Ok("success")
+
+        let result = executor
+            .execute(|| {
+                let counter = counter_clone.clone();
+                async move {
+                    let count = counter.fetch_add(1, Ordering::SeqCst);
+                    if count == 0 {
+                        Err(LlmError::ApiError {
+                            code: 500,
+                            message: "Server error".to_string(),
+                            details: None,
+                        })
+                    } else {
+                        Ok("success")
+                    }
                 }
-            }
-        }).await;
-        
+            })
+            .await;
+
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "success");
         assert_eq!(counter.load(Ordering::SeqCst), 2);
@@ -379,22 +381,24 @@ mod tests {
     async fn test_retry_exhaustion() {
         let counter = Arc::new(AtomicU32::new(0));
         let counter_clone = counter.clone();
-        
+
         let policy = RetryPolicy::new().with_max_attempts(2);
         let executor = RetryExecutor::new(policy);
-        
-        let result: Result<(), LlmError> = executor.execute(|| {
-            let counter = counter_clone.clone();
-            async move {
-                counter.fetch_add(1, Ordering::SeqCst);
-                Err(LlmError::ApiError {
-                    code: 500,
-                    message: "Server error".to_string(),
-                    details: None,
-                })
-            }
-        }).await;
-        
+
+        let result: Result<(), LlmError> = executor
+            .execute(|| {
+                let counter = counter_clone.clone();
+                async move {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    Err(LlmError::ApiError {
+                        code: 500,
+                        message: "Server error".to_string(),
+                        details: None,
+                    })
+                }
+            })
+            .await;
+
         assert!(result.is_err());
         assert_eq!(counter.load(Ordering::SeqCst), 2);
     }
@@ -405,7 +409,7 @@ mod tests {
             .with_initial_delay(Duration::from_millis(100))
             .with_backoff_multiplier(2.0)
             .with_jitter(false);
-        
+
         assert_eq!(policy.calculate_delay(0), Duration::from_millis(100));
         assert_eq!(policy.calculate_delay(1), Duration::from_millis(200));
         assert_eq!(policy.calculate_delay(2), Duration::from_millis(400));
@@ -415,7 +419,7 @@ mod tests {
     fn test_provider_specific_policies() {
         let openai_policy = RetryPolicy::for_provider(&ProviderType::OpenAi);
         let anthropic_policy = RetryPolicy::for_provider(&ProviderType::Anthropic);
-        
+
         assert_eq!(openai_policy.max_attempts, 3);
         assert_eq!(anthropic_policy.initial_delay, Duration::from_millis(1500));
     }

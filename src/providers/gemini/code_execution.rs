@@ -86,21 +86,26 @@ impl CodeExecutionConfig {
 
         if self.enabled {
             let mut tools = Vec::new();
-            
+
             let mut code_execution_tool = serde_json::json!({
                 "code_execution": {}
             });
 
             // Add timeout if specified
             if let Some(timeout) = self.timeout {
-                code_execution_tool["code_execution"]["timeout"] = serde_json::Value::Number(timeout.into());
+                code_execution_tool["code_execution"]["timeout"] =
+                    serde_json::Value::Number(timeout.into());
             }
 
             // Add allowed packages if specified
             if let Some(ref packages) = self.allowed_packages {
-                code_execution_tool["code_execution"]["allowed_packages"] = serde_json::Value::Array(
-                    packages.iter().map(|p| serde_json::Value::String(p.clone())).collect()
-                );
+                code_execution_tool["code_execution"]["allowed_packages"] =
+                    serde_json::Value::Array(
+                        packages
+                            .iter()
+                            .map(|p| serde_json::Value::String(p.clone()))
+                            .collect(),
+                    );
             }
 
             tools.push(code_execution_tool);
@@ -191,23 +196,26 @@ impl CodeExecutionParser {
 
     /// Parse a single execution result
     fn parse_execution_result(data: &serde_json::Value) -> Result<CodeExecutionResult, LlmError> {
-        let code = data.get("code")
+        let code = data
+            .get("code")
             .and_then(|c| c.as_str())
             .unwrap_or("")
             .to_string();
 
-        let output = data.get("output")
+        let output = data
+            .get("output")
             .and_then(|o| o.as_str())
             .map(|s| s.to_string());
 
-        let error = data.get("error")
+        let error = data
+            .get("error")
             .and_then(|e| e.as_str())
             .map(|s| s.to_string());
 
-        let execution_time = data.get("execution_time")
-            .and_then(|t| t.as_u64());
+        let execution_time = data.get("execution_time").and_then(|t| t.as_u64());
 
-        let artifacts = data.get("artifacts")
+        let artifacts = data
+            .get("artifacts")
             .and_then(|a| a.as_array())
             .map(|arr| {
                 arr.iter()
@@ -227,7 +235,8 @@ impl CodeExecutionParser {
 
     /// Parse a code artifact
     fn parse_artifact(data: &serde_json::Value) -> Result<CodeArtifact, LlmError> {
-        let artifact_type = data.get("type")
+        let artifact_type = data
+            .get("type")
             .and_then(|t| t.as_str())
             .map(|s| match s {
                 "image" => ArtifactType::Image,
@@ -238,28 +247,28 @@ impl CodeExecutionParser {
             })
             .unwrap_or(ArtifactType::Text);
 
-        let name = data.get("name")
+        let name = data
+            .get("name")
             .and_then(|n| n.as_str())
             .unwrap_or("untitled")
             .to_string();
 
-        let content = data.get("content")
+        let content = data
+            .get("content")
             .and_then(|c| c.as_str())
             .unwrap_or("")
             .to_string();
 
-        let mime_type = data.get("mime_type")
+        let mime_type = data
+            .get("mime_type")
             .and_then(|m| m.as_str())
             .unwrap_or("text/plain")
             .to_string();
 
-        let metadata = data.get("metadata")
+        let metadata = data
+            .get("metadata")
             .and_then(|m| m.as_object())
-            .map(|obj| {
-                obj.iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect()
-            })
+            .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
             .unwrap_or_default();
 
         Ok(CodeArtifact {
@@ -382,15 +391,16 @@ mod tests {
 
         assert!(config.enabled);
         assert_eq!(config.timeout, Some(60));
-        assert_eq!(config.allowed_packages, Some(vec!["pandas".to_string(), "numpy".to_string()]));
+        assert_eq!(
+            config.allowed_packages,
+            Some(vec!["pandas".to_string(), "numpy".to_string()])
+        );
         assert!(config.include_output);
     }
 
     #[test]
     fn test_request_params() {
-        let config = CodeExecutionConfig::new()
-            .enable()
-            .with_timeout(30);
+        let config = CodeExecutionConfig::new().enable().with_timeout(30);
 
         let params = config.to_request_params();
         assert!(params.contains_key("tools"));
@@ -406,7 +416,13 @@ mod tests {
         assert!(config.enabled);
         assert_eq!(config.timeout, Some(60));
         assert!(config.allowed_packages.is_some());
-        assert!(config.allowed_packages.as_ref().unwrap().contains(&"pandas".to_string()));
+        assert!(
+            config
+                .allowed_packages
+                .as_ref()
+                .unwrap()
+                .contains(&"pandas".to_string())
+        );
     }
 
     #[test]

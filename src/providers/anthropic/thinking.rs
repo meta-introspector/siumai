@@ -63,8 +63,14 @@ impl ThinkingConfig {
     /// Convert to request parameters for the API
     pub fn to_request_params(&self) -> serde_json::Value {
         let mut thinking_obj = serde_json::Map::new();
-        thinking_obj.insert("type".to_string(), serde_json::Value::String(self.r#type.clone()));
-        thinking_obj.insert("budget_tokens".to_string(), serde_json::Value::Number(self.budget_tokens.into()));
+        thinking_obj.insert(
+            "type".to_string(),
+            serde_json::Value::String(self.r#type.clone()),
+        );
+        thinking_obj.insert(
+            "budget_tokens".to_string(),
+            serde_json::Value::Number(self.budget_tokens.into()),
+        );
         serde_json::Value::Object(thinking_obj)
     }
 
@@ -93,10 +99,12 @@ impl ThinkingResponseParser {
                 for item in content_array {
                     if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
                         if item_type == "thinking" {
-                            let thinking_text = item.get("thinking")
+                            let thinking_text = item
+                                .get("thinking")
                                 .and_then(|t| t.as_str())
                                 .map(|s| s.to_string());
-                            let signature = item.get("signature")
+                            let signature = item
+                                .get("signature")
                                 .and_then(|s| s.as_str())
                                 .map(|s| s.to_string());
 
@@ -115,13 +123,16 @@ impl ThinkingResponseParser {
     }
 
     /// Extract redacted thinking content from response
-    pub fn extract_redacted_thinking(response: &serde_json::Value) -> Option<RedactedThinkingBlock> {
+    pub fn extract_redacted_thinking(
+        response: &serde_json::Value,
+    ) -> Option<RedactedThinkingBlock> {
         if let Some(content) = response.get("content") {
             if let Some(content_array) = content.as_array() {
                 for item in content_array {
                     if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
                         if item_type == "redacted_thinking" {
-                            let data = item.get("data")
+                            let data = item
+                                .get("data")
                                 .and_then(|d| d.as_str())
                                 .map(|s| s.to_string());
 
@@ -169,10 +180,9 @@ impl ThinkingResponseParser {
         thinking_content: Option<String>,
     ) -> ChatResponse {
         if let Some(thinking) = thinking_content {
-            response.provider_data.insert(
-                "thinking".to_string(),
-                serde_json::Value::String(thinking),
-            );
+            response
+                .provider_data
+                .insert("thinking".to_string(), serde_json::Value::String(thinking));
         }
         response
     }
@@ -188,8 +198,19 @@ impl ReasoningAnalyzer {
 
         // Count reasoning steps - look for step indicators in the text
         let step_indicators = [
-            "step by step", "first", "second", "third", "then", "next",
-            "finally", "1.", "2.", "3.", "step", "initially", "subsequently"
+            "step by step",
+            "first",
+            "second",
+            "third",
+            "then",
+            "next",
+            "finally",
+            "1.",
+            "2.",
+            "3.",
+            "step",
+            "initially",
+            "subsequently",
         ];
 
         let content_lower = thinking_content.to_lowercase();
@@ -200,15 +221,22 @@ impl ReasoningAnalyzer {
             .max(1); // At least 1 step if any reasoning content exists
 
         // Detect reasoning patterns
-        if thinking_content.contains("Let me think") || thinking_content.contains("I need to consider") {
+        if thinking_content.contains("Let me think")
+            || thinking_content.contains("I need to consider")
+        {
             analysis.patterns.push("deliberative".to_string());
         }
 
-        if thinking_content.contains("pros and cons") || thinking_content.contains("advantages and disadvantages") {
+        if thinking_content.contains("pros and cons")
+            || thinking_content.contains("advantages and disadvantages")
+        {
             analysis.patterns.push("comparative".to_string());
         }
 
-        if thinking_content.contains("because") || thinking_content.contains("therefore") || thinking_content.contains("since") {
+        if thinking_content.contains("because")
+            || thinking_content.contains("therefore")
+            || thinking_content.contains("since")
+        {
             analysis.patterns.push("causal".to_string());
         }
 
@@ -236,8 +264,16 @@ impl ReasoningAnalyzer {
             .len() as f64;
 
         // Simple complexity heuristic
-        let avg_sentence_length = if sentence_count > 0.0 { word_count / sentence_count } else { 0.0 };
-        let vocabulary_diversity = if word_count > 0.0 { unique_words / word_count } else { 0.0 };
+        let avg_sentence_length = if sentence_count > 0.0 {
+            word_count / sentence_count
+        } else {
+            0.0
+        };
+        let vocabulary_diversity = if word_count > 0.0 {
+            unique_words / word_count
+        } else {
+            0.0
+        };
 
         (avg_sentence_length * 0.3 + vocabulary_diversity * 0.7).min(10.0)
     }
@@ -247,9 +283,21 @@ impl ReasoningAnalyzer {
         // Simple keyword extraction - in a real implementation,
         // you might use NLP libraries for better concept extraction
         let keywords = [
-            "problem", "solution", "approach", "method", "strategy",
-            "analysis", "conclusion", "evidence", "reasoning", "logic",
-            "assumption", "hypothesis", "theory", "principle", "concept"
+            "problem",
+            "solution",
+            "approach",
+            "method",
+            "strategy",
+            "analysis",
+            "conclusion",
+            "evidence",
+            "reasoning",
+            "logic",
+            "assumption",
+            "hypothesis",
+            "theory",
+            "principle",
+            "concept",
         ];
 
         let mut concepts = Vec::new();
@@ -342,7 +390,9 @@ pub mod helpers {
     }
 
     /// Extract and analyze thinking from response
-    pub fn extract_and_analyze_thinking(response: &ChatResponse) -> Option<(String, ReasoningAnalysis)> {
+    pub fn extract_and_analyze_thinking(
+        response: &ChatResponse,
+    ) -> Option<(String, ReasoningAnalysis)> {
         if let Some(thinking_value) = response.provider_data.get("thinking") {
             if let Some(thinking_content) = thinking_value.as_str() {
                 let analysis = ReasoningAnalyzer::analyze_reasoning(thinking_content);
@@ -377,8 +427,14 @@ mod tests {
         assert_eq!(config.budget_tokens, 1024);
 
         let params = config.to_request_params();
-        assert_eq!(params.get("type"), Some(&serde_json::Value::String("enabled".to_string())));
-        assert_eq!(params.get("budget_tokens"), Some(&serde_json::Value::Number(1024.into())));
+        assert_eq!(
+            params.get("type"),
+            Some(&serde_json::Value::String("enabled".to_string()))
+        );
+        assert_eq!(
+            params.get("budget_tokens"),
+            Some(&serde_json::Value::Number(1024.into()))
+        );
     }
 
     #[test]
@@ -390,9 +446,9 @@ mod tests {
     #[test]
     fn test_reasoning_analysis() {
         let thinking_content = "Let me think about this step by step. First, I need to consider the pros and cons. Because of this evidence, therefore I conclude...";
-        
+
         let analysis = ReasoningAnalyzer::analyze_reasoning(thinking_content);
-        
+
         assert!(analysis.reasoning_steps > 0);
         assert!(analysis.patterns.contains(&"deliberative".to_string()));
         assert!(analysis.patterns.contains(&"comparative".to_string()));
@@ -420,7 +476,10 @@ mod tests {
         assert!(thinking.is_some());
 
         if let Some(thinking_block) = thinking {
-            assert_eq!(thinking_block.thinking, "I need to analyze this carefully...");
+            assert_eq!(
+                thinking_block.thinking,
+                "I need to analyze this carefully..."
+            );
             assert!(thinking_block.signature.is_some());
         }
     }
