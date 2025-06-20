@@ -20,7 +20,7 @@
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create an OpenAI client
-//!     let client = llm()
+//!     let client = LlmBuilder::new()
 //!         .openai()
 //!         .api_key("your-api-key")
 //!         .model("gpt-4")
@@ -29,12 +29,11 @@
 //!         .await?;
 //!
 //!     // Send a chat request
-//!     let request = ChatRequest::builder()
-//!         .message(user!("Hello, world!"))
-//!         .build();
-//!
-//!     let response = client.chat(request).await?;
-//!     println!("Response: {}", response.text().unwrap_or(""));
+//!     let messages = vec![user!("Hello, world!")];
+//!     let response = client.chat(messages).await?;
+//!     if let Some(text) = response.content_text() {
+//!         println!("Response: {}", text);
+//!     }
 //!
 //!     Ok(())
 //! }
@@ -90,7 +89,8 @@ pub mod prelude {
     pub use crate::traits::*;
     pub use crate::types::*;
     pub use crate::web_search::*;
-    pub use crate::{assistant, llm, provider, system, tool, user};
+    pub use crate::{assistant, provider, system, tool, user, Provider};
+    pub use crate::provider::Siumai;
     pub use crate::{
         quick_openai, quick_openai_with_model,
         quick_anthropic, quick_anthropic_with_model,
@@ -98,24 +98,101 @@ pub mod prelude {
     };
 }
 
-/// Global entry point function - creates an LLM builder
+/// Provider entry point for creating specific provider clients
 ///
-/// This is the main entry point for the siumai library. It creates a new
-/// LlmBuilder that can be used to configure and create LLM clients.
+/// This is the main entry point for creating provider-specific clients.
+/// Use this when you need access to provider-specific features and APIs.
 ///
 /// # Example
 /// ```rust,no_run
-/// use siumai::llm;
+/// use siumai::prelude::*;
 ///
-/// let client = llm()
-///     .openai()
-///     .api_key("your-api-key")
-///     .model("gpt-4")
-///     .build()
-///     .await?;
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     // Get a client specifically for OpenAI
+///     let openai_client = Provider::openai()
+///         .api_key("your-openai-key")
+///         .model("gpt-4")
+///         .build()
+///         .await?;
+///
+///     // You can now call both standard and OpenAI-specific methods
+///     let messages = vec![user!("Hello!")];
+///     let response = openai_client.chat(messages).await?;
+///     // let assistant = openai_client.create_assistant(...).await?; // Example of specific feature
+///
+///     Ok(())
+/// }
 /// ```
-pub fn llm() -> crate::builder::LlmBuilder {
-    crate::builder::llm()
+pub struct Provider;
+
+impl Provider {
+    /// Create an OpenAI client builder
+    pub fn openai() -> crate::builder::OpenAiBuilder {
+        crate::builder::LlmBuilder::new().openai()
+    }
+
+    /// Create an Anthropic client builder
+    pub fn anthropic() -> crate::builder::AnthropicBuilder {
+        crate::builder::LlmBuilder::new().anthropic()
+    }
+
+    /// Create a Gemini client builder
+    pub fn gemini() -> crate::builder::GeminiBuilder {
+        crate::builder::LlmBuilder::new().gemini()
+    }
+
+    /// Create an xAI client builder
+    pub fn xai() -> crate::builder::GenericProviderBuilder {
+        crate::builder::LlmBuilder::new().xai()
+    }
+
+    /// Create an OpenRouter client builder
+    pub fn openrouter() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::OpenRouterProvider> {
+        crate::builder::LlmBuilder::new().openrouter()
+    }
+
+    /// Create a DeepSeek client builder
+    pub fn deepseek() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::DeepSeekProvider> {
+        crate::builder::LlmBuilder::new().deepseek()
+    }
+}
+
+/// Siumai unified interface entry point
+///
+/// This creates a unified client that can work with multiple LLM providers
+/// through a single interface. Use this when you want provider-agnostic code
+/// or need to switch between providers dynamically.
+///
+/// # Example
+/// ```rust,no_run
+/// use siumai::prelude::*;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     // Build a unified client, backed by Anthropic
+///     let client = Siumai::builder()
+///         .anthropic()
+///         .api_key("your-anthropic-key")
+///         .model("claude-3-sonnet-20240229")
+///         .build()
+///         .await?;
+///
+///     // Your code uses the standard Siumai interface
+///     let messages = vec![user!("What is the capital of France?")];
+///     let response = client.chat(messages).await?;
+///
+///     // If you decide to switch to OpenAI, you only change the builder.
+///     // The `.chat(request)` call remains identical.
+///
+///     Ok(())
+/// }
+/// ```
+impl crate::provider::Siumai {
+    /// Create a new Siumai builder for unified interface
+    pub fn builder() -> crate::provider::SiumaiBuilder {
+        crate::provider::SiumaiBuilder::new()
+    }
 }
 
 // Re-export convenience functions and builder
@@ -125,28 +202,6 @@ pub use crate::builder::{
     quick_anthropic, quick_anthropic_with_model,
     quick_gemini, quick_gemini_with_model
 };
-
-/// Siumai unified interface entry point
-///
-/// This creates a new SiumaiBuilder for building unified providers
-/// that can work with multiple LLM providers through a single interface.
-///
-/// # Example
-/// ```rust,no_run
-/// use siumai::siumai;
-///
-/// // Future API (when fully implemented)
-/// let provider = siumai()
-///     .provider(ProviderType::OpenAi)
-///     .api_key("your-api-key")
-///     .model("gpt-4")
-///     .with_audio()
-///     .build()
-///     .await?;
-/// ```
-pub fn siumai() -> crate::provider::SiumaiBuilder {
-    crate::provider::ai()
-}
 
 // Convenient macro definitions
 /// Creates a user message
@@ -256,6 +311,7 @@ macro_rules! user_with_image {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::provider::Siumai;
 
     #[test]
     fn test_macros() {
@@ -277,8 +333,10 @@ mod tests {
     }
 
     #[test]
-    fn test_llm_builder() {
-        let _builder = llm();
+    fn test_provider_builder() {
+        let _openai_builder = Provider::openai();
+        let _anthropic_builder = Provider::anthropic();
+        let _siumai_builder = Siumai::builder();
         // Basic test for builder creation
         assert!(true); // Placeholder test
     }

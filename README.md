@@ -6,6 +6,15 @@
 
 Siumai (烧卖) is a unified LLM interface library for Rust that provides a consistent API across multiple AI providers. It features capability-based trait separation, type-safe parameter handling, and comprehensive streaming support.
 
+## 🎯 Two Ways to Use Siumai
+
+Siumai offers two distinct approaches to fit your needs:
+
+1. **`Provider`** - For provider-specific clients with access to all features
+2. **`Siumai::builder()`** - For unified interface with provider-agnostic code
+
+Choose `Provider` when you need provider-specific features, or `Siumai::builder()` when you want maximum portability.
+
 ## 🌟 Features
 
 - **🔌 Multi-Provider Support**: OpenAI, Anthropic Claude, Google Gemini, and custom providers
@@ -31,32 +40,56 @@ siumai = "0.1.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
-### Basic Usage
+### Provider-Specific Clients
+
+Use `Provider` when you need access to provider-specific features:
 
 ```rust
 use siumai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create an OpenAI client
-    let client = llm()
-        .openai()
-        .api_key("your-api-key")
+    // Get a client specifically for OpenAI
+    let openai_client = Provider::openai()
+        .api_key("your-openai-key")
         .model("gpt-4")
         .temperature(0.7)
         .build()
         .await?;
 
-    // Create a chat request - simple messages use macros directly
-    let request = ChatRequest::builder()
-        .message(system!("You are a helpful assistant"))
-        .message(user!("What is the capital of France?"))
-        .build();
+    // You can now call both standard and OpenAI-specific methods
+    let response = openai_client.chat(vec![user!("Hello!")]).await?;
+    // let assistant = openai_client.create_assistant(...).await?; // Example of specific feature
 
-    // Send the request
+    println!("OpenAI says: {}", response.text().unwrap_or_default());
+    Ok(())
+}
+```
+
+### Unified Interface
+
+Use `Siumai::builder()` when you want provider-agnostic code:
+
+```rust
+use siumai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Build a unified client, backed by Anthropic
+    let client = Siumai::builder()
+        .anthropic()
+        .api_key("your-anthropic-key")
+        .model("claude-3-sonnet-20240229")
+        .build()
+        .await?;
+
+    // Your code uses the standard Siumai interface
+    let request = vec![user!("What is the capital of France?")];
     let response = client.chat(request).await?;
-    println!("Response: {}", response.text().unwrap_or(""));
 
+    // If you decide to switch to OpenAI, you only change the builder.
+    // The `.chat(request)` call remains identical.
+    println!("The unified client says: {}", response.text().unwrap_or_default());
     Ok(())
 }
 ```
@@ -112,9 +145,31 @@ Siumai uses a capability-based architecture that separates different AI function
 
 ### Different Providers
 
+#### Provider-Specific Clients
+
 ```rust
-// OpenAI
-let openai_client = llm()
+// OpenAI - with provider-specific features
+let openai_client = Provider::openai()
+    .api_key("sk-...")
+    .model("gpt-4")
+    .temperature(0.7)
+    .build()
+    .await?;
+
+// Anthropic - with provider-specific features
+let anthropic_client = Provider::anthropic()
+    .api_key("sk-ant-...")
+    .model("claude-3-5-sonnet-20241022")
+    .temperature(0.8)
+    .build()
+    .await?;
+```
+
+#### Unified Interface
+
+```rust
+// OpenAI through unified interface
+let openai_unified = Siumai::builder()
     .openai()
     .api_key("sk-...")
     .model("gpt-4")
@@ -122,13 +177,12 @@ let openai_client = llm()
     .build()
     .await?;
 
-// Anthropic
-let anthropic_client = llm()
+// Anthropic through unified interface
+let anthropic_unified = Siumai::builder()
     .anthropic()
     .api_key("sk-ant-...")
     .model("claude-3-5-sonnet-20241022")
     .temperature(0.8)
-    .cache_control(CacheControl::Ephemeral)
     .build()
     .await?;
 ```
@@ -143,8 +197,15 @@ let custom_client = reqwest::Client::builder()
     .user_agent("my-app/1.0")
     .build()?;
 
-let client = llm()
-    .with_http_client(custom_client)
+// With provider-specific client
+let client = Provider::openai()
+    .api_key("your-key")
+    .model("gpt-4")
+    .build()
+    .await?;
+
+// With unified interface
+let unified_client = Siumai::builder()
     .openai()
     .api_key("your-key")
     .model("gpt-4")
@@ -152,12 +213,11 @@ let client = llm()
     .await?;
 ```
 
-### Provider-Specific Parameters
+### Provider-Specific Features
 
 ```rust
-// OpenAI with structured output
-let openai_client = llm()
-    .openai()
+// OpenAI with structured output (provider-specific client)
+let openai_client = Provider::openai()
     .api_key("your-key")
     .model("gpt-4")
     .response_format(ResponseFormat::JsonObject)
@@ -165,13 +225,22 @@ let openai_client = llm()
     .build()
     .await?;
 
-// Anthropic with caching
-let anthropic_client = llm()
-    .anthropic()
+// Anthropic with caching (provider-specific client)
+let anthropic_client = Provider::anthropic()
     .api_key("your-key")
     .model("claude-3-5-sonnet-20241022")
     .cache_control(CacheControl::Ephemeral)
     .thinking_budget(1000)
+    .build()
+    .await?;
+
+// Unified interface (common parameters only)
+let unified_client = Siumai::builder()
+    .openai()
+    .api_key("your-key")
+    .model("gpt-4")
+    .temperature(0.7)
+    .max_tokens(1000)
     .build()
     .await?;
 ```

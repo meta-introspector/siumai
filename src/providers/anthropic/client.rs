@@ -48,6 +48,7 @@ impl AnthropicClient {
             base_url.clone(),
             http_client.clone(),
             http_config.clone(),
+            specific_params.clone(),
         );
 
         let models_capability = AnthropicModels::new(api_key, base_url, http_client, http_config);
@@ -127,7 +128,15 @@ impl ChatCapability for AnthropicClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        self.chat_capability.chat_with_tools(messages, tools).await
+        // Create a new chat capability with current specific params
+        let chat_capability = AnthropicChatCapability::new(
+            self.chat_capability.api_key.clone(),
+            self.chat_capability.base_url.clone(),
+            self.chat_capability.http_client.clone(),
+            self.chat_capability.http_config.clone(),
+            self.specific_params.clone(),
+        );
+        chat_capability.chat_with_tools(messages, tools).await
     }
 
     async fn chat_stream(

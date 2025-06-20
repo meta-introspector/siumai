@@ -318,7 +318,7 @@ mod builder_tests {
     #[test]
     fn test_llm_builder_creation() {
         // Test basic builder creation
-        let builder = llm();
+        let builder = LlmBuilder::new();
 
         // Test OpenAI builder
         let _openai_builder = builder
@@ -339,7 +339,7 @@ mod builder_tests {
             .build()
             .unwrap();
 
-        let builder = llm()
+        let builder = LlmBuilder::new()
             .with_http_client(custom_client)
             .with_timeout(Duration::from_secs(30));
 

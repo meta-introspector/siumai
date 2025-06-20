@@ -20,24 +20,29 @@
 //!
 //! # Example Usage
 //! ```rust,no_run
-//! use siumai::llm;
+//! use siumai::prelude::*;
 //!
-//! let client = llm()
-//!     .openai()
-//!     .api_key("your-api-key")
-//!     .model("gpt-4")
-//!     .build()
-//!     .await?;
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = LlmBuilder::new()
+//!         .openai()
+//!         .api_key("your-api-key")
+//!         .model("gpt-4")
+//!         .build()
+//!         .await?;
 //!
-//! // Use chat capability
-//! let messages = vec![user!("Hello, world!")];
-//! let response = client.chat(messages).await?;
+//!     // Use chat capability
+//!     let messages = vec![user!("Hello, world!")];
+//!     let response = client.chat(messages).await?;
 //!
-//! // Use audio capability
-//! let audio_data = client.speech("Hello, world!").await?;
+//!     // Use audio capability (if available)
+//!     // let audio_data = client.speech("Hello, world!").await?;
 //!
-//! // Use embedding capability
-//! let embeddings = client.embed(vec!["Hello, world!".to_string()]).await?;
+//!     // Use embedding capability (if available)
+//!     // let embeddings = client.embed(vec!["Hello, world!".to_string()]).await?;
+//!
+//!     Ok(())
+//! }
 //! ```
 
 // Core modules

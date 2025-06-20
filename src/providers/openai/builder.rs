@@ -17,16 +17,21 @@ use super::{OpenAiClient, OpenAiConfig};
 ///
 /// # Example
 /// ```rust,no_run
-/// use siumai::llm;
+/// use siumai::builder::LlmBuilder;
 ///
-/// let client = llm()
-///     .openai()
-///     .api_key("your-api-key")
-///     .model("gpt-4")
-///     .temperature(0.7)
-///     .max_tokens(1000)
-///     .build()
-///     .await?;
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let client = LlmBuilder::new()
+///         .openai()
+///         .api_key("your-api-key")
+///         .model("gpt-4")
+///         .temperature(0.7)
+///         .max_tokens(1000)
+///         .build()
+///         .await?;
+///
+///     Ok(())
+/// }
 /// ```
 #[derive(Debug, Clone)]
 pub struct OpenAiBuilder {

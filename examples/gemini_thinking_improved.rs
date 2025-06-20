@@ -3,7 +3,7 @@
 //! This example demonstrates the simplified thinking API that lets the
 //! Google API handle model-specific limitations and validation.
 
-use siumai::llm;
+use siumai::Provider;
 use siumai::stream::ChatStreamEvent;
 use siumai::types::ChatMessage;
 use siumai::traits::ChatCapability;
@@ -39,8 +39,7 @@ async fn thinking_configurations_examples(api_key: &str) -> Result<(), Box<dyn s
 
     // Try to disable thinking
     println!("\n🔹 Attempting to disable thinking:");
-    let client = llm()
-        .gemini()
+    let client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-flash")
         .disable_thinking() // Let API decide if this is supported
@@ -58,8 +57,7 @@ async fn thinking_configurations_examples(api_key: &str) -> Result<(), Box<dyn s
 
     // Use dynamic thinking
     println!("\n🔹 Using dynamic thinking:");
-    let client = llm()
-        .gemini()
+    let client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-pro")
         .thinking() // Dynamic thinking
@@ -86,8 +84,7 @@ async fn api_error_handling_examples(api_key: &str) -> Result<(), Box<dyn std::e
 
     // Try a configuration that might not be supported
     println!("\n🔹 Trying potentially unsupported configuration:");
-    let client = llm()
-        .gemini()
+    let client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-pro")
         .thinking_budget(0) // Might not be supported
@@ -113,8 +110,7 @@ async fn api_error_handling_examples(api_key: &str) -> Result<(), Box<dyn std::e
 
     // Use a safe configuration
     println!("\n🔹 Using safe dynamic thinking configuration:");
-    let safe_client = llm()
-        .gemini()
+    let safe_client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-pro")
         .thinking() // Dynamic thinking is usually safe
@@ -141,8 +137,7 @@ async fn thinking_strategies_examples(api_key: &str) -> Result<(), Box<dyn std::
 
     // Strategy 1: Dynamic thinking (model decides)
     println!("\n🔹 Strategy 1: Dynamic Thinking (Model Decides)");
-    let dynamic_client = llm()
-        .gemini()
+    let dynamic_client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-flash")
         .thinking() // Dynamic thinking
@@ -159,8 +154,7 @@ async fn thinking_strategies_examples(api_key: &str) -> Result<(), Box<dyn std::
 
     // Strategy 2: Fixed budget thinking
     println!("\n🔹 Strategy 2: Fixed Budget Thinking (1024 tokens)");
-    let fixed_client = llm()
-        .gemini()
+    let fixed_client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-flash")
         .thinking_budget(1024)
@@ -178,8 +172,7 @@ async fn thinking_strategies_examples(api_key: &str) -> Result<(), Box<dyn std::
 
     // Strategy 3: No thinking (for comparison)
     println!("\n🔹 Strategy 3: No Thinking (Flash only)");
-    let no_thinking_client = llm()
-        .gemini()
+    let no_thinking_client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-2.5-flash")
         .thinking_budget(0) // Disable thinking

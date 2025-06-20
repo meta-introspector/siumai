@@ -11,36 +11,41 @@
 //!
 //! # Example Usage
 //! ```rust,no_run
-//! use siumai::llm;
-//! use siumai::providers::openai_compatible::{deepseek, openrouter};
+//! use siumai::prelude::*;
+//! use siumai::providers::openai_compatible::{deepseek, openrouter, recommendations};
 //!
-//! // DeepSeek with reasoning model using constants
-//! let deepseek = llm()
-//!     .deepseek()
-//!     .api_key("your-api-key")
-//!     .model(deepseek::REASONER)  // Using model constant
-//!     .reasoning(true)?
-//!     .build()
-//!     .await?;
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // DeepSeek with reasoning model using constants
+//!     let deepseek = LlmBuilder::new()
+//!         .deepseek()
+//!         .api_key("your-api-key")
+//!         .model(deepseek::REASONER)  // Using model constant
+//!         .reasoning(true)?
+//!         .build()
+//!         .await?;
 //!
-//! // OpenRouter with GPT-4 using constants
-//! let openrouter = llm()
-//!     .openrouter()
-//!     .api_key("your-api-key")
-//!     .model(openrouter::openai::GPT_4)  // Using model constant
-//!     .site_url("https://myapp.com")?
-//!     .app_name("My App")?
-//!     .temperature(0.7)
-//!     .build()
-//!     .await?;
+//!     // OpenRouter with GPT-4 using constants
+//!     let openrouter = LlmBuilder::new()
+//!         .openrouter()
+//!         .api_key("your-api-key")
+//!         .model(openrouter::openai::GPT_4)  // Using model constant
+//!         .site_url("https://myapp.com")?
+//!         .app_name("My App")?
+//!         .temperature(0.7)
+//!         .build()
+//!         .await?;
 //!
-//! // Using recommendation helpers
-//! let coding_model = llm()
-//!     .deepseek()
-//!     .api_key("your-api-key")
-//!     .model(recommendations::for_coding())  // Gets deepseek::CODER
-//!     .build()
-//!     .await?;
+//!     // Using recommendation helpers
+//!     let coding_model = LlmBuilder::new()
+//!         .deepseek()
+//!         .api_key("your-api-key")
+//!         .model(recommendations::for_coding())  // Gets deepseek::CODER
+//!         .build()
+//!         .await?;
+//!
+//!     Ok(())
+//! }
 //! ```
 
 pub mod config;

@@ -108,9 +108,15 @@ pub trait ChatCapability {
     /// The response text
     ///
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// # use siumai::prelude::*;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = quick_openai().await?;
     /// let response = client.ask("What is the capital of France?".to_string()).await?;
     /// println!("{}", response);
+    /// # Ok(())
+    /// # }
     /// ```
     async fn ask(&self, prompt: String) -> Result<String, LlmError> {
         let message = ChatMessage::user(prompt).build();
@@ -131,11 +137,17 @@ pub trait ChatCapability {
     /// The response text
     ///
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// # use siumai::prelude::*;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = quick_openai().await?;
     /// let response = client.ask_with_system(
     ///     "You are a helpful assistant that responds in JSON".to_string(),
     ///     "List 3 colors".to_string()
     /// ).await?;
+    /// # Ok(())
+    /// # }
     /// ```
     async fn ask_with_system(
         &self,
@@ -163,14 +175,20 @@ pub trait ChatCapability {
     /// The response and updated conversation
     ///
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// # use siumai::prelude::*;
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = quick_openai().await?;
     /// let mut conversation = vec![
     ///     ChatMessage::system("You are a helpful assistant").build()
     /// ];
     ///
     /// let (response, updated_conversation) = client
-    ///     .continue_conversation(conversation, "Hello!")
+    ///     .continue_conversation(conversation, "Hello!".to_string())
     ///     .await?;
+    /// # Ok(())
+    /// # }
     /// ```
     async fn continue_conversation(
         &self,

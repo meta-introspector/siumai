@@ -24,6 +24,7 @@ use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 ///     common_params: Default::default(),
 ///     openai_params: Default::default(),
 ///     http_config: Default::default(),
+///     web_search_config: Default::default(),
 /// };
 /// ```
 #[derive(Debug, Clone)]

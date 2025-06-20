@@ -12,18 +12,23 @@
 //!
 //! # Example Usage
 //! ```rust,no_run
-//! use siumai::llm;
+//! use siumai::prelude::*;
 //!
-//! let client = llm()
-//!     .gemini()
-//!     .api_key("your-api-key")
-//!     .model("gemini-1.5-flash")
-//!     .build()
-//!     .await?;
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = LlmBuilder::new()
+//!         .gemini()
+//!         .api_key("your-api-key")
+//!         .model("gemini-1.5-flash")
+//!         .build()
+//!         .await?;
 //!
-//! // Use chat capability
-//! let messages = vec![user!("Hello, world!")];
-//! let response = client.chat_with_tools(messages, None).await?;
+//!     // Use chat capability
+//!     let messages = vec![user!("Hello, world!")];
+//!     let response = client.chat_with_tools(messages, None).await?;
+//!
+//!     Ok(())
+//! }
 //! ```
 
 // Core modules

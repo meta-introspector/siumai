@@ -292,12 +292,11 @@ fn stream_processing_example() {
         },
         ChatStreamEvent::UsageUpdate {
             usage: Usage {
-                prompt_tokens: Some(10),
-                completion_tokens: Some(2),
-                total_tokens: Some(12),
+                prompt_tokens: 10,
+                completion_tokens: 2,
+                total_tokens: 12,
+                cached_tokens: None,
                 reasoning_tokens: None,
-                cache_hit_tokens: None,
-                cache_creation_tokens: None,
             },
         },
     ];
@@ -321,7 +320,7 @@ fn stream_processing_example() {
                 println!(
                     "  Event {}: Usage update - {} total tokens",
                     i + 1,
-                    usage.total_tokens.unwrap_or(0)
+                    usage.total_tokens
                 );
             }
             _ => {

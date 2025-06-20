@@ -2,7 +2,7 @@
 //!
 //! This example tests that all the fixes are working correctly.
 
-use siumai::{llm, LlmBuilder, user, system, assistant};
+use siumai::{LlmBuilder, user, system, assistant, Provider};
 use siumai::providers::openai_compatible::providers::{deepseek, openrouter, recommendations};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -53,13 +53,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 5: Builder pattern
     println!("\n5. Testing builder pattern:");
-    let _builder = llm()
+    let _builder = LlmBuilder::new()
         .deepseek()
         .model(deepseek::CHAT)
         .temperature(0.7);
     println!("   ✓ DeepSeek builder works");
 
-    let _builder = llm()
+    let _builder = LlmBuilder::new()
         .openrouter()
         .model(openrouter::openai::GPT_4O);
     println!("   ✓ OpenRouter builder works");

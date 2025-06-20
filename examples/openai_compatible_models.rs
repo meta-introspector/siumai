@@ -4,7 +4,7 @@
 //! builder methods for OpenAI-compatible providers. This approach keeps the
 //! API surface area manageable and maintainable.
 
-use siumai::{llm, types::ChatMessage};
+use siumai::{types::ChatMessage, Provider};
 use siumai::providers::openai_compatible::providers::{deepseek, openrouter, recommendations};
 use siumai::traits::ChatCapability;
 
@@ -19,24 +19,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("1. DeepSeek Examples:");
     
     // Using specific model constants
-    let deepseek_chat = llm()
-        .deepseek()
+    let deepseek_chat = Provider::deepseek()
         .api_key(std::env::var("DEEPSEEK_API_KEY")?)
         .model(deepseek::CHAT)  // Using constant instead of convenience method
         .temperature(0.7)
         .build()
         .await?;
 
-    let deepseek_coder = llm()
-        .deepseek()
+    let deepseek_coder = Provider::deepseek()
         .api_key(std::env::var("DEEPSEEK_API_KEY")?)
         .model(deepseek::CODER)  // Using constant for coding model
         .temperature(0.1)
         .build()
         .await?;
 
-    let deepseek_reasoner = llm()
-        .deepseek()
+    let deepseek_reasoner = Provider::deepseek()
         .api_key(std::env::var("DEEPSEEK_API_KEY")?)
         .model(deepseek::REASONER)  // Using constant for reasoning model
         .temperature(0.3)
@@ -50,8 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 2: OpenRouter with model constants
     println!("\n2. OpenRouter Examples:");
     
-    let openrouter_gpt4 = llm()
-        .openrouter()
+    let openrouter_gpt4 = Provider::openrouter()
         .api_key(std::env::var("OPENROUTER_API_KEY")?)
         .model(openrouter::openai::GPT_4O)  // Using OpenAI model through OpenRouter
         .site_url("https://example.com")?
@@ -59,15 +55,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .await?;
 
-    let openrouter_claude = llm()
-        .openrouter()
+    let openrouter_claude = Provider::openrouter()
         .api_key(std::env::var("OPENROUTER_API_KEY")?)
         .model(openrouter::anthropic::CLAUDE_3_5_SONNET)  // Using Anthropic model
         .build()
         .await?;
 
-    let openrouter_gemini = llm()
-        .openrouter()
+    let openrouter_gemini = Provider::openrouter()
         .api_key(std::env::var("OPENROUTER_API_KEY")?)
         .model(openrouter::google::GEMINI_1_5_PRO)  // Using Google model
         .build()
@@ -80,22 +74,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Example 3: Using recommendation helpers
     println!("\n3. Recommendation Helpers:");
     
-    let chat_client = llm()
-        .openrouter()
+    let chat_client = Provider::openrouter()
         .api_key(std::env::var("OPENROUTER_API_KEY")?)
         .model(recommendations::for_chat())  // Gets recommended chat model
         .build()
         .await?;
 
-    let coding_client = llm()
-        .deepseek()
+    let coding_client = Provider::deepseek()
         .api_key(std::env::var("DEEPSEEK_API_KEY")?)
         .model(recommendations::for_coding())  // Gets recommended coding model
         .build()
         .await?;
 
-    let reasoning_client = llm()
-        .deepseek()
+    let reasoning_client = Provider::deepseek()
         .api_key(std::env::var("DEEPSEEK_API_KEY")?)
         .model(recommendations::for_reasoning())  // Gets recommended reasoning model
         .build()

@@ -269,3 +269,19 @@ pub fn map_anthropic_error(
         },
     }
 }
+
+/// Convert tools to Anthropic format
+pub fn convert_tools_to_anthropic_format(tools: &[crate::types::Tool]) -> Result<Vec<serde_json::Value>, LlmError> {
+    let mut anthropic_tools = Vec::new();
+
+    for tool in tools {
+        let anthropic_tool = serde_json::json!({
+            "name": tool.function.name,
+            "description": tool.function.description,
+            "input_schema": tool.function.parameters
+        });
+        anthropic_tools.push(anthropic_tool);
+    }
+
+    Ok(anthropic_tools)
+}

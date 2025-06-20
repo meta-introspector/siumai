@@ -199,10 +199,15 @@ impl LlmClient for Siumai {
 /// Builder for creating siumai providers with specific capabilities
 pub struct SiumaiBuilder {
     provider_type: Option<ProviderType>,
+    provider_name: Option<String>,
     api_key: Option<String>,
     base_url: Option<String>,
     model: Option<String>,
     capabilities: Vec<String>,
+    common_params: CommonParams,
+    http_config: HttpConfig,
+    organization: Option<String>,
+    project: Option<String>,
 }
 
 impl SiumaiBuilder {
@@ -210,16 +215,92 @@ impl SiumaiBuilder {
     pub fn new() -> Self {
         Self {
             provider_type: None,
+            provider_name: None,
             api_key: None,
             base_url: None,
             model: None,
             capabilities: Vec::new(),
+            common_params: CommonParams::default(),
+            http_config: HttpConfig::default(),
+            organization: None,
+            project: None,
         }
     }
 
     /// Set the provider type
     pub fn provider(mut self, provider_type: ProviderType) -> Self {
         self.provider_type = Some(provider_type);
+        self
+    }
+
+    /// Set the provider by name (dynamic dispatch)
+    /// This provides the llm_dart-style ai().provider('name') interface
+    pub fn provider_name<S: Into<String>>(mut self, name: S) -> Self {
+        let name = name.into();
+        self.provider_name = Some(name.clone());
+
+        // Map provider name to type
+        self.provider_type = Some(match name.as_str() {
+            "openai" => ProviderType::OpenAi,
+            "anthropic" => ProviderType::Anthropic,
+            "gemini" => ProviderType::Gemini,
+            "xai" => ProviderType::XAI,
+            "deepseek" => ProviderType::Custom("deepseek".to_string()),
+            "openrouter" => ProviderType::Custom("openrouter".to_string()),
+            "groq" => ProviderType::Custom("groq".to_string()),
+            _ => ProviderType::Custom(name),
+        });
+        self
+    }
+
+    // Convenience methods for specific providers (llm_dart style)
+
+    /// Create an OpenAI provider (convenience method)
+    pub fn openai(mut self) -> Self {
+        self.provider_type = Some(ProviderType::OpenAi);
+        self.provider_name = Some("openai".to_string());
+        self
+    }
+
+    /// Create an Anthropic provider (convenience method)
+    pub fn anthropic(mut self) -> Self {
+        self.provider_type = Some(ProviderType::Anthropic);
+        self.provider_name = Some("anthropic".to_string());
+        self
+    }
+
+    /// Create a Gemini provider (convenience method)
+    pub fn gemini(mut self) -> Self {
+        self.provider_type = Some(ProviderType::Gemini);
+        self.provider_name = Some("gemini".to_string());
+        self
+    }
+
+    /// Create a DeepSeek provider (convenience method)
+    pub fn deepseek(mut self) -> Self {
+        self.provider_type = Some(ProviderType::Custom("deepseek".to_string()));
+        self.provider_name = Some("deepseek".to_string());
+        self
+    }
+
+    /// Create an OpenRouter provider (convenience method)
+    pub fn openrouter(mut self) -> Self {
+        self.provider_type = Some(ProviderType::Custom("openrouter".to_string()));
+        self.provider_name = Some("openrouter".to_string());
+        self
+    }
+
+    /// Create a Groq provider (convenience method)
+    pub fn groq(mut self) -> Self {
+        self.provider_type = Some(ProviderType::Custom("groq".to_string()));
+        self.provider_name = Some("groq".to_string());
+        self
+    }
+
+    /// Create an xAI provider (convenience method)
+    pub fn xai(mut self) -> Self {
+        self.provider_type = Some(ProviderType::XAI);
+        self.provider_name = Some("xai".to_string());
         self
     }
 
@@ -238,6 +319,30 @@ impl SiumaiBuilder {
     /// Set the model
     pub fn model<S: Into<String>>(mut self, model: S) -> Self {
         self.model = Some(model.into());
+        self
+    }
+
+    /// Set temperature
+    pub fn temperature(mut self, temperature: f32) -> Self {
+        self.common_params.temperature = Some(temperature);
+        self
+    }
+
+    /// Set max tokens
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.common_params.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set organization (for OpenAI)
+    pub fn organization<S: Into<String>>(mut self, organization: S) -> Self {
+        self.organization = Some(organization.into());
+        self
+    }
+
+    /// Set project (for OpenAI)
+    pub fn project<S: Into<String>>(mut self, project: S) -> Self {
+        self.project = Some(project.into());
         self
     }
 
@@ -269,16 +374,131 @@ impl SiumaiBuilder {
 
     /// Build the siumai provider
     pub async fn build(self) -> Result<Siumai, LlmError> {
-        let _provider_type = self.provider_type.ok_or_else(|| {
+        let provider_type = self.provider_type.ok_or_else(|| {
             LlmError::ConfigurationError("Provider type not specified".to_string())
         })?;
 
-        // For now, we'll return an error since we need to implement the actual provider creation
-        // This would integrate with your existing builder pattern
-        Err(LlmError::UnsupportedOperation(
-            "Siumai builder not yet fully implemented. Use the existing llm() builder for now."
-                .to_string(),
-        ))
+        let api_key = self.api_key.ok_or_else(|| {
+            LlmError::ConfigurationError("API key not specified".to_string())
+        })?;
+
+        // Create the appropriate client based on provider type
+        let client: Box<dyn LlmClient> = match provider_type {
+            ProviderType::OpenAi => {
+                let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
+                    .with_base_url(self.base_url.unwrap_or_else(|| "https://api.openai.com/v1".to_string()))
+                    .with_model(self.model.unwrap_or_else(|| "gpt-4o-mini".to_string()));
+
+                // Set common parameters
+                if let Some(temp) = self.common_params.temperature {
+                    config = config.with_temperature(temp);
+                }
+                if let Some(max_tokens) = self.common_params.max_tokens {
+                    config = config.with_max_tokens(max_tokens);
+                }
+
+                // Set organization and project if provided
+                if let Some(org) = self.organization {
+                    config = config.with_organization(org);
+                }
+                if let Some(proj) = self.project {
+                    config = config.with_project(proj);
+                }
+
+                let http_client = reqwest::Client::new();
+                Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
+            },
+            ProviderType::Anthropic => {
+                let base_url = self.base_url.unwrap_or_else(|| "https://api.anthropic.com".to_string());
+                let model = self.model.unwrap_or_else(|| "claude-3-5-sonnet-20241022".to_string());
+
+                // Set model in common params
+                let mut common_params = self.common_params;
+                common_params.model = model;
+
+                let http_client = reqwest::Client::new();
+                Box::new(crate::providers::anthropic::AnthropicClient::new(
+                    api_key,
+                    base_url,
+                    http_client,
+                    common_params,
+                    crate::params::AnthropicParams::default(),
+                    self.http_config,
+                ))
+            },
+            ProviderType::Gemini => {
+                return Err(LlmError::UnsupportedOperation(
+                    "Gemini provider not yet implemented in unified interface".to_string(),
+                ));
+            },
+            ProviderType::XAI => {
+                return Err(LlmError::UnsupportedOperation(
+                    "xAI provider not yet implemented in unified interface".to_string(),
+                ));
+            },
+            ProviderType::Custom(name) => {
+                match name.as_str() {
+                    "deepseek" => {
+                        // Use OpenAI-compatible client for DeepSeek
+                        let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
+                            .with_base_url(self.base_url.unwrap_or_else(|| "https://api.deepseek.com".to_string()))
+                            .with_model(self.model.unwrap_or_else(|| "deepseek-chat".to_string()));
+
+                        // Set common parameters
+                        if let Some(temp) = self.common_params.temperature {
+                            config = config.with_temperature(temp);
+                        }
+                        if let Some(max_tokens) = self.common_params.max_tokens {
+                            config = config.with_max_tokens(max_tokens);
+                        }
+
+                        let http_client = reqwest::Client::new();
+                        Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
+                    },
+                    "openrouter" => {
+                        // Use OpenAI-compatible client for OpenRouter
+                        let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
+                            .with_base_url(self.base_url.unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string()))
+                            .with_model(self.model.unwrap_or_else(|| "openai/gpt-3.5-turbo".to_string()));
+
+                        // Set common parameters
+                        if let Some(temp) = self.common_params.temperature {
+                            config = config.with_temperature(temp);
+                        }
+                        if let Some(max_tokens) = self.common_params.max_tokens {
+                            config = config.with_max_tokens(max_tokens);
+                        }
+
+                        let http_client = reqwest::Client::new();
+                        Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
+                    },
+                    "groq" => {
+                        // Use OpenAI-compatible client for Groq
+                        let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
+                            .with_base_url(self.base_url.unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string()))
+                            .with_model(self.model.unwrap_or_else(|| "llama-3.3-70b-versatile".to_string()));
+
+                        // Set common parameters
+                        if let Some(temp) = self.common_params.temperature {
+                            config = config.with_temperature(temp);
+                        }
+                        if let Some(max_tokens) = self.common_params.max_tokens {
+                            config = config.with_max_tokens(max_tokens);
+                        }
+
+                        let http_client = reqwest::Client::new();
+                        Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
+                    },
+                    _ => {
+                        return Err(LlmError::UnsupportedOperation(
+                            format!("Custom provider '{}' not yet implemented", name),
+                        ));
+                    }
+                }
+            },
+        };
+
+        Ok(Siumai::new(client))
     }
 }
 
@@ -288,12 +508,7 @@ impl Default for SiumaiBuilder {
     }
 }
 
-/// Convenience function to create a siumai provider builder
-///
-/// This provides a similar API to llm_dart's ai() function
-pub fn ai() -> SiumaiBuilder {
-    SiumaiBuilder::new()
-}
+
 
 /// Provider registry for dynamic provider creation
 pub struct ProviderRegistry {

@@ -21,6 +21,7 @@ pub struct AnthropicChatCapability {
     pub http_client: reqwest::Client,
     pub http_config: HttpConfig,
     pub parameter_mapper: AnthropicParameterMapper,
+    anthropic_params: AnthropicSpecificParams,
 }
 
 impl AnthropicChatCapability {
@@ -30,6 +31,7 @@ impl AnthropicChatCapability {
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
+        anthropic_params: AnthropicSpecificParams,
     ) -> Self {
         Self {
             api_key,
@@ -37,6 +39,7 @@ impl AnthropicChatCapability {
             http_client,
             http_config,
             parameter_mapper: AnthropicParameterMapper,
+            anthropic_params,
         }
     }
 
@@ -44,6 +47,7 @@ impl AnthropicChatCapability {
     fn build_chat_request_body(
         &self,
         request: &ChatRequest,
+        anthropic_params: Option<&super::types::AnthropicSpecificParams>,
     ) -> Result<serde_json::Value, LlmError> {
         // Map common parameters
         let mut body = self
@@ -57,6 +61,19 @@ impl AnthropicChatCapability {
                 .merge_provider_params(body, provider_params);
         }
 
+        // Add Anthropic-specific parameters
+        if let Some(params) = anthropic_params {
+            // Add thinking configuration if present
+            if let Some(ref thinking_config) = params.thinking_config {
+                body["thinking"] = thinking_config.to_request_params();
+            }
+
+            // Add metadata if present
+            if let Some(ref metadata) = params.metadata {
+                body["metadata"] = metadata.clone();
+            }
+        }
+
         // Validate parameters
         self.parameter_mapper.validate_params(&body)?;
 
@@ -67,6 +84,17 @@ impl AnthropicChatCapability {
         // If there is a system message, set it separately
         if let Some(system_content) = system {
             body["system"] = serde_json::Value::String(system_content);
+        }
+
+        // Add tools if present
+        if let Some(ref tools) = request.tools {
+            let anthropic_tools = convert_tools_to_anthropic_format(tools)?;
+            body["tools"] = serde_json::Value::Array(anthropic_tools);
+        }
+
+        // Add streaming if enabled
+        if request.stream {
+            body["stream"] = serde_json::Value::Bool(true);
         }
 
         Ok(body)
@@ -138,7 +166,7 @@ impl ChatCapability for AnthropicChatCapability {
         };
 
         let headers = build_headers(&self.api_key, &self.http_config.headers)?;
-        let body = self.build_chat_request_body(&request)?;
+        let body = self.build_chat_request_body(&request, Some(&self.anthropic_params))?;
         let url = format!("{}/v1/messages", self.base_url);
 
         let response = self

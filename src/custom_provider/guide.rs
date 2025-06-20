@@ -18,9 +18,8 @@ use serde_json;
 ///
 /// ## Step 1: Implement the CustomProvider trait
 ///
-/// ```rust
-/// use siumai::custom_provider::*;
-/// use siumai::types::*;
+/// ```rust,no_run
+/// use siumai::prelude::*;
 /// use async_trait::async_trait;
 ///
 /// pub struct MyCustomProvider {
@@ -60,7 +59,10 @@ use serde_json;
 ///
 /// ## Step 2: Create a configuration and client
 ///
-/// ```rust
+/// ```rust,ignore
+/// # use siumai::prelude::*;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let config = CustomProviderConfig::new(
 ///     "my-provider",
 ///     "https://api.myprovider.com/v1",
@@ -72,16 +74,22 @@ use serde_json;
 ///
 /// let provider = Box::new(MyCustomProvider::new(config.clone()));
 /// let client = CustomProviderClient::new(provider, config)?;
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// ## Step 3: Use the client
 ///
-/// ```rust
-/// use siumai::traits::ChatCapability;
-///
-/// let messages = vec![user("Hello, how are you?")];
+/// ```rust,no_run
+/// # use siumai::prelude::*;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let client = quick_openai().await?;
+/// let messages = vec![user!("Hello, how are you?")];
 /// let response = client.chat_with_tools(messages, None).await?;
 /// println!("Response: {}", response.content.text().unwrap_or(""));
+/// # Ok(())
+/// # }
 /// ```
 
 /// Example: Hugging Face Provider

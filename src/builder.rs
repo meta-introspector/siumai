@@ -10,28 +10,34 @@
 //! - Consistent interface across providers
 //!
 //! # Example Usage
-//! ```rust
-//! use siumai::llm;
+//! ```rust,no_run
+//! use siumai::builder::LlmBuilder;
+//! use std::time::Duration;
 //!
-//! // Basic usage
-//! let client = llm()
-//!     .openai()
-//!     .api_key("your-api-key")
-//!     .model("gpt-4")
-//!     .build()
-//!     .await?;
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     // Basic usage
+//!     let client = LlmBuilder::new()
+//!         .openai()
+//!         .api_key("your-api-key")
+//!         .model("gpt-4")
+//!         .build()
+//!         .await?;
 //!
-//! // With custom HTTP client
-//! let custom_client = reqwest::Client::builder()
-//!     .timeout(Duration::from_secs(30))
-//!     .build()?;
+//!     // With custom HTTP client
+//!     let custom_client = reqwest::Client::builder()
+//!         .timeout(Duration::from_secs(30))
+//!         .build()?;
 //!
-//! let client = llm()
-//!     .with_http_client(custom_client)
-//!     .openai()
-//!     .api_key("your-api-key")
-//!     .build()
-//!     .await?;
+//!     let client = LlmBuilder::new()
+//!         .with_http_client(custom_client)
+//!         .openai()
+//!         .api_key("your-api-key")
+//!         .build()
+//!         .await?;
+//!
+//!     Ok(())
+//! }
 //! ```
 
 use std::collections::HashMap;
@@ -44,39 +50,26 @@ use crate::types::*;
 use crate::params::{AnthropicParams, OpenAiParams, ResponseFormat, ToolChoice};
 use crate::providers::*;
 
-/// Main entry point for the builder pattern.
-///
-/// This function creates a new LlmBuilder instance that can be used to configure
-/// and create LLM clients for different providers.
-///
-/// # Example
-/// ```rust
-/// use siumai::llm;
-///
-/// let client = llm()
-///     .openai()
-///     .api_key("your-api-key")
-///     .model("gpt-4")
-///     .build()
-///     .await?;
-/// ```
-pub fn llm() -> LlmBuilder {
-    LlmBuilder::new()
-}
+
 
 /// Quick OpenAI client creation with minimal configuration.
 ///
 /// Uses environment variable OPENAI_API_KEY and default settings.
 ///
 /// # Example
-/// ```rust
-/// use siumai::quick_openai;
+/// ```rust,no_run
+/// use siumai::{quick_openai, quick_openai_with_model};
 ///
-/// // Uses OPENAI_API_KEY env var and gpt-4o-mini model
-/// let client = quick_openai().await?;
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     // Uses OPENAI_API_KEY env var and gpt-4o-mini model
+///     let client = quick_openai().await?;
 ///
-/// // With custom model
-/// let client = quick_openai_with_model("gpt-4").await?;
+///     // With custom model
+///     let client = quick_openai_with_model("gpt-4").await?;
+///
+///     Ok(())
+/// }
 /// ```
 pub async fn quick_openai() -> Result<crate::providers::openai::OpenAiClient, LlmError> {
     quick_openai_with_model("gpt-4o-mini").await
@@ -84,7 +77,7 @@ pub async fn quick_openai() -> Result<crate::providers::openai::OpenAiClient, Ll
 
 /// Quick OpenAI client creation with custom model.
 pub async fn quick_openai_with_model(model: &str) -> Result<crate::providers::openai::OpenAiClient, LlmError> {
-    llm()
+    LlmBuilder::new()
         .openai()
         .model(model)
         .build()
@@ -100,7 +93,7 @@ pub async fn quick_anthropic() -> Result<crate::providers::anthropic::AnthropicC
 
 /// Quick Anthropic client creation with custom model.
 pub async fn quick_anthropic_with_model(model: &str) -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
-    llm()
+    LlmBuilder::new()
         .anthropic()
         .model(model)
         .build()
@@ -116,7 +109,7 @@ pub async fn quick_gemini() -> Result<crate::providers::gemini::GeminiClient, Ll
 
 /// Quick Gemini client creation with custom model.
 pub async fn quick_gemini_with_model(model: &str) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
-    llm()
+    LlmBuilder::new()
         .gemini()
         .model(model)
         .build()
@@ -217,17 +210,25 @@ impl LlmBuilder {
     /// * `client` - The reqwest client to use
     ///
     /// # Example
-    /// ```rust
-    /// let custom_client = reqwest::Client::builder()
-    ///     .timeout(Duration::from_secs(30))
-    ///     .build()?;
+    /// ```rust,no_run
+    /// use std::time::Duration;
+    /// use siumai::builder::LlmBuilder;
     ///
-    /// let llm_client = llm()
-    ///     .with_http_client(custom_client)
-    ///     .openai()
-    ///     .api_key("your-key")
-    ///     .build()
-    ///     .await?;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let custom_client = reqwest::Client::builder()
+    ///         .timeout(Duration::from_secs(30))
+    ///         .build()?;
+    ///
+    ///     let llm_client = LlmBuilder::new()
+    ///         .with_http_client(custom_client)
+    ///         .openai()
+    ///         .api_key("your-key")
+    ///         .build()
+    ///         .await?;
+    ///
+    ///     Ok(())
+    /// }
     /// ```
     pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
         self.http_client = Some(client);
@@ -361,16 +362,21 @@ impl LlmBuilder {
     ///
     /// # Example
     /// ```rust,no_run
-    /// use siumai::llm;
+    /// use siumai::builder::LlmBuilder;
     ///
-    /// let client = llm()
-    ///     .deepseek()
-    ///     .api_key("your-deepseek-api-key")
-    ///     .model("deepseek-reasoner")
-    ///     .reasoning(true)?
-    ///     .temperature(0.1)
-    ///     .build()
-    ///     .await?;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = LlmBuilder::new()
+    ///         .deepseek()
+    ///         .api_key("your-deepseek-api-key")
+    ///         .model("deepseek-reasoner")
+    ///         .reasoning(true)?
+    ///         .temperature(0.1)
+    ///         .build()
+    ///         .await?;
+    ///
+    ///     Ok(())
+    /// }
     /// ```
     pub fn deepseek(self) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::DeepSeekProvider> {
         crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
@@ -383,17 +389,22 @@ impl LlmBuilder {
     ///
     /// # Example
     /// ```rust,no_run
-    /// use siumai::llm;
+    /// use siumai::builder::LlmBuilder;
     ///
-    /// let client = llm()
-    ///     .openrouter()
-    ///     .api_key("your-openrouter-api-key")
-    ///     .model("openai/gpt-4")
-    ///     .site_url("https://myapp.com")?
-    ///     .app_name("My App")?
-    ///     .temperature(0.7)
-    ///     .build()
-    ///     .await?;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = LlmBuilder::new()
+    ///         .openrouter()
+    ///         .api_key("your-openrouter-api-key")
+    ///         .model("openai/gpt-4")
+    ///         .site_url("https://myapp.com")?
+    ///         .app_name("My App")?
+    ///         .temperature(0.7)
+    ///         .build()
+    ///         .await?;
+    ///
+    ///     Ok(())
+    /// }
     /// ```
     pub fn openrouter(self) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::OpenRouterProvider> {
         crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
@@ -719,6 +730,18 @@ impl AnthropicBuilder {
         self
     }
 
+    /// Enable thinking mode with default budget (10k tokens)
+    pub fn with_thinking_enabled(mut self) -> Self {
+        self.anthropic_params.thinking_budget = Some(10000);
+        self
+    }
+
+    /// Enable thinking mode with specified budget tokens
+    pub fn with_thinking_mode(mut self, budget_tokens: Option<u32>) -> Self {
+        self.anthropic_params.thinking_budget = budget_tokens;
+        self
+    }
+
     /// Sets the system message
     pub fn system_message<S: Into<String>>(mut self, system: S) -> Self {
         self.anthropic_params.system = Some(system.into());
@@ -762,14 +785,39 @@ impl AnthropicBuilder {
                 .unwrap()
         });
 
-        Ok(AnthropicClient::new(
+        // Convert AnthropicParams to AnthropicSpecificParams
+        let specific_params = crate::providers::anthropic::types::AnthropicSpecificParams {
+            beta_features: self.anthropic_params.beta_features.clone().unwrap_or_default(),
+            cache_control: self.anthropic_params.cache_control.as_ref().map(|_cc| {
+                crate::providers::anthropic::cache::CacheControl::ephemeral() // Convert from params::CacheControl
+            }),
+            thinking_config: self.anthropic_params.thinking_budget.map(|budget| {
+                crate::providers::anthropic::thinking::ThinkingConfig::enabled(budget)
+            }),
+            metadata: self.anthropic_params.metadata.as_ref().map(|m| {
+                // Convert HashMap<String, String> to serde_json::Value
+                let mut json_map = serde_json::Map::new();
+                for (k, v) in m {
+                    json_map.insert(k.clone(), serde_json::Value::String(v.clone()));
+                }
+                serde_json::Value::Object(json_map)
+            }),
+        };
+
+        // Create AnthropicClient with the converted specific_params
+        let mut client = AnthropicClient::new(
             api_key,
             base_url,
             http_client,
             self.common_params,
             self.anthropic_params,
             self.http_config,
-        ))
+        );
+
+        // Update the client with the specific params
+        client = client.with_specific_params(specific_params);
+
+        Ok(client)
     }
 }
 
@@ -780,16 +828,21 @@ impl AnthropicBuilder {
 ///
 /// # Example
 /// ```rust,no_run
-/// use siumai::llm;
+/// use siumai::builder::LlmBuilder;
 ///
-/// let client = llm()
-///     .gemini()
-///     .api_key("your-api-key")
-///     .model("gemini-1.5-flash")
-///     .temperature(0.7)
-///     .max_tokens(8192)
-///     .build()
-///     .await?;
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let client = LlmBuilder::new()
+///         .gemini()
+///         .api_key("your-api-key")
+///         .model("gemini-1.5-flash")
+///         .temperature(0.7)
+///         .max_tokens(8192)
+///         .build()
+///         .await?;
+///
+///     Ok(())
+/// }
 /// ```
 #[derive(Debug, Clone)]
 pub struct GeminiBuilder {

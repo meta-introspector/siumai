@@ -2,7 +2,7 @@
 //!
 //! This example demonstrates how to use the Gemini provider for basic chat functionality.
 
-use siumai::{ChatCapability, ModelListingCapability, Tool, ToolFunction, llm, system, user};
+use siumai::{ChatCapability, ModelListingCapability, Tool, ToolFunction, system, user, Provider};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,8 +16,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Creating Gemini client...");
 
     // Create a Gemini client
-    let client = llm()
-        .gemini()
+    let client = Provider::gemini()
         .api_key(api_key)
         .model("gemini-1.5-flash")
         .temperature(0.7)
@@ -145,8 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "required": ["name", "age", "occupation"]
     });
 
-    let structured_client = llm()
-        .gemini()
+    let structured_client = Provider::gemini()
         .api_key(std::env::var("GEMINI_API_KEY")?)
         .model("gemini-1.5-flash")
         .json_schema(schema)
@@ -163,7 +161,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("📋 Structured response: {}", text);
 
         // Try to parse as JSON
-        match serde_json::from_str::<serde_json::Value>(text) {
+        match serde_json::from_str::<serde_json::Value>(&*text) {
             Ok(json) => {
                 println!("✅ Successfully parsed as JSON:");
                 println!("{}", serde_json::to_string_pretty(&json)?);
