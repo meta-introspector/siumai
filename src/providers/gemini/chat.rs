@@ -280,11 +280,8 @@ impl GeminiChatCapability {
             request_id: None,
         };
 
-        // Add thinking content to provider_data if present
-        let mut provider_data = std::collections::HashMap::new();
-        if !thinking_content.is_empty() {
-            provider_data.insert("thinking".to_string(), serde_json::Value::String(thinking_content.clone()));
-        }
+        // Create metadata (no longer storing thinking content here to avoid duplication)
+        let provider_data = std::collections::HashMap::new();
 
         Ok(ChatResponse {
             id: None, // Gemini doesn't provide response IDs

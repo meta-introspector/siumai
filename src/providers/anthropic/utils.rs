@@ -212,6 +212,47 @@ pub fn parse_response_content(content_blocks: &[AnthropicContentBlock]) -> Messa
     MessageContent::Text(String::new())
 }
 
+/// Parse Anthropic response content and extract tool calls
+pub fn parse_response_content_and_tools(content_blocks: &[AnthropicContentBlock]) -> (MessageContent, Option<Vec<crate::types::ToolCall>>) {
+    let mut text_content = String::new();
+    let mut tool_calls = Vec::new();
+
+    for content_block in content_blocks {
+        match content_block.r#type.as_str() {
+            "text" => {
+                if let Some(text) = &content_block.text {
+                    if !text_content.is_empty() {
+                        text_content.push('\n');
+                    }
+                    text_content.push_str(text);
+                }
+            }
+            "tool_use" => {
+                if let (Some(id), Some(name), Some(input)) = (&content_block.id, &content_block.name, &content_block.input) {
+                    tool_calls.push(crate::types::ToolCall {
+                        id: id.clone(),
+                        r#type: "function".to_string(),
+                        function: Some(crate::types::FunctionCall {
+                            name: name.clone(),
+                            arguments: serde_json::to_string(input).unwrap_or_default(),
+                        }),
+                    });
+                }
+            }
+            _ => continue,
+        }
+    }
+
+    let content = if text_content.is_empty() {
+        MessageContent::Text(String::new())
+    } else {
+        MessageContent::Text(text_content)
+    };
+
+    let tools = if tool_calls.is_empty() { None } else { Some(tool_calls) };
+    (content, tools)
+}
+
 /// Extract thinking content from Anthropic response
 pub fn extract_thinking_content(content_blocks: &[AnthropicContentBlock]) -> Option<String> {
     for content_block in content_blocks {
@@ -284,4 +325,88 @@ pub fn convert_tools_to_anthropic_format(tools: &[crate::types::Tool]) -> Result
     }
 
     Ok(anthropic_tools)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::MessageContent;
+
+    #[test]
+    fn test_parse_response_content_and_tools() {
+        let content_blocks = vec![
+            AnthropicContentBlock {
+                r#type: "text".to_string(),
+                text: Some("I'll help you get the weather.".to_string()),
+                thinking: None,
+                signature: None,
+                id: None,
+                name: None,
+                input: None,
+                tool_use_id: None,
+                content: None,
+                is_error: None,
+            },
+            AnthropicContentBlock {
+                r#type: "tool_use".to_string(),
+                text: None,
+                thinking: None,
+                signature: None,
+                id: Some("toolu_123".to_string()),
+                name: Some("get_weather".to_string()),
+                input: Some(serde_json::json!({"location": "San Francisco"})),
+                tool_use_id: None,
+                content: None,
+                is_error: None,
+            },
+        ];
+
+        let (content, tool_calls) = parse_response_content_and_tools(&content_blocks);
+
+        // Check content
+        match content {
+            MessageContent::Text(text) => assert_eq!(text, "I'll help you get the weather."),
+            _ => panic!("Expected text content"),
+        }
+
+        // Check tool calls
+        assert!(tool_calls.is_some());
+        let tools = tool_calls.unwrap();
+        assert_eq!(tools.len(), 1);
+        assert_eq!(tools[0].id, "toolu_123");
+        assert_eq!(tools[0].r#type, "function");
+        assert!(tools[0].function.is_some());
+        let function = tools[0].function.as_ref().unwrap();
+        assert_eq!(function.name, "get_weather");
+        assert_eq!(function.arguments, r#"{"location":"San Francisco"}"#);
+    }
+
+    #[test]
+    fn test_parse_response_content_and_tools_text_only() {
+        let content_blocks = vec![
+            AnthropicContentBlock {
+                r#type: "text".to_string(),
+                text: Some("Hello world".to_string()),
+                thinking: None,
+                signature: None,
+                id: None,
+                name: None,
+                input: None,
+                tool_use_id: None,
+                content: None,
+                is_error: None,
+            },
+        ];
+
+        let (content, tool_calls) = parse_response_content_and_tools(&content_blocks);
+
+        // Check content
+        match content {
+            MessageContent::Text(text) => assert_eq!(text, "Hello world"),
+            _ => panic!("Expected text content"),
+        }
+
+        // Check no tool calls
+        assert!(tool_calls.is_none());
+    }
 }

@@ -792,13 +792,20 @@ impl ChatResponse {
 
     /// Check if the response has thinking content
     pub fn has_thinking(&self) -> bool {
-        self.thinking.is_some()
+        self.thinking.as_ref().map_or(false, |t| !t.is_empty())
     }
 
-    /// Get thinking content
+    /// Get thinking content if available
     pub fn get_thinking(&self) -> Option<&str> {
         self.thinking.as_deref()
     }
+
+    /// Get thinking content with fallback to empty string
+    pub fn thinking_or_empty(&self) -> &str {
+        self.thinking.as_deref().unwrap_or("")
+    }
+
+
 }
 
 /// Usage statistics

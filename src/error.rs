@@ -128,6 +128,18 @@ pub enum LlmError {
     #[error("Processing error: {0}")]
     ProcessingError(String),
 
+    /// Tool call error
+    #[error("Tool call error: {0}")]
+    ToolCallError(String),
+
+    /// Tool validation error
+    #[error("Tool validation error: {0}")]
+    ToolValidationError(String),
+
+    /// Unsupported tool type
+    #[error("Unsupported tool type: {0}")]
+    UnsupportedToolType(String),
+
     /// Other errors
     #[error("Other error: {0}")]
     Other(String),
@@ -237,11 +249,11 @@ impl LlmError {
                 }
             }
             Self::JsonError(_) | Self::ParseError(_) => ErrorCategory::Parsing,
-            Self::InvalidInput(_) | Self::InvalidParameter(_) => ErrorCategory::Validation,
+            Self::InvalidInput(_) | Self::InvalidParameter(_) | Self::ToolValidationError(_) => ErrorCategory::Validation,
             Self::ConfigurationError(_) => ErrorCategory::Configuration,
-            Self::ModelNotSupported(_) | Self::UnsupportedOperation(_) => ErrorCategory::Unsupported,
+            Self::ModelNotSupported(_) | Self::UnsupportedOperation(_) | Self::UnsupportedToolType(_) => ErrorCategory::Unsupported,
             Self::StreamError(_) => ErrorCategory::Stream,
-            Self::ProviderError { .. } => ErrorCategory::Provider,
+            Self::ProviderError { .. } | Self::ToolCallError(_) => ErrorCategory::Provider,
             _ => ErrorCategory::Unknown,
         }
     }

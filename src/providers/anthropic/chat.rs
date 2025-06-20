@@ -105,7 +105,8 @@ impl AnthropicChatCapability {
         &self,
         response: AnthropicChatResponse,
     ) -> Result<ChatResponse, LlmError> {
-        let content = parse_response_content(&response.content);
+        // Parse content and extract tool calls
+        let (content, tool_calls) = parse_response_content_and_tools(&response.content);
         let finish_reason = parse_finish_reason(response.stop_reason.as_deref());
         let usage = create_usage_from_response(response.usage);
 
@@ -140,8 +141,8 @@ impl AnthropicChatCapability {
             model: Some(response.model),
             usage,
             finish_reason,
-            tool_calls: None, // Tool calls require special handling
-            thinking: None, // Anthropic thinking will be handled separately
+            tool_calls,
+            thinking: extract_thinking_content(&response.content),
             metadata: provider_data,
         })
     }

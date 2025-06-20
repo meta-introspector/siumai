@@ -3,6 +3,9 @@
 //! This example demonstrates how to handle Google Gemini's thinking output
 //! with the Siumai LLM library. Thinking is automatically included when the
 //! model produces it - no special configuration needed.
+//!
+//! The example shows the improved API that provides clean, type-safe access
+//! to thinking content without redundant metadata lookups.
 
 use siumai::providers::gemini::GeminiBuilder;
 use siumai::stream::ChatStreamEvent;
@@ -49,24 +52,22 @@ async fn basic_thinking_example(api_key: &str) -> Result<(), Box<dyn std::error:
 
     println!("🤖 Response: {}", response.content.text().unwrap_or("No content"));
 
-    // Check if thinking content was included
-    if let Some(thinking) = response.provider_data.get("thinking") {
-        if let Some(thinking_text) = thinking.as_str() {
-            println!("\n🧠 Thinking process detected:");
-            println!("{}", "-".repeat(40));
-            println!("{}", thinking_text);
-            println!("{}", "-".repeat(40));
-        }
+    // Check if thinking content was included using the new convenience methods
+    if response.has_thinking() {
+        println!("\n🧠 Thinking process detected:");
+        println!("{}", "-".repeat(40));
+        println!("{}", response.get_thinking().unwrap());
+        println!("{}", "-".repeat(40));
     }
 
     if let Some(usage) = &response.usage {
         println!("\n📊 Usage:");
-        println!("  - Prompt tokens: {}", usage.prompt_tokens.unwrap_or(0));
-        println!("  - Completion tokens: {}", usage.completion_tokens.unwrap_or(0));
+        println!("  - Prompt tokens: {}", usage.prompt_tokens);
+        println!("  - Completion tokens: {}", usage.completion_tokens);
         if let Some(reasoning_tokens) = usage.reasoning_tokens {
             println!("  - Thinking tokens: {}", reasoning_tokens);
         }
-        println!("  - Total tokens: {}", usage.total_tokens.unwrap_or(0));
+        println!("  - Total tokens: {}", usage.total_tokens);
     }
 
     println!("\n");
@@ -119,7 +120,7 @@ async fn streaming_thinking_example(api_key: &str) -> Result<(), Box<dyn std::er
                     if let Some(reasoning_tokens) = usage.reasoning_tokens {
                         println!("🧠 Thinking tokens: {}", reasoning_tokens);
                     }
-                    println!("📊 Total tokens: {}", usage.total_tokens.unwrap_or(0));
+                    println!("📊 Total tokens: {}", usage.total_tokens);
                 }
                 break;
             }
@@ -164,14 +165,12 @@ Find the minimum number of moves and which cells to flip.
 
     println!("🤖 Solution: {}", response.content.text().unwrap_or("No content"));
 
-    // Check for thinking content
-    if let Some(thinking) = response.provider_data.get("thinking") {
-        if let Some(thinking_text) = thinking.as_str() {
-            println!("\n🧠 Model's thinking process:");
-            println!("{}", "-".repeat(40));
-            println!("{}", thinking_text);
-            println!("{}", "-".repeat(40));
-        }
+    // Check for thinking content using convenience methods
+    if response.has_thinking() {
+        println!("\n🧠 Model's thinking process:");
+        println!("{}", "-".repeat(40));
+        println!("{}", response.get_thinking().unwrap());
+        println!("{}", "-".repeat(40));
     }
 
     if let Some(usage) = &response.usage {
@@ -179,8 +178,8 @@ Find the minimum number of moves and which cells to flip.
         if let Some(reasoning_tokens) = usage.reasoning_tokens {
             println!("  - Thinking: {} tokens", reasoning_tokens);
         }
-        println!("  - Response: {} tokens", usage.completion_tokens.unwrap_or(0));
-        println!("  - Total: {} tokens", usage.total_tokens.unwrap_or(0));
+        println!("  - Response: {} tokens", usage.completion_tokens);
+        println!("  - Total: {} tokens", usage.total_tokens);
     }
 
     println!("\n");

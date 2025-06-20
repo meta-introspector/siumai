@@ -70,6 +70,13 @@ impl OpenAiChatCapability {
         let messages = convert_messages(&request.messages)?;
         body["messages"] = serde_json::to_value(messages)?;
 
+        // Add tools if provided
+        if let Some(ref tools) = request.tools {
+            if !tools.is_empty() {
+                body["tools"] = serde_json::to_value(tools)?;
+            }
+        }
+
         Ok(body)
     }
 
