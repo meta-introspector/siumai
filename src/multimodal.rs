@@ -10,6 +10,7 @@ use crate::error::LlmError;
 use crate::types::{ContentPart, MessageContent};
 
 /// Multimodal content processor
+#[allow(dead_code)]
 pub struct MultimodalProcessor {
     /// Supported image formats
     image_formats: Vec<ImageFormat>,
@@ -38,12 +39,12 @@ impl MultimodalProcessor {
             MessageContent::Text(text) => Ok(ProcessedContent::Text(text.clone())),
             MessageContent::MultiModal(parts) => {
                 let mut processed_parts = Vec::new();
-                
+
                 for part in parts {
                     let processed_part = self.process_content_part(part)?;
                     processed_parts.push(processed_part);
                 }
-                
+
                 Ok(ProcessedContent::MultiModal(processed_parts))
             }
         }
@@ -93,7 +94,7 @@ impl MultimodalProcessor {
                 .next()
                 .and_then(|s| s.strip_prefix("data:"))
                 .unwrap_or("image/jpeg");
-            
+
             ImageFormat::from_mime_type(mime_type)
         } else {
             // Try to detect from base64 header
@@ -101,11 +102,17 @@ impl MultimodalProcessor {
         };
 
         let mut metadata = ContentMetadata::default();
-        metadata.insert("original_format".to_string(), serde_json::Value::String(format.to_string()));
-        
+        metadata.insert(
+            "original_format".to_string(),
+            serde_json::Value::String(format.to_string()),
+        );
+
         // Add size estimation if possible
         if let Ok(size) = self.estimate_data_size(image_data) {
-            metadata.insert("estimated_size_bytes".to_string(), serde_json::Value::Number(size.into()));
+            metadata.insert(
+                "estimated_size_bytes".to_string(),
+                serde_json::Value::Number(size.into()),
+            );
         }
 
         Ok(MediaInfo {
@@ -115,7 +122,11 @@ impl MultimodalProcessor {
     }
 
     /// Analyze audio content
-    fn analyze_audio(&self, audio_data: &str, format_hint: Option<&str>) -> Result<MediaInfo, LlmError> {
+    fn analyze_audio(
+        &self,
+        audio_data: &str,
+        format_hint: Option<&str>,
+    ) -> Result<MediaInfo, LlmError> {
         let format = if let Some(hint) = format_hint {
             AudioFormat::from_extension(hint)
         } else if audio_data.starts_with("data:audio/") {
@@ -124,17 +135,23 @@ impl MultimodalProcessor {
                 .next()
                 .and_then(|s| s.strip_prefix("data:"))
                 .unwrap_or("audio/wav");
-            
+
             AudioFormat::from_mime_type(mime_type)
         } else {
             AudioFormat::Wav // Default
         };
 
         let mut metadata = ContentMetadata::default();
-        metadata.insert("original_format".to_string(), serde_json::Value::String(format.to_string()));
-        
+        metadata.insert(
+            "original_format".to_string(),
+            serde_json::Value::String(format.to_string()),
+        );
+
         if let Ok(size) = self.estimate_data_size(audio_data) {
-            metadata.insert("estimated_size_bytes".to_string(), serde_json::Value::Number(size.into()));
+            metadata.insert(
+                "estimated_size_bytes".to_string(),
+                serde_json::Value::Number(size.into()),
+            );
         }
 
         Ok(MediaInfo {
@@ -181,7 +198,7 @@ impl Default for ProcessingConfig {
     fn default() -> Self {
         Self {
             max_image_size: Some(20 * 1024 * 1024), // 20MB
-            max_audio_duration: Some(300), // 5 minutes
+            max_audio_duration: Some(300),          // 5 minutes
             auto_compress: true,
             compression_quality: 0.8,
         }
@@ -479,10 +496,10 @@ mod tests {
     #[test]
     fn test_multimodal_processor() {
         let processor = MultimodalProcessor::new();
-        
+
         let text_content = MessageContent::Text("Hello world".to_string());
         let processed = processor.process_content(&text_content).unwrap();
-        
+
         match processed {
             ProcessedContent::Text(text) => assert_eq!(text, "Hello world"),
             _ => panic!("Expected text content"),

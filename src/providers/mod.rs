@@ -8,6 +8,7 @@ pub mod openai;
 
 // Re-export main types
 pub use anthropic::AnthropicClient;
+pub use gemini::GeminiClient;
 pub use openai::OpenAiClient;
 
 use crate::traits::ProviderCapabilities;
@@ -87,6 +88,31 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
             ],
         },
         ProviderInfo {
+            provider_type: ProviderType::Gemini,
+            name: "Google Gemini",
+            description: "Google Gemini models with multimodal capabilities and code execution",
+            capabilities: ProviderCapabilities::new()
+                .with_chat()
+                .with_streaming()
+                .with_tools()
+                .with_vision()
+                .with_custom_feature("code_execution", true)
+                .with_custom_feature("thinking_mode", true)
+                .with_custom_feature("safety_settings", true)
+                .with_custom_feature("cached_content", true)
+                .with_custom_feature("json_schema", true),
+            default_base_url: "https://generativelanguage.googleapis.com/v1beta",
+            supported_models: vec![
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-8b",
+                "gemini-1.5-pro",
+                "gemini-2.0-flash-exp",
+                "gemini-exp-1114",
+                "gemini-exp-1121",
+                "gemini-exp-1206",
+            ],
+        },
+        ProviderInfo {
             provider_type: ProviderType::XAI,
             name: "xAI",
             description: "xAI Grok models with advanced reasoning capabilities",
@@ -97,10 +123,7 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
                 .with_vision()
                 .with_custom_feature("reasoning", true),
             default_base_url: "https://api.x.ai",
-            supported_models: vec![
-                "grok-beta",
-                "grok-vision-beta",
-            ],
+            supported_models: vec!["grok-beta", "grok-vision-beta"],
         },
     ]
 }
@@ -126,7 +149,7 @@ pub fn get_default_model(provider_type: &ProviderType) -> Option<&'static str> {
     match provider_type {
         ProviderType::OpenAi => Some("gpt-4o"),
         ProviderType::Anthropic => Some("claude-3-5-sonnet-20241022"),
-        ProviderType::Gemini => Some("gemini-pro"),
+        ProviderType::Gemini => Some("gemini-1.5-flash"),
         ProviderType::XAI => Some("grok-beta"),
         ProviderType::Custom(_) => None,
     }
@@ -186,11 +209,11 @@ impl ProviderFactory {
             },
             ProviderType::Gemini => crate::types::CommonParams {
                 model: get_default_model(provider_type)
-                    .unwrap_or("gemini-pro")
+                    .unwrap_or("gemini-1.5-flash")
                     .to_string(),
                 temperature: Some(0.7),
-                max_tokens: Some(4096),
-                top_p: Some(1.0),
+                max_tokens: Some(8192),
+                top_p: Some(0.95),
                 stop_sequences: None,
                 seed: None,
             },

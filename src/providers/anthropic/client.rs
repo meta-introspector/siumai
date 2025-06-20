@@ -17,6 +17,7 @@ use super::types::AnthropicSpecificParams;
 use super::utils::get_default_models;
 
 /// Anthropic Client
+#[allow(dead_code)]
 pub struct AnthropicClient {
     /// Chat capability implementation
     chat_capability: AnthropicChatCapability,
@@ -49,12 +50,7 @@ impl AnthropicClient {
             http_config.clone(),
         );
 
-        let models_capability = AnthropicModels::new(
-            api_key,
-            base_url,
-            http_client,
-            http_config,
-        );
+        let models_capability = AnthropicModels::new(api_key, base_url, http_client, http_config);
 
         Self {
             chat_capability,
@@ -101,7 +97,8 @@ impl AnthropicClient {
 
     /// Enable thinking mode with default budget (10k tokens)
     pub fn with_thinking_enabled(mut self) -> Self {
-        self.specific_params.thinking_config = Some(super::thinking::ThinkingConfig::enabled(10000));
+        self.specific_params.thinking_config =
+            Some(super::thinking::ThinkingConfig::enabled(10000));
         self
     }
 
@@ -208,7 +205,14 @@ mod tests {
 
         assert_eq!(client.specific_params().beta_features.len(), 2);
         assert!(client.specific_params().thinking_config.is_some());
-        assert!(client.specific_params().thinking_config.as_ref().unwrap().is_enabled());
+        assert!(
+            client
+                .specific_params()
+                .thinking_config
+                .as_ref()
+                .unwrap()
+                .is_enabled()
+        );
         assert!(client.specific_params().cache_control.is_some());
     }
 
@@ -226,7 +230,17 @@ mod tests {
         .add_beta_feature("prompt-caching-2024-07-31".to_string());
 
         assert_eq!(client.specific_params().beta_features.len(), 2);
-        assert!(client.specific_params().beta_features.contains(&"computer-use-2024-10-22".to_string()));
-        assert!(client.specific_params().beta_features.contains(&"prompt-caching-2024-07-31".to_string()));
+        assert!(
+            client
+                .specific_params()
+                .beta_features
+                .contains(&"computer-use-2024-10-22".to_string())
+        );
+        assert!(
+            client
+                .specific_params()
+                .beta_features
+                .contains(&"prompt-caching-2024-07-31".to_string())
+        );
     }
 }

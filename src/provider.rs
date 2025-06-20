@@ -63,10 +63,8 @@ impl Siumai {
         capability_name: &str,
         implementation: T,
     ) {
-        self.capabilities.insert(
-            capability_name.to_string(),
-            Box::new(implementation),
-        );
+        self.capabilities
+            .insert(capability_name.to_string(), Box::new(implementation));
     }
 
     /// Get a capability implementation
@@ -93,21 +91,29 @@ impl Siumai {
 
     /// Execute a capability-specific operation
     /// This provides a type-safe way to access provider capabilities
-    pub async fn with_capability<T, F, R>(&self, capability_name: &str, operation: F) -> Result<R, LlmError>
+    pub async fn with_capability<T, F, R>(
+        &self,
+        capability_name: &str,
+        operation: F,
+    ) -> Result<R, LlmError>
     where
         F: FnOnce(&T) -> R,
         T: Any,
     {
         if !self.supports(capability_name) {
-            return Err(LlmError::UnsupportedOperation(
-                format!("Provider {} does not support {}", self.provider_name(), capability_name)
-            ));
+            return Err(LlmError::UnsupportedOperation(format!(
+                "Provider {} does not support {}",
+                self.provider_name(),
+                capability_name
+            )));
         }
 
-        let capability = self.get_capability::<T>(capability_name)
-            .ok_or_else(|| LlmError::InternalError(
-                format!("Capability {} not properly registered", capability_name)
-            ))?;
+        let capability = self.get_capability::<T>(capability_name).ok_or_else(|| {
+            LlmError::InternalError(format!(
+                "Capability {} not properly registered",
+                capability_name
+            ))
+        })?;
 
         Ok(operation(capability))
     }
@@ -118,14 +124,16 @@ impl Siumai {
         F: FnOnce(&dyn AudioCapability) -> R,
     {
         if !self.supports("audio") {
-            return Err(LlmError::UnsupportedOperation(
-                format!("Provider {} does not support audio", self.provider_name())
-            ));
+            return Err(LlmError::UnsupportedOperation(format!(
+                "Provider {} does not support audio",
+                self.provider_name()
+            )));
         }
 
         // For now, we'll return an error since we need proper capability registration
         Err(LlmError::UnsupportedOperation(
-            "Audio capability access not yet implemented. Use provider-specific client.".to_string()
+            "Audio capability access not yet implemented. Use provider-specific client."
+                .to_string(),
         ))
     }
 
@@ -135,13 +143,15 @@ impl Siumai {
         F: FnOnce(&dyn EmbeddingCapability) -> R,
     {
         if !self.supports("embedding") {
-            return Err(LlmError::UnsupportedOperation(
-                format!("Provider {} does not support embedding", self.provider_name())
-            ));
+            return Err(LlmError::UnsupportedOperation(format!(
+                "Provider {} does not support embedding",
+                self.provider_name()
+            )));
         }
 
         Err(LlmError::UnsupportedOperation(
-            "Embedding capability access not yet implemented. Use provider-specific client.".to_string()
+            "Embedding capability access not yet implemented. Use provider-specific client."
+                .to_string(),
         ))
     }
 }
@@ -266,7 +276,8 @@ impl SiumaiBuilder {
         // For now, we'll return an error since we need to implement the actual provider creation
         // This would integrate with your existing builder pattern
         Err(LlmError::UnsupportedOperation(
-            "Siumai builder not yet fully implemented. Use the existing llm() builder for now.".to_string()
+            "Siumai builder not yet fully implemented. Use the existing llm() builder for now."
+                .to_string(),
         ))
     }
 }
@@ -318,14 +329,11 @@ impl ProviderRegistry {
     }
 
     /// Create a provider by name
-    pub fn create_provider(
-        &self,
-        name: &str,
-        config: ProviderConfig,
-    ) -> Result<Siumai, LlmError> {
-        let factory = self.factories.get(name).ok_or_else(|| {
-            LlmError::ConfigurationError(format!("Unknown provider: {}", name))
-        })?;
+    pub fn create_provider(&self, name: &str, config: ProviderConfig) -> Result<Siumai, LlmError> {
+        let factory = self
+            .factories
+            .get(name)
+            .ok_or_else(|| LlmError::ConfigurationError(format!("Unknown provider: {}", name)))?;
 
         let client = factory.create_provider(config)?;
         Ok(Siumai::new(client))

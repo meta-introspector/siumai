@@ -11,10 +11,10 @@
 //! - `chat.rs` - Chat completion capability implementation
 //! - `audio.rs` - Audio processing (TTS/STT) capability implementation
 //! - `embeddings.rs` - Text embedding capability implementation
-//! - `images.rs` - Image generation capability implementation (future)
-//! - `files.rs` - File management capability implementation (future)
+//! - `images.rs` - Image generation capability implementation
+//! - `files.rs` - File management capability implementation
 //! - `models.rs` - Model listing capability implementation (future)
-//! - `moderation.rs` - Content moderation capability implementation (future)
+//! - `moderation.rs` - Content moderation capability implementation
 //! - `types.rs` - OpenAI-specific type definitions
 //! - `utils.rs` - Utility functions and helpers
 //!
@@ -51,15 +51,15 @@ pub mod utils;
 pub mod audio;
 pub mod chat;
 pub mod embeddings;
+pub mod files;
 pub mod images;
 pub mod responses;
 pub mod streaming;
 pub mod structured_output;
 
 // Future capability modules (placeholders)
-// pub mod files;
 pub mod models;
-// pub mod moderation;
+pub mod moderation;
 
 // Re-export main types for convenience
 pub use builder::OpenAiBuilder;
@@ -71,5 +71,7 @@ pub use types::*;
 pub use audio::OpenAiAudio;
 pub use chat::OpenAiChatCapability;
 pub use embeddings::OpenAiEmbeddings;
+pub use files::OpenAiFiles;
 pub use images::OpenAiImages;
 pub use models::OpenAiModels;
+pub use moderation::OpenAiModeration;

@@ -12,12 +12,13 @@ use std::collections::HashMap;
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::traits::ChatCapability;
-use crate::types::{ChatMessage, ChatResponse, Tool, OpenAiBuiltInTool};
+use crate::types::{ChatMessage, ChatResponse, OpenAiBuiltInTool, Tool};
 use crate::web_search::{WebSearchCapability, WebSearchProvider};
 
 use super::config::OpenAiConfig;
 
 /// OpenAI Responses API client
+#[allow(dead_code)]
 pub struct OpenAiResponses {
     /// HTTP client
     http_client: reqwest::Client,
@@ -126,12 +127,16 @@ impl OpenAiResponses {
     }
 
     /// Convert ChatMessage to API format
-    fn convert_message_to_api_format(&self, message: &ChatMessage) -> Result<serde_json::Value, LlmError> {
+    fn convert_message_to_api_format(
+        &self,
+        message: &ChatMessage,
+    ) -> Result<serde_json::Value, LlmError> {
         let mut api_message = serde_json::json!({
             "role": match message.role {
                 crate::types::MessageRole::System => "system",
                 crate::types::MessageRole::User => "user",
                 crate::types::MessageRole::Assistant => "assistant",
+                crate::types::MessageRole::Developer => "developer",
                 crate::types::MessageRole::Tool => "tool",
             }
         });
@@ -159,7 +164,8 @@ impl OpenAiResponses {
                                 }
                             });
                             if let Some(detail) = detail {
-                                image_part["image_url"]["detail"] = serde_json::Value::String(detail.clone());
+                                image_part["image_url"]["detail"] =
+                                    serde_json::Value::String(detail.clone());
                             }
                             content_parts.push(image_part);
                         }
@@ -227,20 +233,32 @@ impl OpenAiResponses {
             .to_string();
 
         // Extract usage information
-        let usage = response_data.get("usage").map(|usage_data| {
-            crate::types::Usage {
-                prompt_tokens: usage_data.get("input_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
-                completion_tokens: usage_data.get("output_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
-                total_tokens: usage_data.get("total_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
+        let usage = response_data
+            .get("usage")
+            .map(|usage_data| crate::types::Usage {
+                prompt_tokens: usage_data
+                    .get("input_tokens")
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u32),
+                completion_tokens: usage_data
+                    .get("output_tokens")
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u32),
+                total_tokens: usage_data
+                    .get("total_tokens")
+                    .and_then(|v| v.as_u64())
+                    .map(|v| v as u32),
                 reasoning_tokens: None,
                 cache_hit_tokens: None,
                 cache_creation_tokens: None,
-            }
-        });
+            });
 
         // Extract metadata
         let metadata = crate::types::ResponseMetadata {
-            id: response_data.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            id: response_data
+                .get("id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             model: Some(self.config.common_params.model.clone()),
             created: None,
             provider: "openai".to_string(),
@@ -271,13 +289,8 @@ impl ChatCapability for OpenAiResponses {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        let request_body = self.build_request_body(
-            &messages,
-            tools.as_deref(),
-            None,
-            false,
-            false,
-        )?;
+        let request_body =
+            self.build_request_body(&messages, tools.as_deref(), None, false, false)?;
 
         let response = self
             .http_client
@@ -369,7 +382,10 @@ impl ChatCapability for OpenAiResponses {
 
 impl OpenAiResponses {
     /// Parse SSE chunk into stream events (static version)
-    fn parse_sse_chunk_static(chunk: &str, model_name: &str) -> Vec<crate::stream::ChatStreamEvent> {
+    fn parse_sse_chunk_static(
+        chunk: &str,
+        model_name: &str,
+    ) -> Vec<crate::stream::ChatStreamEvent> {
         let mut events = Vec::new();
 
         for line in chunk.lines() {
@@ -406,15 +422,26 @@ impl OpenAiResponses {
                             });
                         }
 
-                        if let Some(tool_calls) = delta.get("tool_calls").and_then(|tc| tc.as_array()) {
+                        if let Some(tool_calls) =
+                            delta.get("tool_calls").and_then(|tc| tc.as_array())
+                        {
                             for (index, tool_call) in tool_calls.iter().enumerate() {
                                 let tool_call_delta = crate::stream::ToolCallDelta {
-                                    id: tool_call.get("id").and_then(|id| id.as_str()).map(|s| s.to_string()),
+                                    id: tool_call
+                                        .get("id")
+                                        .and_then(|id| id.as_str())
+                                        .map(|s| s.to_string()),
                                     r#type: None, // Will be filled from function type
                                     function: tool_call.get("function").map(|func| {
                                         crate::stream::FunctionCallDelta {
-                                            name: func.get("name").and_then(|n| n.as_str()).map(|s| s.to_string()),
-                                            arguments: func.get("arguments").and_then(|a| a.as_str()).map(|s| s.to_string()),
+                                            name: func
+                                                .get("name")
+                                                .and_then(|n| n.as_str())
+                                                .map(|s| s.to_string()),
+                                            arguments: func
+                                                .get("arguments")
+                                                .and_then(|a| a.as_str())
+                                                .map(|s| s.to_string()),
                                         }
                                     }),
                                 };
@@ -430,14 +457,28 @@ impl OpenAiResponses {
                     // Handle usage updates
                     if let Some(usage) = json_data.get("usage") {
                         let usage_info = crate::types::Usage {
-                            prompt_tokens: usage.get("prompt_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
-                            completion_tokens: usage.get("completion_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
-                            total_tokens: usage.get("total_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
-                            reasoning_tokens: usage.get("reasoning_tokens").and_then(|v| v.as_u64()).map(|v| v as u32),
+                            prompt_tokens: usage
+                                .get("prompt_tokens")
+                                .and_then(|v| v.as_u64())
+                                .map(|v| v as u32),
+                            completion_tokens: usage
+                                .get("completion_tokens")
+                                .and_then(|v| v.as_u64())
+                                .map(|v| v as u32),
+                            total_tokens: usage
+                                .get("total_tokens")
+                                .and_then(|v| v.as_u64())
+                                .map(|v| v as u32),
+                            reasoning_tokens: usage
+                                .get("reasoning_tokens")
+                                .and_then(|v| v.as_u64())
+                                .map(|v| v as u32),
                             cache_hit_tokens: None,
                             cache_creation_tokens: None,
                         };
-                        events.push(crate::stream::ChatStreamEvent::UsageUpdate { usage: usage_info });
+                        events.push(crate::stream::ChatStreamEvent::UsageUpdate {
+                            usage: usage_info,
+                        });
                     }
                 }
             }
@@ -447,6 +488,7 @@ impl OpenAiResponses {
     }
 
     /// Parse SSE chunk into stream events
+    #[allow(dead_code)]
     fn parse_sse_chunk(&self, chunk: &str) -> Vec<crate::stream::ChatStreamEvent> {
         Self::parse_sse_chunk_static(chunk, &self.config.common_params.model)
     }
@@ -457,7 +499,7 @@ impl WebSearchCapability for OpenAiResponses {
     async fn web_search(
         &self,
         query: String,
-        config: Option<crate::types::WebSearchConfig>,
+        _config: Option<crate::types::WebSearchConfig>,
     ) -> Result<Vec<crate::types::WebSearchResult>, LlmError> {
         // Use the built-in web search tool
         let messages = vec![crate::types::ChatMessage {
@@ -470,13 +512,8 @@ impl WebSearchCapability for OpenAiResponses {
 
         let built_in_tools = vec![OpenAiBuiltInTool::WebSearch];
 
-        let request_body = self.build_request_body(
-            &messages,
-            None,
-            Some(&built_in_tools),
-            false,
-            false,
-        )?;
+        let _request_body =
+            self.build_request_body(&messages, None, Some(&built_in_tools), false, false)?;
 
         // TODO: Implement actual web search request and parse results
         // For now, return empty results

@@ -93,7 +93,7 @@ mod instant_serde {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-    pub fn serialize<S>(instant: &Instant, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(_instant: &Instant, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -236,6 +236,7 @@ impl ProviderMetrics {
 
 /// Performance monitor
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct PerformanceMonitor {
     /// Metrics storage
     metrics: Arc<RwLock<PerformanceMetrics>>,
@@ -265,14 +266,19 @@ impl PerformanceMonitor {
         let mut metrics = self.metrics.write().await;
         metrics.error_rate.total_errors += 1;
         metrics.error_rate.total_requests += 1;
-        
-        *metrics.error_rate.error_breakdown.entry(error_type.to_string()).or_insert(0) += 1;
-        
-        metrics.error_rate.error_rate = 
+
+        *metrics
+            .error_rate
+            .error_breakdown
+            .entry(error_type.to_string())
+            .or_insert(0) += 1;
+
+        metrics.error_rate.error_rate =
             metrics.error_rate.total_errors as f64 / metrics.error_rate.total_requests as f64;
 
         if let Some(provider) = provider {
-            let provider_metrics = metrics.provider_metrics
+            let provider_metrics = metrics
+                .provider_metrics
                 .entry(provider.to_string())
                 .or_insert_with(|| ProviderMetrics::new(provider.to_string()));
             provider_metrics.error_count += 1;
@@ -284,20 +290,24 @@ impl PerformanceMonitor {
     pub async fn record_success(&self, provider: Option<&str>, response_time: Duration) {
         let mut metrics = self.metrics.write().await;
         metrics.error_rate.total_requests += 1;
-        
-        metrics.error_rate.error_rate = 
+
+        metrics.error_rate.error_rate =
             metrics.error_rate.total_errors as f64 / metrics.error_rate.total_requests as f64;
 
         if let Some(provider) = provider {
-            let provider_metrics = metrics.provider_metrics
+            let provider_metrics = metrics
+                .provider_metrics
                 .entry(provider.to_string())
                 .or_insert_with(|| ProviderMetrics::new(provider.to_string()));
             provider_metrics.success_count += 1;
             provider_metrics.request_count += 1;
-            
+
             // Update average response time
-            let total_time = provider_metrics.avg_response_time.as_millis() as u64 * (provider_metrics.success_count - 1) + response_time.as_millis() as u64;
-            provider_metrics.avg_response_time = Duration::from_millis(total_time / provider_metrics.success_count);
+            let total_time = provider_metrics.avg_response_time.as_millis() as u64
+                * (provider_metrics.success_count - 1)
+                + response_time.as_millis() as u64;
+            provider_metrics.avg_response_time =
+                Duration::from_millis(total_time / provider_metrics.success_count);
         }
     }
 
@@ -308,6 +318,7 @@ impl PerformanceMonitor {
     }
 
     /// Update latency metrics
+    #[allow(dead_code)]
     async fn update_latency_metrics(&self) {
         let timings = self.request_timings.read().await;
         if timings.is_empty() {
@@ -318,17 +329,17 @@ impl PerformanceMonitor {
         sorted_timings.sort();
 
         let mut metrics = self.metrics.write().await;
-        
+
         // Calculate percentiles
         let len = sorted_timings.len();
         metrics.latency.p50_latency = sorted_timings[len / 2];
         metrics.latency.p95_latency = sorted_timings[(len * 95) / 100];
         metrics.latency.p99_latency = sorted_timings[(len * 99) / 100];
-        
+
         // Calculate average
         let total: Duration = sorted_timings.iter().sum();
         metrics.latency.avg_latency = total / len as u32;
-        
+
         // Min and max
         metrics.latency.min_latency = sorted_timings[0];
         metrics.latency.max_latency = sorted_timings[len - 1];
@@ -337,6 +348,7 @@ impl PerformanceMonitor {
 }
 
 /// Request timer for measuring individual request performance
+#[allow(dead_code)]
 pub struct RequestTimer {
     start_time: Instant,
     metrics: Arc<RwLock<PerformanceMetrics>>,
@@ -344,10 +356,7 @@ pub struct RequestTimer {
 }
 
 impl RequestTimer {
-    fn new(
-        metrics: Arc<RwLock<PerformanceMetrics>>,
-        timings: Arc<RwLock<Vec<Duration>>>,
-    ) -> Self {
+    fn new(metrics: Arc<RwLock<PerformanceMetrics>>, timings: Arc<RwLock<Vec<Duration>>>) -> Self {
         Self {
             start_time: Instant::now(),
             metrics,
@@ -358,16 +367,16 @@ impl RequestTimer {
     /// Finish timing and record the duration
     pub async fn finish(self) -> Duration {
         let duration = self.start_time.elapsed();
-        
+
         // Store timing for percentile calculations
         let mut timings = self.timings.write().await;
         timings.push(duration);
-        
+
         // Keep only recent timings to avoid memory growth
         if timings.len() > 10000 {
             timings.drain(0..5000);
         }
-        
+
         duration
     }
 }
@@ -428,7 +437,9 @@ pub mod optimization {
     }
 
     /// Create an optimized HTTP client
-    pub fn create_optimized_client(config: ConnectionPoolConfig) -> Result<reqwest::Client, Box<dyn std::error::Error>> {
+    pub fn create_optimized_client(
+        config: ConnectionPoolConfig,
+    ) -> Result<reqwest::Client, Box<dyn std::error::Error>> {
         let client = reqwest::Client::builder()
             .pool_max_idle_per_host(config.max_idle_per_host)
             .pool_idle_timeout(config.keep_alive_timeout)
@@ -437,11 +448,12 @@ pub mod optimization {
             .tcp_keepalive(Duration::from_secs(60))
             .tcp_nodelay(true)
             .build()?;
-        
+
         Ok(client)
     }
 
     /// Memory-efficient string interning for common values
+    #[allow(dead_code)]
     pub struct StringInterner {
         strings: std::collections::HashMap<String, &'static str>,
     }
@@ -469,14 +481,14 @@ mod tests {
     #[test]
     fn test_provider_metrics() {
         let mut metrics = ProviderMetrics::new("test-provider".to_string());
-        
+
         assert_eq!(metrics.success_rate(), 0.0);
         assert_eq!(metrics.cache_hit_rate(), 0.0);
-        
+
         metrics.request_count = 10;
         metrics.success_count = 8;
         assert_eq!(metrics.success_rate(), 0.8);
-        
+
         metrics.cache_hits = 7;
         metrics.cache_misses = 3;
         assert_eq!(metrics.cache_hit_rate(), 0.7);
@@ -486,18 +498,20 @@ mod tests {
     async fn test_performance_monitor() {
         let config = MonitorConfig::default();
         let monitor = PerformanceMonitor::new(config);
-        
+
         // Test error recording
         monitor.record_error("network_error", Some("openai")).await;
-        
+
         let metrics = monitor.get_metrics().await;
         assert_eq!(metrics.error_rate.total_errors, 1);
         assert_eq!(metrics.error_rate.total_requests, 1);
         assert_eq!(metrics.error_rate.error_rate, 1.0);
-        
+
         // Test success recording
-        monitor.record_success(Some("openai"), Duration::from_millis(100)).await;
-        
+        monitor
+            .record_success(Some("openai"), Duration::from_millis(100))
+            .await;
+
         let metrics = monitor.get_metrics().await;
         assert_eq!(metrics.error_rate.total_requests, 2);
         assert_eq!(metrics.error_rate.error_rate, 0.5);
@@ -507,11 +521,11 @@ mod tests {
     async fn test_request_timer() {
         let config = MonitorConfig::default();
         let monitor = PerformanceMonitor::new(config);
-        
+
         let timer = monitor.start_request().await;
         tokio::time::sleep(Duration::from_millis(10)).await;
         let duration = timer.finish().await;
-        
+
         assert!(duration >= Duration::from_millis(10));
     }
 }

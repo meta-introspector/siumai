@@ -49,6 +49,7 @@ pub mod error_handling;
 pub mod multimodal;
 pub mod params;
 pub mod performance;
+pub mod provider;
 pub mod provider_features;
 pub mod providers;
 pub mod retry;
@@ -56,7 +57,6 @@ pub mod retry_strategy;
 pub mod stream;
 pub mod traits;
 pub mod types;
-pub mod siumai;
 pub mod web_search;
 
 // Re-export main types and traits
@@ -83,14 +83,14 @@ pub mod prelude {
     pub use crate::error::LlmError;
     pub use crate::multimodal::*;
     pub use crate::performance::*;
+    pub use crate::provider::*;
     pub use crate::provider_features::*;
     pub use crate::retry_strategy::*;
     pub use crate::stream::*;
     pub use crate::traits::*;
     pub use crate::types::*;
-    pub use crate::siumai::*;
     pub use crate::web_search::*;
-    pub use crate::{assistant, llm, siumai, system, tool, user};
+    pub use crate::{assistant, llm, provider, system, tool, user};
 }
 
 /// Global entry point function - creates an LLM builder
@@ -131,8 +131,8 @@ pub fn llm() -> crate::builder::LlmBuilder {
 ///     .build()
 ///     .await?;
 /// ```
-pub fn siumai() -> crate::siumai::SiumaiBuilder {
-    crate::siumai::ai()
+pub fn siumai() -> crate::provider::SiumaiBuilder {
+    crate::provider::ai()
 }
 
 // Convenient macro definitions

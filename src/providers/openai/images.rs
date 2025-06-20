@@ -9,7 +9,10 @@ use std::collections::HashMap;
 
 use crate::error::LlmError;
 use crate::traits::ImageGenerationCapability;
-use crate::types::{ImageGenerationRequest, ImageGenerationResponse, GeneratedImage, ImageEditRequest, ImageVariationRequest};
+use crate::types::{
+    GeneratedImage, ImageEditRequest, ImageGenerationRequest, ImageGenerationResponse,
+    ImageVariationRequest,
+};
 
 use super::config::OpenAiConfig;
 
@@ -65,14 +68,14 @@ struct OpenAiImageData {
 }
 
 /// OpenAI image generation capability implementation.
-/// 
+///
 /// This struct provides the OpenAI-specific implementation of image generation
 /// using the DALL-E models.
-/// 
+///
 /// # Supported Models
 /// - dall-e-2: Can generate 1-10 images, sizes: 256x256, 512x512, 1024x1024
 /// - dall-e-3: Can generate 1 image, sizes: 1024x1024, 1792x1024, 1024x1792
-/// 
+///
 /// # API Reference
 /// https://platform.openai.com/docs/api-reference/images/create
 #[derive(Debug, Clone)]
@@ -85,7 +88,7 @@ pub struct OpenAiImages {
 
 impl OpenAiImages {
     /// Create a new OpenAI images instance.
-    /// 
+    ///
     /// # Arguments
     /// * `config` - OpenAI configuration
     /// * `http_client` - HTTP client for making requests
@@ -101,10 +104,22 @@ impl OpenAiImages {
         "dall-e-3".to_string()
     }
 
+    /// Get supported image generation models.
+    fn get_supported_models(&self) -> Vec<String> {
+        vec![
+            "dall-e-2".to_string(),
+            "dall-e-3".to_string(),
+            "gpt-image-1".to_string(), // New model
+        ]
+    }
+
     /// Make an image generation API request.
-    async fn make_request(&self, request: OpenAiImageRequest) -> Result<OpenAiImageResponse, LlmError> {
+    async fn make_request(
+        &self,
+        request: OpenAiImageRequest,
+    ) -> Result<OpenAiImageResponse, LlmError> {
         let url = format!("{}/images/generations", self.config.base_url);
-        
+
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
@@ -161,12 +176,12 @@ impl OpenAiImages {
             .collect();
 
         let mut metadata = HashMap::new();
-        metadata.insert("created".to_string(), serde_json::Value::Number(openai_response.created.into()));
+        metadata.insert(
+            "created".to_string(),
+            serde_json::Value::Number(openai_response.created.into()),
+        );
 
-        ImageGenerationResponse {
-            images,
-            metadata,
-        }
+        ImageGenerationResponse { images, metadata }
     }
 
     /// Get supported image sizes for the given model.
@@ -182,6 +197,12 @@ impl OpenAiImages {
                 "1792x1024".to_string(),
                 "1024x1792".to_string(),
             ],
+            "gpt-image-1" => vec![
+                "1024x1024".to_string(),
+                "1792x1024".to_string(),
+                "1024x1792".to_string(),
+                "2048x2048".to_string(), // Higher resolution support
+            ],
             _ => vec!["1024x1024".to_string()], // Default fallback
         }
     }
@@ -189,7 +210,16 @@ impl OpenAiImages {
     /// Validate request parameters.
     fn validate_request(&self, request: &ImageGenerationRequest) -> Result<(), LlmError> {
         let model = request.model.as_deref().unwrap_or("dall-e-3");
-        
+
+        // Validate model is supported
+        if !self.get_supported_models().contains(&model.to_string()) {
+            return Err(LlmError::InvalidInput(format!(
+                "Unsupported model: {}. Supported models: {:?}",
+                model,
+                self.get_supported_models()
+            )));
+        }
+
         // Validate count based on model
         match model {
             "dall-e-2" => {
@@ -206,10 +236,19 @@ impl OpenAiImages {
                     ));
                 }
             }
+            "gpt-image-1" => {
+                if request.count > 4 {
+                    return Err(LlmError::InvalidInput(
+                        "GPT-Image-1 can generate at most 4 images".to_string(),
+                    ));
+                }
+            }
             _ => {
-                return Err(LlmError::InvalidInput(
-                    format!("Unsupported model: {}", model),
-                ));
+                // This should not happen due to model validation above
+                return Err(LlmError::InvalidInput(format!(
+                    "Unsupported model: {}",
+                    model
+                )));
             }
         }
 
@@ -217,10 +256,10 @@ impl OpenAiImages {
         if let Some(size) = &request.size {
             let supported_sizes = self.get_supported_sizes(model);
             if !supported_sizes.contains(size) {
-                return Err(LlmError::InvalidInput(
-                    format!("Unsupported size '{}' for model '{}'. Supported sizes: {:?}", 
-                           size, model, supported_sizes),
-                ));
+                return Err(LlmError::InvalidInput(format!(
+                    "Unsupported size '{}' for model '{}'. Supported sizes: {:?}",
+                    size, model, supported_sizes
+                )));
             }
         }
 
@@ -231,22 +270,32 @@ impl OpenAiImages {
 #[async_trait]
 impl ImageGenerationCapability for OpenAiImages {
     /// Generate images from text prompts.
-    async fn generate_images(&self, request: ImageGenerationRequest) -> Result<ImageGenerationResponse, LlmError> {
+    async fn generate_images(
+        &self,
+        request: ImageGenerationRequest,
+    ) -> Result<ImageGenerationResponse, LlmError> {
         // Validate request
         self.validate_request(&request)?;
 
         // Use model from request or default
-        let model = request.model.clone().unwrap_or_else(|| self.default_model());
+        let model = request
+            .model
+            .clone()
+            .unwrap_or_else(|| self.default_model());
 
         let openai_request = OpenAiImageRequest {
             prompt: request.prompt,
             model: Some(model),
-            n: if request.count > 0 { Some(request.count) } else { Some(1) },
+            n: if request.count > 0 {
+                Some(request.count)
+            } else {
+                Some(1)
+            },
             size: request.size,
             quality: request.quality,
             style: request.style,
             response_format: Some("url".to_string()), // Default to URL
-            user: None, // Could be added to request if needed
+            user: None,                               // Could be added to request if needed
         };
 
         let openai_response = self.make_request(openai_request).await?;
@@ -262,15 +311,13 @@ impl ImageGenerationCapability for OpenAiImages {
             "1024x1024".to_string(),
             "1792x1024".to_string(),
             "1024x1792".to_string(),
+            "2048x2048".to_string(), // New size for gpt-image-1
         ]
     }
 
     /// Get supported response formats for this provider.
     fn get_supported_formats(&self) -> Vec<String> {
-        vec![
-            "url".to_string(),
-            "b64_json".to_string(),
-        ]
+        vec!["url".to_string(), "b64_json".to_string()]
     }
 
     /// Check if the provider supports image editing.
@@ -284,7 +331,10 @@ impl ImageGenerationCapability for OpenAiImages {
     }
 
     /// Edit an existing image based on a prompt.
-    async fn edit_image(&self, request: ImageEditRequest) -> Result<ImageGenerationResponse, LlmError> {
+    async fn edit_image(
+        &self,
+        request: ImageEditRequest,
+    ) -> Result<ImageGenerationResponse, LlmError> {
         // OpenAI image editing API request
         let url = format!("{}/images/edits", self.config.base_url);
 
@@ -298,8 +348,7 @@ impl ImageGenerationCapability for OpenAiImages {
         }
 
         // Create multipart form
-        let mut form = reqwest::multipart::Form::new()
-            .text("prompt", request.prompt);
+        let mut form = reqwest::multipart::Form::new().text("prompt", request.prompt);
 
         // Add image file
         let part = reqwest::multipart::Part::bytes(request.image)
@@ -359,7 +408,10 @@ impl ImageGenerationCapability for OpenAiImages {
     }
 
     /// Create variations of an existing image.
-    async fn create_variation(&self, request: ImageVariationRequest) -> Result<ImageGenerationResponse, LlmError> {
+    async fn create_variation(
+        &self,
+        request: ImageVariationRequest,
+    ) -> Result<ImageGenerationResponse, LlmError> {
         // OpenAI image variations API request
         let url = format!("{}/images/variations", self.config.base_url);
 

@@ -2,10 +2,10 @@
 //!
 //! Common utility functions for Anthropic Claude API interactions.
 
+use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
-use super::types::*;
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 
 /// Build HTTP headers for Anthropic API requests according to official documentation
 /// https://docs.anthropic.com/en/api/messages
@@ -83,7 +83,10 @@ pub fn convert_message_content(content: &MessageContent) -> Result<serde_json::V
                             "text": text
                         }));
                     }
-                    ContentPart::Image { image_url, detail: _ } => {
+                    ContentPart::Image {
+                        image_url,
+                        detail: _,
+                    } => {
                         // Anthropic uses a different image format
                         content_parts.push(serde_json::json!({
                             "type": "image",
@@ -94,7 +97,10 @@ pub fn convert_message_content(content: &MessageContent) -> Result<serde_json::V
                             }
                         }));
                     }
-                    ContentPart::Audio { audio_url, format: _ } => {
+                    ContentPart::Audio {
+                        audio_url,
+                        format: _,
+                    } => {
                         // Anthropic does not currently support audio, treating it as text
                         content_parts.push(serde_json::json!({
                             "type": "text",
@@ -135,6 +141,17 @@ pub fn convert_messages(
                     role: "assistant".to_string(),
                     content: convert_message_content(&message.content)?,
                 });
+            }
+            MessageRole::Developer => {
+                // Developer messages are treated as system-level instructions in Anthropic
+                // Since Anthropic handles system messages separately, we'll add it to the system message
+                if let MessageContent::Text(text) = &message.content {
+                    let developer_text = format!("Developer instructions: {}", text);
+                    system_message = Some(match system_message {
+                        Some(existing) => format!("{}\n\n{}", existing, developer_text),
+                        None => developer_text,
+                    });
+                }
             }
             MessageRole::Tool => {
                 // Handling of tool results for Anthropic
@@ -227,10 +244,14 @@ pub fn map_anthropic_error(
 ) -> LlmError {
     match error_type {
         "authentication_error" => LlmError::AuthenticationError(error_message.to_string()),
-        "permission_error" => LlmError::AuthenticationError(format!("Permission denied: {}", error_message)),
+        "permission_error" => {
+            LlmError::AuthenticationError(format!("Permission denied: {}", error_message))
+        }
         "invalid_request_error" => LlmError::InvalidInput(error_message.to_string()),
         "not_found_error" => LlmError::NotFound(error_message.to_string()),
-        "request_too_large" => LlmError::InvalidInput(format!("Request too large: {}", error_message)),
+        "request_too_large" => {
+            LlmError::InvalidInput(format!("Request too large: {}", error_message))
+        }
         "rate_limit_error" => LlmError::RateLimitError(error_message.to_string()),
         "api_error" => LlmError::ProviderError {
             provider: "anthropic".to_string(),

@@ -2,10 +2,10 @@
 //!
 //! Defines all data structures used in the LLM library.
 
+use crate::error::LlmError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use crate::error::LlmError;
 
 /// Provider type enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -87,6 +87,22 @@ impl ProviderParams {
             .get(key)
             .and_then(|v| serde_json::from_value(v.clone()).ok())
     }
+
+    /// Creates provider parameters from OpenAI parameters
+    pub fn from_openai(openai_params: crate::params::OpenAiParams) -> Self {
+        let mut params = HashMap::new();
+
+        // Serialize the OpenAI params to a JSON value and then convert to HashMap
+        if let Ok(json_value) = serde_json::to_value(&openai_params) {
+            if let Ok(map) =
+                serde_json::from_value::<HashMap<String, serde_json::Value>>(json_value)
+            {
+                params = map;
+            }
+        }
+
+        Self { params }
+    }
 }
 
 impl Default for ProviderParams {
@@ -124,10 +140,12 @@ impl Default for HttpConfig {
 
 /// Message role
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
 pub enum MessageRole {
     System,
     User,
     Assistant,
+    Developer, // Developer role for system-level instructions
     Tool,
 }
 
@@ -257,6 +275,11 @@ impl ChatMessage {
         ChatMessageBuilder::assistant(content)
     }
 
+    /// Creates a developer message
+    pub fn developer<S: Into<String>>(content: S) -> ChatMessageBuilder {
+        ChatMessageBuilder::developer(content)
+    }
+
     /// Creates a tool message
     pub fn tool<S: Into<String>>(content: S, tool_call_id: S) -> ChatMessageBuilder {
         ChatMessageBuilder::tool(content, tool_call_id)
@@ -314,6 +337,17 @@ impl ChatMessageBuilder {
     pub fn assistant<S: Into<String>>(content: S) -> Self {
         Self {
             role: MessageRole::Assistant,
+            content: Some(MessageContent::Text(content.into())),
+            metadata: MessageMetadata::default(),
+            tool_calls: None,
+            tool_call_id: None,
+        }
+    }
+
+    /// Creates a developer message builder
+    pub fn developer<S: Into<String>>(content: S) -> Self {
+        Self {
+            role: MessageRole::Developer,
             content: Some(MessageContent::Text(content.into())),
             metadata: MessageMetadata::default(),
             tool_calls: None,
@@ -537,7 +571,9 @@ impl OpenAiBuiltInTool {
                 });
                 if let Some(ids) = vector_store_ids {
                     json["vector_store_ids"] = serde_json::Value::Array(
-                        ids.iter().map(|id| serde_json::Value::String(id.clone())).collect()
+                        ids.iter()
+                            .map(|id| serde_json::Value::String(id.clone()))
+                            .collect(),
                     );
                 }
                 json
@@ -701,12 +737,10 @@ impl ChatResponse {
 
     /// Gets thinking/reasoning content if available
     pub fn thinking(&self) -> Option<&str> {
-        self.provider_data.get("thinking")
+        self.provider_data
+            .get("thinking")
             .and_then(|v| v.as_str())
-            .or_else(|| {
-                self.provider_data.get("reasoning")
-                    .and_then(|v| v.as_str())
-            })
+            .or_else(|| self.provider_data.get("reasoning").and_then(|v| v.as_str()))
     }
 
     /// Gets all text content
@@ -1346,7 +1380,8 @@ pub struct CompletionResponse {
 }
 
 /// Completion stream for streaming completions
-pub type CompletionStream = Pin<Box<dyn Stream<Item = Result<CompletionStreamEvent, LlmError>> + Send>>;
+pub type CompletionStream =
+    Pin<Box<dyn Stream<Item = Result<CompletionStreamEvent, LlmError>> + Send>>;
 
 /// Completion stream events
 #[derive(Debug, Clone)]

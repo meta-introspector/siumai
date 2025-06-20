@@ -13,17 +13,21 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::error::LlmError;
-use crate::types::{WebSearchConfig, WebSearchResult, WebSearchStrategy, WebSearchContextSize};
+use crate::types::{WebSearchConfig, WebSearchContextSize, WebSearchResult, WebSearchStrategy};
 
 /// Web search capability trait
 #[async_trait]
 pub trait WebSearchCapability {
     /// Perform a web search
-    async fn web_search(&self, query: String, config: Option<WebSearchConfig>) -> Result<Vec<WebSearchResult>, LlmError>;
-    
+    async fn web_search(
+        &self,
+        query: String,
+        config: Option<WebSearchConfig>,
+    ) -> Result<Vec<WebSearchResult>, LlmError>;
+
     /// Check if web search is supported
     fn supports_web_search(&self) -> bool;
-    
+
     /// Get the web search strategy used by this provider
     fn web_search_strategy(&self) -> WebSearchStrategy;
 }
@@ -41,104 +45,132 @@ impl WebSearchProvider {
     pub fn new(provider: String, config: WebSearchConfig) -> Self {
         Self { provider, config }
     }
-    
+
     /// Build search parameters for OpenAI
-    pub fn build_openai_params(&self, query: &str) -> HashMap<String, serde_json::Value> {
+    pub fn build_openai_params(&self, _query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
-        
+
         if let Some(max_results) = self.config.max_results {
-            params.insert("max_results".to_string(), serde_json::Value::Number(max_results.into()));
+            params.insert(
+                "max_results".to_string(),
+                serde_json::Value::Number(max_results.into()),
+            );
         }
-        
+
         if let Some(context_size) = &self.config.context_size {
             let size_str = match context_size {
                 WebSearchContextSize::Small => "small",
-                WebSearchContextSize::Medium => "medium", 
+                WebSearchContextSize::Medium => "medium",
                 WebSearchContextSize::Large => "large",
             };
-            params.insert("search_context_size".to_string(), serde_json::Value::String(size_str.to_string()));
+            params.insert(
+                "search_context_size".to_string(),
+                serde_json::Value::String(size_str.to_string()),
+            );
         }
-        
+
         // Add provider-specific parameters
         for (key, value) in &self.config.provider_params {
             params.insert(key.clone(), value.clone());
         }
-        
+
         params
     }
-    
+
     /// Build search parameters for xAI
     pub fn build_xai_params(&self, query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
-        
-        params.insert("query".to_string(), serde_json::Value::String(query.to_string()));
-        
+
+        params.insert(
+            "query".to_string(),
+            serde_json::Value::String(query.to_string()),
+        );
+
         if let Some(max_results) = self.config.max_results {
-            params.insert("max_results".to_string(), serde_json::Value::Number(max_results.into()));
+            params.insert(
+                "max_results".to_string(),
+                serde_json::Value::Number(max_results.into()),
+            );
         }
-        
+
         // Add provider-specific parameters
         for (key, value) in &self.config.provider_params {
             params.insert(key.clone(), value.clone());
         }
-        
+
         params
     }
-    
+
     /// Build search parameters for Anthropic
     pub fn build_anthropic_params(&self, query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
-        
-        params.insert("query".to_string(), serde_json::Value::String(query.to_string()));
-        
+
+        params.insert(
+            "query".to_string(),
+            serde_json::Value::String(query.to_string()),
+        );
+
         if let Some(max_results) = self.config.max_results {
-            params.insert("max_results".to_string(), serde_json::Value::Number(max_results.into()));
+            params.insert(
+                "max_results".to_string(),
+                serde_json::Value::Number(max_results.into()),
+            );
         }
-        
+
         // Add provider-specific parameters
         for (key, value) in &self.config.provider_params {
             params.insert(key.clone(), value.clone());
         }
-        
+
         params
     }
-    
+
     /// Build search parameters for Gemini
     pub fn build_gemini_params(&self, query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
-        
-        params.insert("query".to_string(), serde_json::Value::String(query.to_string()));
-        
+
+        params.insert(
+            "query".to_string(),
+            serde_json::Value::String(query.to_string()),
+        );
+
         if let Some(max_results) = self.config.max_results {
-            params.insert("max_results".to_string(), serde_json::Value::Number(max_results.into()));
+            params.insert(
+                "max_results".to_string(),
+                serde_json::Value::Number(max_results.into()),
+            );
         }
-        
+
         // Add provider-specific parameters
         for (key, value) in &self.config.provider_params {
             params.insert(key.clone(), value.clone());
         }
-        
+
         params
     }
-    
+
     /// Build search parameters for OpenRouter
     pub fn build_openrouter_params(&self, query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
-        
+
         if let Some(search_prompt) = &self.config.search_prompt {
-            params.insert("search_prompt".to_string(), serde_json::Value::String(search_prompt.clone()));
+            params.insert(
+                "search_prompt".to_string(),
+                serde_json::Value::String(search_prompt.clone()),
+            );
         } else {
             // Default search prompt
-            params.insert("search_prompt".to_string(), serde_json::Value::String(
-                format!("Search for information about: {}", query)
-            ));
+            params.insert(
+                "search_prompt".to_string(),
+                serde_json::Value::String(format!("Search for information about: {}", query)),
+            );
         }
-        
+
         // Add provider-specific parameters
         for (key, value) in &self.config.provider_params {
             params.insert(key.clone(), value.clone());
         }
-        
+
         params
     }
 }
@@ -160,13 +192,13 @@ impl AnthropicWebSearchTool {
             max_results: None,
         }
     }
-    
+
     /// Set maximum results
     pub fn with_max_results(mut self, max_results: u32) -> Self {
         self.max_results = Some(max_results);
         self
     }
-    
+
     /// Convert to tool definition
     pub fn to_tool(&self) -> crate::types::Tool {
         let mut parameters = serde_json::json!({
@@ -179,14 +211,14 @@ impl AnthropicWebSearchTool {
             },
             "required": ["query"]
         });
-        
+
         if self.max_results.is_some() {
             parameters["properties"]["max_results"] = serde_json::json!({
                 "type": "integer",
                 "description": "Maximum number of search results to return"
             });
         }
-        
+
         crate::types::Tool::function(
             "web_search".to_string(),
             "Search the web for current information".to_string(),
@@ -218,19 +250,19 @@ impl XaiLiveSearchConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Enable live search
     pub fn enable(mut self) -> Self {
         self.enabled = true;
         self
     }
-    
+
     /// Disable live search
     pub fn disable(mut self) -> Self {
         self.enabled = false;
         self
     }
-    
+
     /// Add search parameter
     pub fn with_parameter<T: Serialize>(mut self, key: &str, value: T) -> Self {
         self.search_parameters.insert(
@@ -239,12 +271,12 @@ impl XaiLiveSearchConfig {
         );
         self
     }
-    
+
     /// Set maximum results
     pub fn with_max_results(self, max_results: u32) -> Self {
         self.with_parameter("max_results", max_results)
     }
-    
+
     /// Set search timeout
     pub fn with_timeout(self, timeout_seconds: u32) -> Self {
         self.with_parameter("timeout", timeout_seconds)
@@ -274,19 +306,19 @@ impl GeminiSearchConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Enable search
     pub fn enable(mut self) -> Self {
         self.enabled = true;
         self
     }
-    
+
     /// Disable search
     pub fn disable(mut self) -> Self {
         self.enabled = false;
         self
     }
-    
+
     /// Add search parameter
     pub fn with_parameter<T: Serialize>(mut self, key: &str, value: T) -> Self {
         self.search_parameters.insert(
@@ -300,7 +332,7 @@ impl GeminiSearchConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_web_search_config() {
         let config = WebSearchConfig {
@@ -311,32 +343,37 @@ mod tests {
             strategy: WebSearchStrategy::Auto,
             provider_params: HashMap::new(),
         };
-        
+
         assert!(config.enabled);
         assert_eq!(config.max_results, Some(5));
     }
-    
+
     #[test]
     fn test_anthropic_web_search_tool() {
-        let tool = AnthropicWebSearchTool::new("test query".to_string())
-            .with_max_results(10);
-        
+        let tool = AnthropicWebSearchTool::new("test query".to_string()).with_max_results(10);
+
         assert_eq!(tool.query, "test query");
         assert_eq!(tool.max_results, Some(10));
-        
+
         let tool_def = tool.to_tool();
         assert_eq!(tool_def.function.name, "web_search");
     }
-    
+
     #[test]
     fn test_xai_live_search_config() {
         let config = XaiLiveSearchConfig::new()
             .enable()
             .with_max_results(5)
             .with_timeout(30);
-        
+
         assert!(config.enabled);
-        assert_eq!(config.search_parameters.get("max_results"), Some(&serde_json::Value::Number(5.into())));
-        assert_eq!(config.search_parameters.get("timeout"), Some(&serde_json::Value::Number(30.into())));
+        assert_eq!(
+            config.search_parameters.get("max_results"),
+            Some(&serde_json::Value::Number(5.into()))
+        );
+        assert_eq!(
+            config.search_parameters.get("timeout"),
+            Some(&serde_json::Value::Number(30.into()))
+        );
     }
 }

@@ -91,7 +91,8 @@ pub trait ChatCapability {
         let request_messages = vec![ChatMessage::user(prompt).build()];
         let response = self.chat(request_messages).await?;
 
-        response.content_text()
+        response
+            .content_text()
             .ok_or_else(|| LlmError::InternalError("No text in summary response".to_string()))
             .map(|s| s.to_string())
     }
@@ -126,7 +127,7 @@ pub trait AudioCapability {
     /// # Errors
     /// Returns `UnsupportedOperation` if text-to-speech is not supported.
     /// Check `supported_features()` first.
-    async fn text_to_speech(&self, request: TtsRequest) -> Result<TtsResponse, LlmError> {
+    async fn text_to_speech(&self, _request: TtsRequest) -> Result<TtsResponse, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Text-to-speech not supported by this provider".to_string(),
         ))
@@ -142,7 +143,7 @@ pub trait AudioCapability {
     ///
     /// # Errors
     /// Returns `UnsupportedOperation` if streaming TTS is not supported.
-    async fn text_to_speech_stream(&self, request: TtsRequest) -> Result<AudioStream, LlmError> {
+    async fn text_to_speech_stream(&self, _request: TtsRequest) -> Result<AudioStream, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Streaming text-to-speech not supported by this provider".to_string(),
         ))
@@ -158,7 +159,7 @@ pub trait AudioCapability {
     ///
     /// # Errors
     /// Returns `UnsupportedOperation` if speech-to-text is not supported.
-    async fn speech_to_text(&self, request: SttRequest) -> Result<SttResponse, LlmError> {
+    async fn speech_to_text(&self, _request: SttRequest) -> Result<SttResponse, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Speech-to-text not supported by this provider".to_string(),
         ))
@@ -174,7 +175,10 @@ pub trait AudioCapability {
     ///
     /// # Errors
     /// Returns `UnsupportedOperation` if audio translation is not supported.
-    async fn translate_audio(&self, request: AudioTranslationRequest) -> Result<SttResponse, LlmError> {
+    async fn translate_audio(
+        &self,
+        _request: AudioTranslationRequest,
+    ) -> Result<SttResponse, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Audio translation not supported by this provider".to_string(),
         ))
@@ -376,7 +380,10 @@ pub trait ImageGenerationCapability {
     ///
     /// # Returns
     /// Generated images with metadata
-    async fn generate_images(&self, request: ImageGenerationRequest) -> Result<ImageGenerationResponse, LlmError>;
+    async fn generate_images(
+        &self,
+        request: ImageGenerationRequest,
+    ) -> Result<ImageGenerationResponse, LlmError>;
 
     /// Edit an existing image based on a prompt.
     ///
@@ -385,7 +392,10 @@ pub trait ImageGenerationCapability {
     ///
     /// # Returns
     /// Edited images with metadata
-    async fn edit_image(&self, request: ImageEditRequest) -> Result<ImageGenerationResponse, LlmError> {
+    async fn edit_image(
+        &self,
+        _request: ImageEditRequest,
+    ) -> Result<ImageGenerationResponse, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Image editing not supported by this provider".to_string(),
         ))
@@ -398,7 +408,10 @@ pub trait ImageGenerationCapability {
     ///
     /// # Returns
     /// Image variations with metadata
-    async fn create_variation(&self, request: ImageVariationRequest) -> Result<ImageGenerationResponse, LlmError> {
+    async fn create_variation(
+        &self,
+        _request: ImageVariationRequest,
+    ) -> Result<ImageGenerationResponse, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Image variations not supported by this provider".to_string(),
         ))
@@ -443,7 +456,11 @@ pub trait ImageGenerationCapability {
         };
 
         let response = self.generate_images(request).await?;
-        Ok(response.images.into_iter().filter_map(|img| img.url).collect())
+        Ok(response
+            .images
+            .into_iter()
+            .filter_map(|img| img.url)
+            .collect())
     }
 }
 
@@ -608,7 +625,10 @@ pub trait CompletionCapability {
     ///
     /// # Returns
     /// Stream of completion events
-    async fn complete_stream(&self, request: CompletionRequest) -> Result<CompletionStream, LlmError> {
+    async fn complete_stream(
+        &self,
+        _request: CompletionRequest,
+    ) -> Result<CompletionStream, LlmError> {
         Err(LlmError::UnsupportedOperation(
             "Streaming completion not supported by this provider".to_string(),
         ))
@@ -796,8 +816,6 @@ impl ProviderCapabilities {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

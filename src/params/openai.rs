@@ -5,10 +5,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use super::common::{ParameterMapper as CommonMapper, ParameterValidator};
+use super::mapper::{ParameterConstraints, ParameterMapper};
 use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderParams, ProviderType};
-use super::common::{ParameterValidator, ParameterMapper as CommonMapper};
-use super::mapper::{ParameterMapper, ParameterConstraints};
 
 /// OpenAI Parameter Mapper
 pub struct OpenAiParameterMapper;
@@ -57,7 +57,11 @@ impl ParameterMapper for OpenAiParameterMapper {
         if let Some(frequency_penalty) = params.get("frequency_penalty") {
             if let Some(penalty_val) = frequency_penalty.as_f64() {
                 ParameterValidator::validate_numeric_range(
-                    penalty_val, -2.0, 2.0, "frequency_penalty", "OpenAI"
+                    penalty_val,
+                    -2.0,
+                    2.0,
+                    "frequency_penalty",
+                    "OpenAI",
                 )?;
             }
         }
@@ -65,7 +69,11 @@ impl ParameterMapper for OpenAiParameterMapper {
         if let Some(presence_penalty) = params.get("presence_penalty") {
             if let Some(penalty_val) = presence_penalty.as_f64() {
                 ParameterValidator::validate_numeric_range(
-                    penalty_val, -2.0, 2.0, "presence_penalty", "OpenAI"
+                    penalty_val,
+                    -2.0,
+                    2.0,
+                    "presence_penalty",
+                    "OpenAI",
                 )?;
             }
         }
@@ -76,6 +84,57 @@ impl ParameterMapper for OpenAiParameterMapper {
                     return Err(LlmError::InvalidParameter(
                         "n must be between 1 and 128 for OpenAI".to_string(),
                     ));
+                }
+            }
+        }
+
+        // Validate max_completion_tokens
+        if let Some(max_completion_tokens) = params.get("max_completion_tokens") {
+            if let Some(tokens_val) = max_completion_tokens.as_u64() {
+                ParameterValidator::validate_max_tokens(
+                    tokens_val,
+                    1,
+                    128000,
+                    "OpenAI max_completion_tokens",
+                )?;
+            }
+        }
+
+        // Validate top_logprobs
+        if let Some(top_logprobs) = params.get("top_logprobs") {
+            if let Some(logprobs_val) = top_logprobs.as_u64() {
+                if logprobs_val > 20 {
+                    return Err(LlmError::InvalidParameter(
+                        "top_logprobs must be between 0 and 20 for OpenAI".to_string(),
+                    ));
+                }
+            }
+        }
+
+        // Validate modalities
+        if let Some(modalities) = params.get("modalities") {
+            if let Some(modalities_array) = modalities.as_array() {
+                for modality in modalities_array {
+                    if let Some(modality_str) = modality.as_str() {
+                        if !["text", "audio"].contains(&modality_str) {
+                            return Err(LlmError::InvalidParameter(format!(
+                                "Invalid modality '{}'. Supported modalities: text, audio",
+                                modality_str
+                            )));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Validate service_tier
+        if let Some(service_tier) = params.get("service_tier") {
+            if let Some(tier_str) = service_tier.as_str() {
+                if !["auto", "default"].contains(&tier_str) {
+                    return Err(LlmError::InvalidParameter(format!(
+                        "Invalid service_tier '{}'. Supported tiers: auto, default",
+                        tier_str
+                    )));
                 }
             }
         }
@@ -105,6 +164,12 @@ impl ParameterMapper for OpenAiParameterMapper {
             "tool_choice",
             "tools",
             "parallel_tool_calls",
+            "modalities",
+            "reasoning_effort",
+            "max_completion_tokens",
+            "service_tier",
+            "logprobs",
+            "top_logprobs",
         ]
     }
 
@@ -145,6 +210,14 @@ pub struct OpenAiParams {
     pub logprobs: Option<bool>,
     /// Top logprobs to return
     pub top_logprobs: Option<u32>,
+    /// Response modalities (text, audio)
+    pub modalities: Option<Vec<String>>,
+    /// Reasoning effort level for reasoning models
+    pub reasoning_effort: Option<ReasoningEffort>,
+    /// Maximum completion tokens (replaces max_tokens for some models)
+    pub max_completion_tokens: Option<u32>,
+    /// Service tier for prioritized access
+    pub service_tier: Option<String>,
 }
 
 impl super::common::ProviderParamsExt for OpenAiParams {
@@ -170,16 +243,28 @@ pub enum ResponseFormat {
 #[serde(untagged)]
 pub enum ToolChoice {
     String(String), // "none", "auto", "required"
-    Function { 
+    Function {
         #[serde(rename = "type")]
         choice_type: String, // "function"
-        function: FunctionChoice 
+        function: FunctionChoice,
     },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FunctionChoice {
     pub name: String,
+}
+
+/// Reasoning effort level for reasoning models (o1 series)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReasoningEffort {
+    /// Low reasoning effort - faster responses
+    Low,
+    /// Medium reasoning effort - balanced performance
+    Medium,
+    /// High reasoning effort - more thorough reasoning
+    High,
 }
 
 /// OpenAI parameter builder for convenient parameter construction
@@ -237,6 +322,31 @@ impl OpenAiParamsBuilder {
     pub fn logprobs(mut self, enabled: bool, top_logprobs: Option<u32>) -> Self {
         self.params.logprobs = Some(enabled);
         self.params.top_logprobs = top_logprobs;
+        self
+    }
+
+    pub fn modalities(mut self, modalities: Vec<String>) -> Self {
+        self.params.modalities = Some(modalities);
+        self
+    }
+
+    pub fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
+        self.params.reasoning_effort = Some(effort);
+        self
+    }
+
+    pub fn max_completion_tokens(mut self, tokens: u32) -> Self {
+        self.params.max_completion_tokens = Some(tokens);
+        self
+    }
+
+    pub fn service_tier(mut self, tier: String) -> Self {
+        self.params.service_tier = Some(tier);
+        self
+    }
+
+    pub fn logit_bias(mut self, bias: HashMap<String, f32>) -> Self {
+        self.params.logit_bias = Some(bias);
         self
     }
 

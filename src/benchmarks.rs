@@ -9,9 +9,9 @@ use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 use crate::error::LlmError;
-use crate::performance::{PerformanceMonitor, MonitorConfig};
+use crate::performance::{MonitorConfig, PerformanceMonitor};
 use crate::traits::ChatCapability;
-use crate::types::{ChatMessage, MessageContent, MessageRole, MessageMetadata};
+use crate::types::{ChatMessage, MessageContent, MessageMetadata, MessageRole};
 
 /// Benchmark configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,7 +201,7 @@ impl BenchmarkRunner {
             memory_tracking: true,
             ..MonitorConfig::default()
         };
-        
+
         Self {
             config,
             monitor: PerformanceMonitor::new(monitor_config),
@@ -213,8 +213,11 @@ impl BenchmarkRunner {
         &self,
         client: std::sync::Arc<T>,
     ) -> Result<BenchmarkResults, LlmError> {
-        println!("🚀 Starting benchmark with {} concurrent requests", self.config.concurrency);
-        
+        println!(
+            "🚀 Starting benchmark with {} concurrent requests",
+            self.config.concurrency
+        );
+
         // Warmup phase
         if !self.config.warmup_duration.is_zero() {
             println!("🔥 Warming up for {:?}", self.config.warmup_duration);
@@ -227,7 +230,7 @@ impl BenchmarkRunner {
 
         // Create semaphore for concurrency control
         let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(self.config.concurrency));
-        
+
         // Calculate requests per worker
         let requests_per_worker = self.config.total_requests / self.config.concurrency;
         let remaining_requests = self.config.total_requests % self.config.concurrency;
@@ -252,7 +255,7 @@ impl BenchmarkRunner {
                 let _permit = semaphore.acquire().await.unwrap();
                 Self::run_worker(worker_id, worker_requests, scenarios, &*client, monitor).await
             });
-            
+
             handles.push(handle);
         }
 
@@ -265,7 +268,7 @@ impl BenchmarkRunner {
         }
 
         let total_duration = start_time.elapsed();
-        
+
         // Compile results
         self.compile_results(results, total_duration).await
     }
@@ -274,12 +277,14 @@ impl BenchmarkRunner {
     async fn warmup<T: ChatCapability + Send + Sync>(&self, client: &T) -> Result<(), LlmError> {
         let warmup_requests = (self.config.concurrency * 2).min(10);
         let scenario = &self.config.scenarios[0];
-        
+
         for _ in 0..warmup_requests {
-            let _ = client.chat_with_tools(scenario.messages.clone(), None).await;
+            let _ = client
+                .chat_with_tools(scenario.messages.clone(), None)
+                .await;
             sleep(Duration::from_millis(100)).await;
         }
-        
+
         Ok(())
     }
 
@@ -292,20 +297,23 @@ impl BenchmarkRunner {
         monitor: PerformanceMonitor,
     ) -> Vec<RequestResult> {
         let mut results = Vec::new();
-        
+
         for request_id in 0..requests {
             // Select scenario based on weight
             let scenario = Self::select_scenario(&scenarios);
-            
+
             let timer = monitor.start_request().await;
-            
-            match client.chat_with_tools(scenario.messages.clone(), None).await {
+
+            match client
+                .chat_with_tools(scenario.messages.clone(), None)
+                .await
+            {
                 Ok(response) => {
                     let duration = timer.finish().await;
                     monitor.record_success(None, duration).await;
-                    
+
                     let validation = Self::validate_response(&response, &scenario.expected);
-                    
+
                     results.push(RequestResult {
                         worker_id,
                         request_id,
@@ -320,7 +328,7 @@ impl BenchmarkRunner {
                 Err(error) => {
                     let duration = timer.finish().await;
                     monitor.record_error("request_failed", None).await;
-                    
+
                     results.push(RequestResult {
                         worker_id,
                         request_id,
@@ -338,7 +346,7 @@ impl BenchmarkRunner {
                 }
             }
         }
-        
+
         results
     }
 
@@ -386,7 +394,9 @@ impl BenchmarkRunner {
                 passed += 1;
             } else {
                 failed += 1;
-                *failure_reasons.entry("missing_keyword".to_string()).or_insert(0) += 1;
+                *failure_reasons
+                    .entry("missing_keyword".to_string())
+                    .or_insert(0) += 1;
             }
         }
 
@@ -396,7 +406,9 @@ impl BenchmarkRunner {
                 passed += 1;
             } else {
                 failed += 1;
-                *failure_reasons.entry("forbidden_keyword".to_string()).or_insert(0) += 1;
+                *failure_reasons
+                    .entry("forbidden_keyword".to_string())
+                    .or_insert(0) += 1;
             }
         }
 
@@ -467,11 +479,12 @@ impl BenchmarkRunner {
             if !scenario_requests.is_empty() {
                 let success_count = scenario_requests.iter().filter(|r| r.success).count();
                 let success_rate = success_count as f64 / scenario_requests.len() as f64;
-                
+
                 let avg_response_time = scenario_requests
                     .iter()
                     .map(|r| r.duration)
-                    .sum::<Duration>() / scenario_requests.len() as u32;
+                    .sum::<Duration>()
+                    / scenario_requests.len() as u32;
 
                 let validation_results = ValidationResults {
                     passed: scenario_requests.iter().map(|r| r.validation.passed).sum(),
@@ -514,6 +527,7 @@ impl BenchmarkRunner {
 
 /// Individual request result
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct RequestResult {
     worker_id: usize,
     request_id: usize,

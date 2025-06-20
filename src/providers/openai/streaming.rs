@@ -6,13 +6,14 @@ use futures::{Stream, StreamExt};
 use serde::Deserialize;
 
 use crate::error::LlmError;
-use crate::stream::{ChatStream, ChatStreamEvent, ToolCallDelta, FunctionCallDelta};
-use crate::types::{ChatRequest, ResponseMetadata, Usage, ToolType};
+use crate::stream::{ChatStream, ChatStreamEvent, FunctionCallDelta, ToolCallDelta};
+use crate::types::{ChatRequest, ResponseMetadata, ToolType, Usage};
 
 use super::config::OpenAiConfig;
 
 /// OpenAI Server-Sent Events (SSE) response structure
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OpenAiStreamResponse {
     /// Response ID
     id: String,
@@ -32,6 +33,7 @@ struct OpenAiStreamResponse {
 
 /// OpenAI stream choice
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OpenAiStreamChoice {
     /// Choice index
     index: usize,
@@ -45,6 +47,7 @@ struct OpenAiStreamChoice {
 
 /// OpenAI stream delta
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OpenAiStreamDelta {
     /// Role (only in first chunk)
     role: Option<String>,
@@ -58,6 +61,7 @@ struct OpenAiStreamDelta {
 
 /// OpenAI tool call delta
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OpenAiToolCallDelta {
     /// Tool call index
     index: usize,
@@ -95,6 +99,7 @@ struct OpenAiUsage {
 
 /// OpenAI completion tokens details
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct OpenAiCompletionTokensDetails {
     /// Reasoning tokens (for o1 models)
     reasoning_tokens: Option<u32>,
@@ -134,7 +139,7 @@ impl OpenAiStreaming {
     /// Create a streaming chat completion request
     pub async fn create_chat_stream(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
         let url = format!("{}/chat/completions", self.config.base_url);
-        
+
         // Build request body
         let mut request_body = serde_json::json!({
             "model": request.common_params.model,
@@ -169,12 +174,15 @@ impl OpenAiStreaming {
 
         // Add OpenAI-specific parameters from config
         if let Some(response_format) = &self.config.openai_params.response_format {
-            request_body["response_format"] = serde_json::to_value(response_format)
-                .map_err(|e| LlmError::JsonError(format!("Failed to serialize response_format: {}", e)))?;
+            request_body["response_format"] =
+                serde_json::to_value(response_format).map_err(|e| {
+                    LlmError::JsonError(format!("Failed to serialize response_format: {}", e))
+                })?;
         }
         if let Some(tool_choice) = &self.config.openai_params.tool_choice {
-            request_body["tool_choice"] = serde_json::to_value(tool_choice)
-                .map_err(|e| LlmError::JsonError(format!("Failed to serialize tool_choice: {}", e)))?;
+            request_body["tool_choice"] = serde_json::to_value(tool_choice).map_err(|e| {
+                LlmError::JsonError(format!("Failed to serialize tool_choice: {}", e))
+            })?;
         }
         if let Some(parallel_tool_calls) = self.config.openai_params.parallel_tool_calls {
             request_body["parallel_tool_calls"] = parallel_tool_calls.into();
@@ -234,9 +242,7 @@ impl OpenAiStreaming {
     ) -> Result<impl Stream<Item = Result<ChatStreamEvent, LlmError>>, LlmError> {
         let stream = response
             .bytes_stream()
-            .map(|chunk| {
-                chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {}", e)))
-            });
+            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {}", e))));
 
         Ok(stream.filter_map(move |chunk_result| {
             let streaming = self.clone();
@@ -256,19 +262,19 @@ impl OpenAiStreaming {
     async fn parse_sse_chunk(&self, chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
         for line in chunk.lines() {
             let line = line.trim();
-            
+
             // Skip empty lines and comments
             if line.is_empty() || line.starts_with(':') {
                 continue;
             }
-            
+
             // Parse data lines
             if let Some(data) = line.strip_prefix("data: ") {
                 // Check for stream end
                 if data == "[DONE]" {
                     return None;
                 }
-                
+
                 // Parse JSON data
                 match serde_json::from_str::<OpenAiStreamResponse>(data) {
                     Ok(response) => {
@@ -283,7 +289,7 @@ impl OpenAiStreaming {
                 }
             }
         }
-        
+
         None
     }
 
@@ -296,10 +302,10 @@ impl OpenAiStreaming {
                     prompt_tokens: Some(usage.prompt_tokens),
                     completion_tokens: usage.completion_tokens,
                     total_tokens: usage.total_tokens,
-                    reasoning_tokens: usage.completion_tokens_details
+                    reasoning_tokens: usage
+                        .completion_tokens_details
                         .and_then(|d| d.reasoning_tokens),
-                    cache_hit_tokens: usage.prompt_tokens_details
-                        .and_then(|d| d.cached_tokens),
+                    cache_hit_tokens: usage.prompt_tokens_details.and_then(|d| d.cached_tokens),
                     cache_creation_tokens: None, // Not provided by OpenAI
                 },
             };
@@ -308,7 +314,7 @@ impl OpenAiStreaming {
         // Process choices
         for choice in response.choices {
             let delta = choice.delta;
-            
+
             // Handle content delta
             if let Some(content) = delta.content {
                 return ChatStreamEvent::ContentDelta {
@@ -316,14 +322,12 @@ impl OpenAiStreaming {
                     index: Some(choice.index),
                 };
             }
-            
+
             // Handle reasoning delta (o1 models)
             if let Some(reasoning) = delta.reasoning {
-                return ChatStreamEvent::ReasoningDelta {
-                    delta: reasoning,
-                };
+                return ChatStreamEvent::ReasoningDelta { delta: reasoning };
             }
-            
+
             // Handle tool call deltas
             if let Some(tool_calls) = delta.tool_calls {
                 if let Some(tool_call) = tool_calls.into_iter().next() {
@@ -350,8 +354,10 @@ impl OpenAiStreaming {
             metadata: ResponseMetadata {
                 id: Some(response.id),
                 model: Some(response.model),
-                created: Some(chrono::DateTime::from_timestamp(response.created as i64, 0)
-                    .unwrap_or_else(chrono::Utc::now)),
+                created: Some(
+                    chrono::DateTime::from_timestamp(response.created as i64, 0)
+                        .unwrap_or_else(chrono::Utc::now),
+                ),
                 provider: "openai".to_string(),
                 request_id: None,
             },
@@ -359,7 +365,10 @@ impl OpenAiStreaming {
     }
 
     /// Convert messages to OpenAI format
-    fn convert_messages(&self, messages: &[crate::types::ChatMessage]) -> Result<serde_json::Value, LlmError> {
+    fn convert_messages(
+        &self,
+        messages: &[crate::types::ChatMessage],
+    ) -> Result<serde_json::Value, LlmError> {
         // This is a simplified conversion - in a real implementation,
         // you'd need to handle all message types and content formats
         let openai_messages: Vec<serde_json::Value> = messages
@@ -371,7 +380,7 @@ impl OpenAiStreaming {
                 })
             })
             .collect();
-        
+
         Ok(serde_json::Value::Array(openai_messages))
     }
 
@@ -407,7 +416,7 @@ mod tests {
         let config = OpenAiConfig::new("test-key");
         let client = reqwest::Client::new();
         let _streaming = OpenAiStreaming::new(config, client);
-        
+
         // Basic test for streaming client creation
         assert!(true);
     }
@@ -417,9 +426,9 @@ mod tests {
         let config = OpenAiConfig::new("test-key");
         let client = reqwest::Client::new();
         let streaming = OpenAiStreaming::new(config, client);
-        
+
         let sse_data = r#"data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}"#;
-        
+
         // This would require async test setup to properly test
         // For now, just verify the structure compiles
         assert!(true);

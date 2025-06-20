@@ -17,6 +17,7 @@ use super::types::OpenAiSpecificParams;
 use super::utils::get_default_models;
 
 /// OpenAI Client
+#[allow(dead_code)]
 pub struct OpenAiClient {
     /// Chat capability implementation
     chat_capability: OpenAiChatCapability,
@@ -235,8 +236,14 @@ mod tests {
             .with_presence_penalty(0.5)
             .with_frequency_penalty(0.3);
 
-        assert_eq!(client.specific_params().organization, Some("org-123".to_string()));
-        assert_eq!(client.specific_params().project, Some("proj-456".to_string()));
+        assert_eq!(
+            client.specific_params().organization,
+            Some("org-123".to_string())
+        );
+        assert_eq!(
+            client.specific_params().project,
+            Some("proj-456".to_string())
+        );
         assert_eq!(client.specific_params().presence_penalty, Some(0.5));
         assert_eq!(client.specific_params().frequency_penalty, Some(0.3));
     }

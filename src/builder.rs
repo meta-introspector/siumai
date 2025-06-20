@@ -248,8 +248,8 @@ impl LlmBuilder {
     /// Create a Google client builder.
     ///
     /// # Returns
-    /// Google-specific builder for further configuration
-    pub fn google(self) -> GeminiBuilder {
+    /// Gemini-specific builder for further configuration
+    pub fn gemini(self) -> GeminiBuilder {
         GeminiBuilder::new(self)
     }
 
@@ -310,10 +310,13 @@ impl LlmBuilder {
         // Add default headers
         let mut headers = reqwest::header::HeaderMap::new();
         for (name, value) in &self.default_headers {
-            let header_name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid header name '{}': {}", name, e)))?;
-            let header_value = reqwest::header::HeaderValue::from_str(value)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid header value '{}': {}", value, e)))?;
+            let header_name =
+                reqwest::header::HeaderName::from_bytes(name.as_bytes()).map_err(|e| {
+                    LlmError::ConfigurationError(format!("Invalid header name '{}': {}", name, e))
+                })?;
+            let header_value = reqwest::header::HeaderValue::from_str(value).map_err(|e| {
+                LlmError::ConfigurationError(format!("Invalid header value '{}': {}", value, e))
+            })?;
             headers.insert(header_name, header_value);
         }
 
@@ -321,8 +324,9 @@ impl LlmBuilder {
             builder = builder.default_headers(headers);
         }
 
-        builder.build()
-            .map_err(|e| LlmError::ConfigurationError(format!("Failed to build HTTP client: {}", e)))
+        builder.build().map_err(|e| {
+            LlmError::ConfigurationError(format!("Failed to build HTTP client: {}", e))
+        })
     }
 }
 
@@ -631,20 +635,201 @@ impl AnthropicBuilder {
     }
 }
 
-// Placeholder builder
+/// Gemini-specific builder for configuring Gemini clients.
+///
+/// This builder provides Gemini-specific configuration options while
+/// inheriting common HTTP and timeout settings from the base LlmBuilder.
+///
+/// # Example
+/// ```rust,no_run
+/// use siumai::llm;
+///
+/// let client = llm()
+///     .gemini()
+///     .api_key("your-api-key")
+///     .model("gemini-1.5-flash")
+///     .temperature(0.7)
+///     .max_tokens(8192)
+///     .build()
+///     .await?;
+/// ```
+#[derive(Debug, Clone)]
 pub struct GeminiBuilder {
-    _base: LlmBuilder,
+    /// Base builder with HTTP configuration
+    base: LlmBuilder,
+    /// Gemini API key
+    api_key: Option<String>,
+    /// Base URL for Gemini API
+    base_url: Option<String>,
+    /// Model to use
+    model: Option<String>,
+    /// Temperature setting
+    temperature: Option<f32>,
+    /// Maximum output tokens
+    max_tokens: Option<i32>,
+    /// Top-p setting
+    top_p: Option<f32>,
+    /// Top-k setting
+    top_k: Option<i32>,
+    /// Stop sequences
+    stop_sequences: Option<Vec<String>>,
+    /// Candidate count
+    candidate_count: Option<i32>,
+    /// Safety settings
+    safety_settings: Option<Vec<crate::providers::gemini::SafetySetting>>,
+    /// JSON schema for structured output
+    json_schema: Option<serde_json::Value>,
 }
 
 impl GeminiBuilder {
-    fn new(base: LlmBuilder) -> Self {
-        Self { _base: base }
+    /// Create a new Gemini builder
+    pub fn new(base: LlmBuilder) -> Self {
+        Self {
+            base,
+            api_key: None,
+            base_url: None,
+            model: None,
+            temperature: None,
+            max_tokens: None,
+            top_p: None,
+            top_k: None,
+            stop_sequences: None,
+            candidate_count: None,
+            safety_settings: None,
+            json_schema: None,
+        }
     }
 
-    pub async fn build(self) -> Result<(), LlmError> {
-        Err(LlmError::UnsupportedOperation(
-            "Gemini provider not yet implemented".to_string(),
-        ))
+    /// Set the API key
+    pub fn api_key<S: Into<String>>(mut self, api_key: S) -> Self {
+        self.api_key = Some(api_key.into());
+        self
+    }
+
+    /// Set the base URL
+    pub fn base_url<S: Into<String>>(mut self, base_url: S) -> Self {
+        self.base_url = Some(base_url.into());
+        self
+    }
+
+    /// Set the model
+    pub fn model<S: Into<String>>(mut self, model: S) -> Self {
+        self.model = Some(model.into());
+        self
+    }
+
+    /// Set temperature (0.0 to 2.0)
+    pub fn temperature(mut self, temperature: f32) -> Self {
+        self.temperature = Some(temperature);
+        self
+    }
+
+    /// Set maximum output tokens
+    pub fn max_tokens(mut self, max_tokens: i32) -> Self {
+        self.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set top-p (0.0 to 1.0)
+    pub fn top_p(mut self, top_p: f32) -> Self {
+        self.top_p = Some(top_p);
+        self
+    }
+
+    /// Set top-k
+    pub fn top_k(mut self, top_k: i32) -> Self {
+        self.top_k = Some(top_k);
+        self
+    }
+
+    /// Set stop sequences
+    pub fn stop_sequences(mut self, sequences: Vec<String>) -> Self {
+        self.stop_sequences = Some(sequences);
+        self
+    }
+
+    /// Set candidate count
+    pub fn candidate_count(mut self, count: i32) -> Self {
+        self.candidate_count = Some(count);
+        self
+    }
+
+    /// Set safety settings
+    pub fn safety_settings(
+        mut self,
+        settings: Vec<crate::providers::gemini::SafetySetting>,
+    ) -> Self {
+        self.safety_settings = Some(settings);
+        self
+    }
+
+    /// Enable structured output with JSON schema
+    pub fn json_schema(mut self, schema: serde_json::Value) -> Self {
+        self.json_schema = Some(schema);
+        self
+    }
+
+    /// Build the Gemini client
+    pub async fn build(self) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
+        let api_key = self.api_key.ok_or_else(|| {
+            LlmError::ConfigurationError("API key is required for Gemini".to_string())
+        })?;
+
+        let mut config = crate::providers::gemini::GeminiConfig::new(api_key);
+
+        if let Some(base_url) = self.base_url {
+            config = config.with_base_url(base_url);
+        }
+
+        if let Some(model) = self.model {
+            config = config.with_model(model);
+        }
+
+        // Build generation config
+        let mut generation_config = crate::providers::gemini::GenerationConfig::new();
+
+        if let Some(temp) = self.temperature {
+            generation_config = generation_config.with_temperature(temp);
+        }
+
+        if let Some(max_tokens) = self.max_tokens {
+            generation_config = generation_config.with_max_output_tokens(max_tokens);
+        }
+
+        if let Some(top_p) = self.top_p {
+            generation_config = generation_config.with_top_p(top_p);
+        }
+
+        if let Some(top_k) = self.top_k {
+            generation_config = generation_config.with_top_k(top_k);
+        }
+
+        if let Some(stop_sequences) = self.stop_sequences {
+            generation_config = generation_config.with_stop_sequences(stop_sequences);
+        }
+
+        if let Some(count) = self.candidate_count {
+            generation_config = generation_config.with_candidate_count(count);
+        }
+
+        if let Some(schema) = self.json_schema {
+            generation_config = generation_config.with_response_schema(schema);
+            generation_config =
+                generation_config.with_response_mime_type("application/json".to_string());
+        }
+
+        config = config.with_generation_config(generation_config);
+
+        if let Some(safety_settings) = self.safety_settings {
+            config = config.with_safety_settings(safety_settings);
+        }
+
+        // Apply HTTP configuration from base builder
+        if let Some(timeout) = self.base.timeout {
+            config = config.with_timeout(timeout.as_secs());
+        }
+
+        crate::providers::gemini::GeminiClient::new(config)
     }
 }
 

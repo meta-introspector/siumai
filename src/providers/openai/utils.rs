@@ -2,10 +2,10 @@
 //!
 //! Common utility functions for OpenAI API interactions.
 
+use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use super::types::*;
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 
 /// Build HTTP headers for OpenAI API requests
 pub fn build_headers(
@@ -86,12 +86,16 @@ pub fn convert_message_content(content: &MessageContent) -> Result<serde_json::V
                         });
 
                         if let Some(detail) = detail {
-                            image_obj["image_url"]["detail"] = serde_json::Value::String(detail.clone());
+                            image_obj["image_url"]["detail"] =
+                                serde_json::Value::String(detail.clone());
                         }
 
                         content_parts.push(image_obj);
                     }
-                    ContentPart::Audio { audio_url, format: _ } => {
+                    ContentPart::Audio {
+                        audio_url,
+                        format: _,
+                    } => {
                         // OpenAI does not currently support audio content directly in chat
                         content_parts.push(serde_json::json!({
                             "type": "text",
@@ -140,6 +144,12 @@ pub fn convert_messages(messages: &[ChatMessage]) -> Result<Vec<OpenAiMessage>, 
                         })
                         .collect()
                 }),
+                tool_call_id: None,
+            },
+            MessageRole::Developer => OpenAiMessage {
+                role: "developer".to_string(),
+                content: Some(convert_message_content(&message.content)?),
+                tool_calls: None,
                 tool_call_id: None,
             },
             MessageRole::Tool => OpenAiMessage {

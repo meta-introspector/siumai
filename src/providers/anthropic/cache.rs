@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::error::LlmError;
-use crate::types::{ChatMessage, MessageContent, ContentPart};
+use crate::types::{ChatMessage, ContentPart, MessageContent};
 
 /// Cache control configuration for Anthropic
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,8 +107,13 @@ impl CacheAwareMessageBuilder {
     }
 
     /// Set cache control for a specific content part (for multimodal messages)
-    pub fn with_content_cache_control(mut self, content_index: usize, cache_control: CacheControl) -> Self {
-        self.content_cache_controls.insert(content_index, cache_control);
+    pub fn with_content_cache_control(
+        mut self,
+        content_index: usize,
+        cache_control: CacheControl,
+    ) -> Self {
+        self.content_cache_controls
+            .insert(content_index, cache_control);
         self
     }
 
@@ -129,7 +134,10 @@ impl CacheAwareMessageBuilder {
                         for (index, cache_control) in self.content_cache_controls {
                             if let Some(content_item) = content_array.get_mut(index) {
                                 if let Some(content_obj) = content_item.as_object_mut() {
-                                    content_obj.insert("cache_control".to_string(), cache_control.to_json());
+                                    content_obj.insert(
+                                        "cache_control".to_string(),
+                                        cache_control.to_json(),
+                                    );
                                 }
                             }
                         }
@@ -153,6 +161,7 @@ impl CacheAwareMessageBuilder {
                 crate::types::MessageRole::System => "system",
                 crate::types::MessageRole::User => "user",
                 crate::types::MessageRole::Assistant => "assistant",
+                crate::types::MessageRole::Developer => "user", // Developer messages are treated as user messages in Anthropic
                 crate::types::MessageRole::Tool => "tool",
             }
         });
@@ -236,7 +245,7 @@ impl CacheStatistics {
     /// Parse cache statistics from API response
     pub fn from_response(response: &serde_json::Value) -> Option<Self> {
         let usage = response.get("usage")?;
-        
+
         Some(Self {
             cache_hits: usage.get("cache_hits")?.as_u64()? as u32,
             cache_misses: usage.get("cache_misses")?.as_u64()? as u32,
@@ -277,12 +286,14 @@ pub mod patterns {
             tool_call_id: None,
         };
 
-        CacheAwareMessageBuilder::new(message)
-            .with_cache_control(CacheControl::ephemeral())
+        CacheAwareMessageBuilder::new(message).with_cache_control(CacheControl::ephemeral())
     }
 
     /// Create a user message with document caching
-    pub fn cached_document_message<S: Into<String>>(document: S, query: S) -> CacheAwareMessageBuilder {
+    pub fn cached_document_message<S: Into<String>>(
+        document: S,
+        query: S,
+    ) -> CacheAwareMessageBuilder {
         let content = format!("Document:\n{}\n\nQuery: {}", document.into(), query.into());
         let message = ChatMessage {
             role: crate::types::MessageRole::User,
@@ -292,8 +303,7 @@ pub mod patterns {
             tool_call_id: None,
         };
 
-        CacheAwareMessageBuilder::new(message)
-            .with_cache_control(CacheControl::ephemeral())
+        CacheAwareMessageBuilder::new(message).with_cache_control(CacheControl::ephemeral())
     }
 
     /// Create a conversation with cached context
@@ -312,7 +322,7 @@ pub mod patterns {
             } else {
                 builder
             };
-            
+
             if let Ok(json) = builder.build() {
                 result.push(json);
             }

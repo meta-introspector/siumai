@@ -3,7 +3,6 @@
 //! Contains data structures specific to the Anthropic Claude API.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use super::cache::CacheControl;
 use super::thinking::ThinkingConfig;
@@ -87,8 +86,6 @@ pub struct AnthropicModelInfo {
     pub created_at: String,
     pub r#type: String,
 }
-
-
 
 /// Tool Use block for Anthropic
 #[derive(Debug, Serialize, Deserialize)]

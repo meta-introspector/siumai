@@ -89,25 +89,31 @@ pub trait CustomProvider: Send + Sync {
     /// Validate configuration
     fn validate_config(&self, config: &CustomProviderConfig) -> Result<(), LlmError> {
         if config.name.is_empty() {
-            return Err(LlmError::InvalidParameter("Provider name cannot be empty".to_string()));
+            return Err(LlmError::InvalidParameter(
+                "Provider name cannot be empty".to_string(),
+            ));
         }
         if config.base_url.is_empty() {
-            return Err(LlmError::InvalidParameter("Base URL cannot be empty".to_string()));
+            return Err(LlmError::InvalidParameter(
+                "Base URL cannot be empty".to_string(),
+            ));
         }
         if config.api_key.is_empty() {
-            return Err(LlmError::InvalidParameter("API key cannot be empty".to_string()));
+            return Err(LlmError::InvalidParameter(
+                "API key cannot be empty".to_string(),
+            ));
         }
         Ok(())
     }
 
     /// Transform request before sending
-    fn transform_request(&self, request: &mut CustomChatRequest) -> Result<(), LlmError> {
+    fn transform_request(&self, _request: &mut CustomChatRequest) -> Result<(), LlmError> {
         // Default implementation does nothing
         Ok(())
     }
 
     /// Transform response after receiving
-    fn transform_response(&self, response: &mut CustomChatResponse) -> Result<(), LlmError> {
+    fn transform_response(&self, _response: &mut CustomChatResponse) -> Result<(), LlmError> {
         // Default implementation does nothing
         Ok(())
     }
@@ -265,9 +271,9 @@ impl CustomProviderClient {
             client_builder = client_builder.timeout(std::time::Duration::from_secs(timeout));
         }
 
-        let http_client = client_builder
-            .build()
-            .map_err(|e| LlmError::ConfigurationError(format!("Failed to create HTTP client: {}", e)))?;
+        let http_client = client_builder.build().map_err(|e| {
+            LlmError::ConfigurationError(format!("Failed to create HTTP client: {}", e))
+        })?;
 
         Ok(Self {
             provider,
@@ -321,8 +327,7 @@ impl ChatCapability for CustomProviderClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        let mut request = CustomChatRequest::new(messages, "default".to_string())
-            .with_stream(true);
+        let mut request = CustomChatRequest::new(messages, "default".to_string()).with_stream(true);
 
         if let Some(tools) = tools {
             request = request.with_tools(tools);
