@@ -115,6 +115,7 @@ struct OpenAiPromptTokensDetails {
     /// Cached tokens
     cached_tokens: Option<u32>,
     /// Audio tokens
+    #[allow(dead_code)]
     audio_tokens: Option<u32>,
 }
 

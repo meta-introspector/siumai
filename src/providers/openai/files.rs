@@ -48,6 +48,7 @@ struct OpenAiFileResponse {
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiFileListResponse {
     /// Object type (should be "list")
+    #[allow(dead_code)]
     object: String,
     /// List of files
     data: Vec<OpenAiFileResponse>,
@@ -61,6 +62,7 @@ struct OpenAiFileDeleteResponse {
     /// File ID that was deleted
     id: String,
     /// Object type (should be "file")
+    #[allow(dead_code)]
     object: String,
     /// Whether deletion was successful
     deleted: bool,

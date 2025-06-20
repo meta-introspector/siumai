@@ -114,6 +114,7 @@ impl GeminiFiles {
     }
 
     /// Convert FileUploadRequest to CreateFileRequest
+    #[allow(dead_code)]
     fn convert_upload_request_to_gemini(&self, request: &FileUploadRequest) -> CreateFileRequest {
         let gemini_file = GeminiFile {
             name: None, // Will be auto-generated

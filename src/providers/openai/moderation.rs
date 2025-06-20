@@ -27,6 +27,7 @@ struct OpenAiModerationRequest {
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiModerationResponse {
     /// Unique identifier for the moderation request
+    #[allow(dead_code)]
     id: String,
     /// Model used for moderation
     model: String,

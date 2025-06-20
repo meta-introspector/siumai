@@ -1,7 +1,7 @@
 [package]
 name = "siumai"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 description = "A unified LLM interface library for Rust"
 license = "MIT OR Apache-2.0"
@@ -10,7 +10,7 @@ homepage = "https://github.com/YumchaLabs/siumai"
 documentation = "https://docs.rs/siumai"
 readme = "README.md"
 keywords = ["llm", "ai", "openai", "anthropic", "async"]
-categories = ["api-bindings", "web-programming::http-client"]
+categories = ["api-bindings"]
 
 [dependencies]
 # Async traits
