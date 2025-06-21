@@ -3,10 +3,12 @@
 //! Implements text completion using the /api/generate endpoint.
 
 use futures_util::StreamExt;
+use std::sync::{Arc, Mutex};
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::types::*;
+use crate::utils::Utf8StreamDecoder;
 
 use super::config::OllamaParams;
 use super::types::*;
@@ -151,35 +153,70 @@ impl OllamaCompletionCapability {
             )));
         }
 
-        // Create stream from response
-        let stream = response.bytes_stream();
-        let mapped_stream = stream.map(|chunk_result| {
-            match chunk_result {
-                Ok(chunk) => {
-                    let chunk_str = String::from_utf8_lossy(&chunk);
-                    for line in chunk_str.lines() {
-                        if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                            if let Ok(ollama_response) =
-                                serde_json::from_value::<OllamaGenerateResponse>(json_value)
-                            {
-                                // Parse response directly without using self
-                                let content = ollama_response.response;
+        // Create stream from response with UTF-8 decoder
+        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder_for_flush = decoder.clone();
 
-                                return Ok(ChatStreamEvent::ContentDelta {
-                                    delta: content,
-                                    index: Some(0),
-                                });
+        let stream = response.bytes_stream();
+        let decoded_stream = stream.filter_map(move |chunk_result| {
+            let decoder = decoder.clone();
+            async move {
+                match chunk_result {
+                    Ok(chunk) => {
+                        // Use UTF-8 decoder to handle incomplete sequences
+                        let decoded_chunk = {
+                            let mut decoder = decoder.lock().unwrap();
+                            decoder.decode(&chunk)
+                        };
+
+                        if !decoded_chunk.is_empty() {
+                            for line in decoded_chunk.lines() {
+                                if let Ok(Some(json_value)) = parse_streaming_line(line) {
+                                    if let Ok(ollama_response) =
+                                        serde_json::from_value::<OllamaGenerateResponse>(json_value)
+                                    {
+                                        let content = ollama_response.response;
+                                        return Some(Ok(ChatStreamEvent::ContentDelta {
+                                            delta: content,
+                                            index: Some(0),
+                                        }));
+                                    }
+                                }
                             }
                         }
+                        None
                     }
-                    Ok(ChatStreamEvent::ContentDelta {
-                        delta: String::new(),
-                        index: Some(0),
-                    })
+                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
                 }
-                Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
             }
         });
+
+        // Add flush operation
+        let flush_stream = futures_util::stream::once(async move {
+            let remaining = {
+                let mut decoder = decoder_for_flush.lock().unwrap();
+                decoder.flush()
+            };
+
+            if !remaining.is_empty() {
+                for line in remaining.lines() {
+                    if let Ok(Some(json_value)) = parse_streaming_line(line) {
+                        if let Ok(ollama_response) =
+                            serde_json::from_value::<OllamaGenerateResponse>(json_value)
+                        {
+                            let content = ollama_response.response;
+                            return Some(Ok(ChatStreamEvent::ContentDelta {
+                                delta: content,
+                                index: Some(0),
+                            }));
+                        }
+                    }
+                }
+            }
+            None
+        }).filter_map(|result| async move { result });
+
+        let mapped_stream = decoded_stream.chain(flush_stream);
 
         Ok(Box::pin(mapped_stream))
     }

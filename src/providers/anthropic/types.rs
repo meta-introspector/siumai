@@ -104,3 +104,76 @@ pub struct AnthropicToolResult {
     pub content: String,
     pub is_error: Option<bool>,
 }
+
+/// Anthropic Streaming Event
+#[derive(Debug, Deserialize)]
+pub struct AnthropicStreamEvent {
+    pub r#type: String,
+    #[serde(flatten)]
+    pub data: serde_json::Value,
+}
+
+/// Message Start Event
+#[derive(Debug, Deserialize)]
+pub struct MessageStartEvent {
+    pub r#type: String,
+    pub message: AnthropicMessage,
+}
+
+/// Content Block Start Event
+#[derive(Debug, Deserialize)]
+pub struct ContentBlockStartEvent {
+    pub r#type: String,
+    pub index: u32,
+    pub content_block: AnthropicContentBlock,
+}
+
+/// Content Block Delta Event
+#[derive(Debug, Deserialize)]
+pub struct ContentBlockDeltaEvent {
+    pub r#type: String,
+    pub index: u32,
+    pub delta: AnthropicDelta,
+}
+
+/// Content Block Stop Event
+#[derive(Debug, Deserialize)]
+pub struct ContentBlockStopEvent {
+    pub r#type: String,
+    pub index: u32,
+}
+
+/// Message Delta Event
+#[derive(Debug, Deserialize)]
+pub struct MessageDeltaEvent {
+    pub r#type: String,
+    pub delta: AnthropicMessageDelta,
+    pub usage: Option<AnthropicUsage>,
+}
+
+/// Message Stop Event
+#[derive(Debug, Deserialize)]
+pub struct MessageStopEvent {
+    pub r#type: String,
+}
+
+/// Anthropic Delta types
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type")]
+pub enum AnthropicDelta {
+    #[serde(rename = "text_delta")]
+    TextDelta { text: String },
+    #[serde(rename = "input_json_delta")]
+    InputJsonDelta { partial_json: String },
+    #[serde(rename = "thinking_delta")]
+    ThinkingDelta { thinking: String },
+    #[serde(rename = "signature_delta")]
+    SignatureDelta { signature: String },
+}
+
+/// Message Delta
+#[derive(Debug, Deserialize)]
+pub struct AnthropicMessageDelta {
+    pub stop_reason: Option<String>,
+    pub stop_sequence: Option<String>,
+}

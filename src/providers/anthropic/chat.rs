@@ -3,13 +3,16 @@
 //! Implements the `ChatCapability` trait for Anthropic Claude.
 
 use async_trait::async_trait;
+use futures_util::StreamExt;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use crate::error::LlmError;
 use crate::params::{AnthropicParameterMapper, ParameterMapper};
-use crate::stream::ChatStream;
+use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::traits::ChatCapability;
 use crate::types::*;
+use crate::utils::Utf8StreamDecoder;
 
 use super::types::*;
 use super::utils::*;
@@ -217,14 +220,206 @@ impl ChatCapability for AnthropicChatCapability {
 
     async fn chat_stream(
         &self,
-        _messages: Vec<ChatMessage>,
-        _tools: Option<Vec<Tool>>,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // Streaming implementation will be added later
-        Err(LlmError::UnsupportedOperation(
-            "Streaming not yet implemented for Anthropic".to_string(),
-        ))
+        // Create a ChatRequest for streaming
+        let request = ChatRequest {
+            messages,
+            tools,
+            common_params: CommonParams::default(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: true,
+        };
+
+        let headers = build_headers(&self.api_key, &self.http_config.headers)?;
+        let request_body = self.build_chat_request_body(&request, Some(&self.anthropic_params))?;
+
+        let response = self
+            .http_client
+            .post(&format!("{}/v1/messages", self.base_url))
+            .headers(headers)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(LlmError::HttpError(format!(
+                "HTTP {}: {}",
+                status,
+                error_text
+            )));
+        }
+
+        // Create stream from response with UTF-8 decoder
+        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder_for_flush = decoder.clone();
+
+        let stream = response.bytes_stream();
+        let decoded_stream = stream.filter_map(move |chunk_result| {
+            let decoder = decoder.clone();
+            async move {
+                match chunk_result {
+                    Ok(chunk) => {
+                        // Use UTF-8 decoder to handle incomplete sequences
+                        let decoded_chunk = {
+                            let mut decoder = decoder.lock().unwrap();
+                            decoder.decode(&chunk)
+                        };
+
+                        if !decoded_chunk.is_empty() {
+                            if let Some(event) = Self::parse_sse_event(&decoded_chunk) {
+                                return Some(event);
+                            }
+                        }
+                        None
+                    }
+                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
+                }
+            }
+        });
+
+        // Add flush operation
+        let flush_stream = futures_util::stream::once(async move {
+            let remaining = {
+                let mut decoder = decoder_for_flush.lock().unwrap();
+                decoder.flush()
+            };
+
+            if !remaining.is_empty() {
+                Self::parse_sse_event(&remaining)
+            } else {
+                None
+            }
+        }).filter_map(|result| async move { result });
+
+        let final_stream = decoded_stream.chain(flush_stream);
+        Ok(Box::pin(final_stream))
     }
+}
+
+impl AnthropicChatCapability {
+    /// Parse SSE event from Anthropic streaming response
+    fn parse_sse_event(chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
+        for line in chunk.lines() {
+            let line = line.trim();
+
+            // Skip empty lines and comments
+            if line.is_empty() || line.starts_with(':') {
+                continue;
+            }
+
+            // Parse SSE data line
+            if let Some(data) = line.strip_prefix("data: ") {
+                // Handle end of stream
+                if data == "[DONE]" {
+                    return None;
+                }
+
+                // Parse JSON event
+                match serde_json::from_str::<AnthropicStreamEvent>(data) {
+                    Ok(event) => {
+                        return Self::handle_stream_event(event);
+                    }
+                    Err(e) => {
+                        return Some(Err(LlmError::ParseError(format!(
+                            "Failed to parse stream event: {e}"
+                        ))));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Handle different types of Anthropic stream events
+    fn handle_stream_event(event: AnthropicStreamEvent) -> Option<Result<ChatStreamEvent, LlmError>> {
+        match event.r#type.as_str() {
+            "message_start" => {
+                // Message started, no content yet
+                None
+            }
+            "content_block_start" => {
+                // Content block started, no delta yet
+                None
+            }
+            "content_block_delta" => {
+                // Parse content block delta
+                match serde_json::from_value::<ContentBlockDeltaEvent>(event.data) {
+                    Ok(delta_event) => {
+                        match delta_event.delta {
+                            AnthropicDelta::TextDelta { text } => {
+                                Some(Ok(ChatStreamEvent::ContentDelta {
+                                    delta: text,
+                                    index: Some(delta_event.index as usize),
+                                }))
+                            }
+                            AnthropicDelta::ThinkingDelta { thinking } => {
+                                Some(Ok(ChatStreamEvent::ReasoningDelta {
+                                    delta: thinking,
+                                }))
+                            }
+                            AnthropicDelta::InputJsonDelta { partial_json } => {
+                                // Handle tool input delta
+                                Some(Ok(ChatStreamEvent::ContentDelta {
+                                    delta: partial_json,
+                                    index: Some(delta_event.index as usize),
+                                }))
+                            }
+                            AnthropicDelta::SignatureDelta { signature } => {
+                                // Handle signature delta (for thinking mode)
+                                Some(Ok(ChatStreamEvent::ReasoningDelta {
+                                    delta: signature,
+                                }))
+                            }
+                        }
+                    }
+                    Err(e) => Some(Err(LlmError::ParseError(format!(
+                        "Failed to parse content block delta: {e}"
+                    )))),
+                }
+            }
+            "content_block_stop" => {
+                // Content block finished
+                None
+            }
+            "message_delta" => {
+                // Message metadata delta (usage, stop reason, etc.)
+                None
+            }
+            "message_stop" => {
+                // Message finished
+                None
+            }
+            "ping" => {
+                // Heartbeat, ignore
+                None
+            }
+            "error" => {
+                // Error event
+                let error_msg = event.data.get("error")
+                    .and_then(|e| e.get("message"))
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("Unknown streaming error");
+                Some(Err(LlmError::StreamError(error_msg.to_string())))
+            }
+            _ => {
+                // Unknown event type, ignore
+                None
+            }
+        }
+    }
+
+
 }
 
 /// Legacy implementation for backward compatibility

@@ -92,6 +92,7 @@ pub mod retry_strategy;
 pub mod stream;
 pub mod traits;
 pub mod types;
+pub mod utils;
 pub mod web_search;
 
 // Re-export main types and traits

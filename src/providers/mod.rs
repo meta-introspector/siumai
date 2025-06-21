@@ -8,6 +8,8 @@ pub mod ollama;
 pub mod openai;
 pub mod openai_compatible;
 
+pub mod test_provider;
+
 // Re-export main types
 pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;

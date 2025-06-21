@@ -4,11 +4,13 @@
 
 use async_trait::async_trait;
 use futures_util::StreamExt;
+use std::sync::{Arc, Mutex};
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::traits::ChatCapability;
 use crate::types::*;
+use crate::utils::Utf8StreamDecoder;
 
 use super::config::OllamaParams;
 use super::types::*;
@@ -228,31 +230,70 @@ impl ChatCapability for OllamaChatCapability {
             )));
         }
 
-        // Create stream from response
+        // Create stream from response with UTF-8 decoder
+        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder_for_flush = decoder.clone();
+
         let stream = response.bytes_stream();
-        let mapped_stream = stream.map(|chunk_result| match chunk_result {
-            Ok(chunk) => {
-                let chunk_str = String::from_utf8_lossy(&chunk);
-                for line in chunk_str.lines() {
+        let decoded_stream = stream.filter_map(move |chunk_result| {
+            let decoder = decoder.clone();
+            async move {
+                match chunk_result {
+                    Ok(chunk) => {
+                        // Use UTF-8 decoder to handle incomplete sequences
+                        let decoded_chunk = {
+                            let mut decoder = decoder.lock().unwrap();
+                            decoder.decode(&chunk)
+                        };
+
+                        if !decoded_chunk.is_empty() {
+                            for line in decoded_chunk.lines() {
+                                if let Ok(Some(json_value)) = parse_streaming_line(line) {
+                                    if let Ok(ollama_response) =
+                                        serde_json::from_value::<OllamaChatResponse>(json_value)
+                                    {
+                                        let content_delta = ollama_response.message.content.clone();
+                                        return Some(Ok(ChatStreamEvent::ContentDelta {
+                                            delta: content_delta,
+                                            index: Some(0),
+                                        }));
+                                    }
+                                }
+                            }
+                        }
+                        None
+                    }
+                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
+                }
+            }
+        });
+
+        // Add flush operation
+        let flush_stream = futures_util::stream::once(async move {
+            let remaining = {
+                let mut decoder = decoder_for_flush.lock().unwrap();
+                decoder.flush()
+            };
+
+            if !remaining.is_empty() {
+                for line in remaining.lines() {
                     if let Ok(Some(json_value)) = parse_streaming_line(line) {
                         if let Ok(ollama_response) =
                             serde_json::from_value::<OllamaChatResponse>(json_value)
                         {
                             let content_delta = ollama_response.message.content.clone();
-                            return Ok(ChatStreamEvent::ContentDelta {
+                            return Some(Ok(ChatStreamEvent::ContentDelta {
                                 delta: content_delta,
                                 index: Some(0),
-                            });
+                            }));
                         }
                     }
                 }
-                Ok(ChatStreamEvent::ContentDelta {
-                    delta: String::new(),
-                    index: Some(0),
-                })
             }
-            Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
-        });
+            None
+        }).filter_map(|result| async move { result });
+
+        let mapped_stream = decoded_stream.chain(flush_stream);
 
         Ok(Box::pin(mapped_stream))
     }

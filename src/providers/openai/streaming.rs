@@ -4,10 +4,12 @@
 
 use futures::{Stream, StreamExt};
 use serde::Deserialize;
+use std::sync::{Arc, Mutex};
 
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, ResponseMetadata, Usage};
+use crate::utils::Utf8StreamDecoder;
 
 use super::config::OpenAiConfig;
 use super::utils::{contains_thinking_tags, extract_thinking_content, filter_thinking_content};
@@ -246,18 +248,50 @@ impl OpenAiStreaming {
             .bytes_stream()
             .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
 
-        Ok(stream.filter_map(move |chunk_result| {
+        // Create a UTF-8 decoder for this stream
+        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder_for_flush = decoder.clone();
+        let streaming_for_flush = self.clone();
+
+        // Create a stream that handles UTF-8 decoding
+        let decoded_stream = stream.filter_map(move |chunk_result| {
             let streaming = self.clone();
+            let decoder = decoder.clone();
             async move {
                 match chunk_result {
                     Ok(chunk) => {
-                        let chunk_str = String::from_utf8_lossy(&chunk);
-                        streaming.parse_sse_chunk(&chunk_str).await
+                        // Use UTF-8 decoder to handle incomplete sequences
+                        let decoded_chunk = {
+                            let mut decoder = decoder.lock().unwrap();
+                            decoder.decode(&chunk)
+                        };
+
+                        if !decoded_chunk.is_empty() {
+                            streaming.parse_sse_chunk(&decoded_chunk).await
+                        } else {
+                            None
+                        }
                     }
                     Err(e) => Some(Err(e)),
                 }
             }
-        }))
+        });
+
+        // Add a final flush operation
+        let flush_stream = futures::stream::once(async move {
+            let remaining = {
+                let mut decoder = decoder_for_flush.lock().unwrap();
+                decoder.flush()
+            };
+
+            if !remaining.is_empty() {
+                streaming_for_flush.parse_sse_chunk(&remaining).await
+            } else {
+                None
+            }
+        }).filter_map(|result| async move { result });
+
+        Ok(decoded_stream.chain(flush_stream))
     }
 
     /// Parse a Server-Sent Events chunk
