@@ -405,6 +405,7 @@ let config = OllamaConfig::builder()
     .num_ctx(4096)              // Context window
     .num_gpu(1)                 // Use GPU acceleration
     .numa(true)                 // Enable NUMA
+    .think(true)                // Enable thinking mode for thinking models
     .option("temperature", serde_json::Value::Number(
         serde_json::Number::from_f64(0.8).unwrap()
     ))
@@ -416,6 +417,38 @@ let client = OllamaClient::new_with_config(config);
 let mut stream = client.generate_stream("Write a haiku about AI".to_string()).await?;
 while let Some(event) = stream.next().await {
     // Process streaming response
+}
+```
+
+#### Thinking Models with Ollama
+
+```rust
+use siumai::prelude::*;
+
+// Use thinking models like DeepSeek-R1
+let client = LlmBuilder::new()
+    .ollama()
+    .base_url("http://localhost:11434")
+    .model("deepseek-r1:latest")
+    .think(true)                // Enable thinking mode
+    .temperature(0.7)
+    .build()
+    .await?;
+
+let messages = vec![
+    user!("Solve this step by step: What is 15% of 240?")
+];
+
+let response = client.chat(messages).await?;
+
+// Access the model's thinking process
+if let Some(thinking) = &response.thinking {
+    println!("🧠 Model's reasoning: {}", thinking);
+}
+
+// Get the final answer
+if let Some(answer) = response.content_text() {
+    println!("📝 Final answer: {}", answer);
 }
 ```
 

@@ -45,6 +45,8 @@ pub struct OllamaParams {
     pub use_mmap: Option<bool>,
     /// Number of threads to use
     pub num_thread: Option<u32>,
+    /// Should the model think before responding (for thinking models)
+    pub think: Option<bool>,
     /// Additional model options
     pub options: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
@@ -225,6 +227,14 @@ impl OllamaConfigBuilder {
         self
     }
 
+    /// Enable thinking mode for thinking models
+    pub fn think(mut self, think: bool) -> Self {
+        let mut params = self.ollama_params.unwrap_or_default();
+        params.think = Some(think);
+        self.ollama_params = Some(params);
+        self
+    }
+
     /// Add model option
     pub fn option<K: Into<String>>(mut self, key: K, value: serde_json::Value) -> Self {
         let mut params = self.ollama_params.unwrap_or_default();
@@ -278,6 +288,7 @@ mod tests {
             .keep_alive("10m")
             .raw(true)
             .format("json")
+            .think(true)
             .option(
                 "temperature",
                 serde_json::Value::Number(serde_json::Number::from_f64(0.7).unwrap()),
@@ -290,6 +301,26 @@ mod tests {
         assert_eq!(config.ollama_params.keep_alive, Some("10m".to_string()));
         assert_eq!(config.ollama_params.raw, Some(true));
         assert_eq!(config.ollama_params.format, Some("json".to_string()));
+        assert_eq!(config.ollama_params.think, Some(true));
+    }
+
+    #[test]
+    fn test_thinking_model_config() {
+        let config = OllamaConfig::builder()
+            .base_url("http://localhost:11434")
+            .model("deepseek-r1:latest")
+            .think(true)
+            .num_ctx(4096)
+            .option(
+                "temperature",
+                serde_json::Value::Number(serde_json::Number::from_f64(0.7).unwrap()),
+            )
+            .build()
+            .unwrap();
+
+        assert_eq!(config.ollama_params.think, Some(true));
+        assert_eq!(config.ollama_params.num_ctx, Some(4096));
+        assert_eq!(config.model, Some("deepseek-r1:latest".to_string()));
     }
 
     #[test]

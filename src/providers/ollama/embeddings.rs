@@ -207,8 +207,13 @@ impl EmbeddingCapability for OllamaEmbeddingCapability {
     }
 
     fn embedding_dimension(&self) -> usize {
-        // Default dimension for most Ollama embedding models
-        // This could be made configurable based on the model
+        // Return a reasonable default dimension for Ollama embedding models
+        // Note: The actual dimension depends on the specific model being used:
+        // - nomic-embed-text: 768
+        // - all-minilm: 384
+        // - mxbai-embed-large: 1024
+        // - snowflake-arctic-embed: 1024
+        // Since we can't determine the exact model at this point, we use a common default
         384
     }
 }

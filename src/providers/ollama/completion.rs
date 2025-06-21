@@ -97,6 +97,7 @@ impl OllamaCompletionCapability {
             raw: self.ollama_params.raw,
             keep_alive: self.ollama_params.keep_alive.clone(),
             context: None,
+            think: self.ollama_params.think,
         })
     }
 

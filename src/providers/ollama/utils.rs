@@ -69,6 +69,7 @@ pub fn convert_chat_message(message: &ChatMessage) -> OllamaChatMessage {
         content: content_str,
         images: None,
         tool_calls: None,
+        thinking: None,
     };
 
     // Extract images from multimodal content

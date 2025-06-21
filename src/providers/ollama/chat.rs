@@ -99,6 +99,7 @@ impl OllamaChatCapability {
                 Some(options)
             },
             keep_alive: self.ollama_params.keep_alive.clone(),
+            think: self.ollama_params.think,
         })
     }
 
@@ -164,7 +165,7 @@ impl OllamaChatCapability {
             usage,
             finish_reason,
             tool_calls: message.tool_calls,
-            thinking: None,
+            thinking: response.message.thinking,
             metadata,
         }
     }
@@ -285,6 +286,7 @@ mod tests {
                 content: "Hello there!".to_string(),
                 images: None,
                 tool_calls: None,
+                thinking: None,
             },
             done: true,
             done_reason: Some("stop".to_string()),

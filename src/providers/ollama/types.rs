@@ -27,6 +27,9 @@ pub struct OllamaChatRequest {
     /// Keep model loaded duration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keep_alive: Option<String>,
+    /// Should the model think before responding (for thinking models)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub think: Option<bool>,
 }
 
 /// Ollama generate request
@@ -66,6 +69,9 @@ pub struct OllamaGenerateRequest {
     /// Context from previous request
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context: Option<Vec<i32>>,
+    /// Should the model think before responding (for thinking models)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub think: Option<bool>,
 }
 
 /// Ollama chat message
@@ -81,6 +87,9 @@ pub struct OllamaChatMessage {
     /// Tool calls made by the assistant
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_calls: Option<Vec<OllamaToolCall>>,
+    /// The model's thinking process (for thinking models)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thinking: Option<String>,
 }
 
 /// Ollama tool definition
