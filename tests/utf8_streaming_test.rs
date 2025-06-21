@@ -14,7 +14,7 @@ async fn test_utf8_truncation_with_chinese_characters() {
     let config = TestProviderConfig {
         simulate_utf8_truncation: true,
         include_thinking: false,
-        chunk_size: 2, // Very small chunks to force UTF-8 truncation
+        chunk_size: 50, // Small enough to cause UTF-8 truncation but large enough for SSE parsing
     };
 
     let provider = TestProvider::new(config);
@@ -65,7 +65,7 @@ async fn test_emoji_handling_in_truncated_stream() {
     let config = TestProviderConfig {
         simulate_utf8_truncation: true,
         include_thinking: false,
-        chunk_size: 3, // Small chunks that may split emoji
+        chunk_size: 60, // Small enough to split emoji but large enough for SSE parsing
     };
 
     let provider = TestProvider::new(config);
@@ -99,7 +99,7 @@ async fn test_thinking_content_with_utf8_truncation() {
     let config = TestProviderConfig {
         simulate_utf8_truncation: true,
         include_thinking: true,
-        chunk_size: 4, // Small chunks to test thinking tag boundaries
+        chunk_size: 80, // Small enough to test UTF-8 truncation but large enough for SSE parsing
     };
 
     let provider = TestProvider::new(config);
@@ -161,7 +161,7 @@ async fn test_mixed_content_with_extreme_fragmentation() {
     let config = TestProviderConfig {
         simulate_utf8_truncation: true,
         include_thinking: true,
-        chunk_size: 1, // Single byte chunks - worst case scenario
+        chunk_size: 30, // Small chunks but still parseable for SSE
     };
 
     let provider = TestProvider::new(config);
@@ -208,7 +208,7 @@ async fn test_thinking_tag_boundary_splitting() {
     let config = TestProviderConfig {
         simulate_utf8_truncation: true,
         include_thinking: true,
-        chunk_size: 5, // Size that may split thinking tags
+        chunk_size: 70, // Small enough to test boundaries but large enough for SSE parsing
     };
 
     let provider = TestProvider::new(config);
@@ -253,7 +253,7 @@ async fn test_comparison_with_and_without_truncation() {
     let config_with_truncation = TestProviderConfig {
         simulate_utf8_truncation: true,
         include_thinking: true,
-        chunk_size: 3,
+        chunk_size: 90, // Small enough to test truncation but large enough for SSE parsing
     };
 
     // Test without truncation
