@@ -177,6 +177,10 @@ impl LlmClient for AnthropicClient {
             .with_custom_feature("prompt_caching", true)
             .with_custom_feature("thinking_mode", true)
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]

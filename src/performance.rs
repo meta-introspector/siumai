@@ -405,6 +405,9 @@ impl Default for MonitorConfig {
     }
 }
 
+// Re-export commonly used types at module level
+pub use optimization::{ResponseCache, CacheStats};
+
 /// Performance optimization utilities
 pub mod optimization {
     use super::*;
@@ -471,6 +474,138 @@ pub mod optimization {
             // In production, you'd use a proper string interner
             Box::leak(s.into_boxed_str())
         }
+    }
+
+    /// High-performance LRU cache for chat responses
+    pub struct ResponseCache {
+        cache: std::collections::HashMap<String, CachedResponse>,
+        access_order: std::collections::VecDeque<String>,
+        max_size: usize,
+        hit_count: u64,
+        miss_count: u64,
+    }
+
+    #[derive(Clone)]
+    struct CachedResponse {
+        response: crate::types::ChatResponse,
+        timestamp: std::time::Instant,
+        access_count: u32,
+    }
+
+    impl ResponseCache {
+        /// Create a new response cache with specified capacity
+        pub fn new(max_size: usize) -> Self {
+            Self {
+                cache: std::collections::HashMap::with_capacity(max_size),
+                access_order: std::collections::VecDeque::with_capacity(max_size),
+                max_size,
+                hit_count: 0,
+                miss_count: 0,
+            }
+        }
+
+        /// Generate cache key from messages (optimized for performance)
+        pub fn cache_key(messages: &[crate::types::ChatMessage]) -> String {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+
+            let mut hasher = DefaultHasher::new();
+            for msg in messages {
+                msg.role.hash(&mut hasher);
+                if let Some(text) = msg.content_text() {
+                    text.hash(&mut hasher);
+                }
+            }
+            format!("chat_{:x}", hasher.finish())
+        }
+
+        /// Get cached response if available
+        pub fn get(&mut self, key: &str) -> Option<crate::types::ChatResponse> {
+            if let Some(cached) = self.cache.get_mut(key) {
+                // Update access statistics
+                cached.access_count += 1;
+                self.hit_count += 1;
+
+                // Move to front of access order
+                if let Some(pos) = self.access_order.iter().position(|k| k == key) {
+                    self.access_order.remove(pos);
+                }
+                self.access_order.push_front(key.to_string());
+
+                Some(cached.response.clone())
+            } else {
+                self.miss_count += 1;
+                None
+            }
+        }
+
+        /// Store response in cache
+        pub fn put(&mut self, key: String, response: crate::types::ChatResponse) {
+            // Remove oldest entry if at capacity
+            if self.cache.len() >= self.max_size {
+                if let Some(oldest_key) = self.access_order.pop_back() {
+                    self.cache.remove(&oldest_key);
+                }
+            }
+
+            let cached = CachedResponse {
+                response,
+                timestamp: std::time::Instant::now(),
+                access_count: 1,
+            };
+
+            self.cache.insert(key.clone(), cached);
+            self.access_order.push_front(key);
+        }
+
+        /// Get cache hit rate
+        pub fn hit_rate(&self) -> f64 {
+            let total = self.hit_count + self.miss_count;
+            if total == 0 {
+                0.0
+            } else {
+                self.hit_count as f64 / total as f64
+            }
+        }
+
+        /// Clear expired entries
+        pub fn cleanup_expired(&mut self, max_age: std::time::Duration) {
+            let now = std::time::Instant::now();
+            let mut expired_keys = Vec::new();
+
+            for (key, cached) in &self.cache {
+                if now.duration_since(cached.timestamp) > max_age {
+                    expired_keys.push(key.clone());
+                }
+            }
+
+            for key in expired_keys {
+                self.cache.remove(&key);
+                if let Some(pos) = self.access_order.iter().position(|k| k == &key) {
+                    self.access_order.remove(pos);
+                }
+            }
+        }
+
+        /// Get cache statistics
+        pub fn stats(&self) -> CacheStats {
+            CacheStats {
+                size: self.cache.len(),
+                capacity: self.max_size,
+                hit_count: self.hit_count,
+                miss_count: self.miss_count,
+                hit_rate: self.hit_rate(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct CacheStats {
+        pub size: usize,
+        pub capacity: usize,
+        pub hit_count: u64,
+        pub miss_count: u64,
+        pub hit_rate: f64,
     }
 }
 

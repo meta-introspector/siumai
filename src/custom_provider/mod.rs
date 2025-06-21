@@ -352,6 +352,10 @@ impl LlmClient for CustomProviderClient {
     fn capabilities(&self) -> ProviderCapabilities {
         self.provider.capabilities()
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Helper trait for building custom providers

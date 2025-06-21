@@ -173,7 +173,7 @@ pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
         Some("length") => Some(FinishReason::Length),
         Some("tool_calls") => Some(FinishReason::ToolCalls),
         Some("content_filter") => Some(FinishReason::ContentFilter),
-        Some("function_call") => Some(FinishReason::FunctionCall),
+        Some("function_call") => Some(FinishReason::ToolCalls), // function_call is deprecated, map to tool_calls
         Some(other) => Some(FinishReason::Other(other.to_string())),
         None => None,
     }

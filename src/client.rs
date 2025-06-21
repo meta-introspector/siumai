@@ -17,6 +17,9 @@ pub trait LlmClient: ChatCapability + Send + Sync {
 
     /// Get capability information
     fn capabilities(&self) -> ProviderCapabilities;
+
+    /// Get as Any for dynamic casting
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// Client Wrapper - used to unify clients from different providers
@@ -223,6 +226,10 @@ impl LlmClient for UnifiedLlmClient {
     fn capabilities(&self) -> ProviderCapabilities {
         self.inner.client().capabilities()
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 impl LlmClient for ClientWrapper {
@@ -236,6 +243,10 @@ impl LlmClient for ClientWrapper {
 
     fn capabilities(&self) -> ProviderCapabilities {
         self.client().capabilities()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

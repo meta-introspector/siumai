@@ -263,6 +263,10 @@ impl LlmClient for GeminiClient {
             .with_custom_feature("cached_content", true)
             .with_custom_feature("json_schema", true)
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// Builder for creating Gemini clients

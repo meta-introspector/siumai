@@ -11,105 +11,89 @@ use crate::types::{CommonParams, ProviderType};
 pub struct EnhancedParameterValidator;
 
 impl EnhancedParameterValidator {
-    /// Validates parameters for a specific provider with detailed error reporting
+    /// Validates parameters for a specific provider with simplified logic for better performance
     pub fn validate_for_provider(
         params: &CommonParams,
         provider_type: &ProviderType,
     ) -> Result<ValidationReport, LlmError> {
-        let mapper = ParameterMapperFactory::create_mapper(provider_type);
-        let constraints = mapper.get_param_constraints();
-        let supported_params = mapper.supported_params();
-
         let mut report = ValidationReport::new(provider_type.clone());
+        let mut has_errors = false;
 
-        // Validate temperature
+        // Fast validation with early returns for better performance
+
+        // Validate temperature with simplified range checks
         if let Some(temp) = params.temperature {
-            if temp < constraints.temperature_min as f32
-                || temp > constraints.temperature_max as f32
-            {
+            let (min, max) = Self::get_temperature_range(provider_type);
+            if temp < min || temp > max {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "temperature".to_string(),
                     value: temp.to_string(),
-                    min: constraints.temperature_min,
-                    max: constraints.temperature_max,
+                    min: min as f64,
+                    max: max as f64,
                     provider: format!("{:?}", provider_type),
                 });
+                has_errors = true;
             } else {
                 report.add_valid_param("temperature".to_string());
             }
         }
 
-        // Validate max_tokens
+        // Validate max_tokens with simplified range checks
         if let Some(max_tokens) = params.max_tokens {
-            let max_tokens_u64 = max_tokens as u64;
-            if max_tokens_u64 < constraints.max_tokens_min
-                || max_tokens_u64 > constraints.max_tokens_max
-            {
+            let (min, max) = Self::get_max_tokens_range(provider_type);
+            if max_tokens < min || max_tokens > max {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "max_tokens".to_string(),
                     value: max_tokens.to_string(),
-                    min: constraints.max_tokens_min as f64,
-                    max: constraints.max_tokens_max as f64,
+                    min: min as f64,
+                    max: max as f64,
                     provider: format!("{:?}", provider_type),
                 });
+                has_errors = true;
             } else {
                 report.add_valid_param("max_tokens".to_string());
             }
         }
 
-        // Validate top_p
+        // Validate top_p with simplified range checks
         if let Some(top_p) = params.top_p {
-            if top_p < constraints.top_p_min as f32 || top_p > constraints.top_p_max as f32 {
+            if top_p < 0.0 || top_p > 1.0 {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "top_p".to_string(),
                     value: top_p.to_string(),
-                    min: constraints.top_p_min,
-                    max: constraints.top_p_max,
+                    min: 0.0,
+                    max: 1.0,
                     provider: format!("{:?}", provider_type),
                 });
+                has_errors = true;
             } else {
                 report.add_valid_param("top_p".to_string());
             }
         }
 
-        // Validate model name
-        if !params.model.is_empty() {
-            if Self::is_model_supported(&params.model, provider_type) {
-                report.add_valid_param("model".to_string());
-            } else {
-                report.add_warning(ValidationWarning::UnsupportedModel {
-                    model: params.model.clone(),
-                    provider: format!("{:?}", provider_type),
-                    suggestion: Self::suggest_alternative_model(&params.model, provider_type),
-                });
-            }
+        // Simplified model validation
+        if !params.model.is_empty() && !Self::is_model_supported(&params.model, provider_type) {
+            report.add_warning(ValidationWarning::UnsupportedModel {
+                model: params.model.clone(),
+                provider: format!("{:?}", provider_type),
+                suggestion: Self::suggest_alternative_model(&params.model, provider_type),
+            });
         }
 
-        // Validate stop sequences
+        // Simplified stop sequences validation
         if let Some(stop_sequences) = &params.stop_sequences {
-            if stop_sequences.len() > Self::max_stop_sequences(provider_type) {
+            let max_sequences = Self::max_stop_sequences(provider_type);
+            if stop_sequences.len() > max_sequences {
                 report.add_error(ValidationError::TooManyStopSequences {
                     count: stop_sequences.len(),
-                    max: Self::max_stop_sequences(provider_type),
+                    max: max_sequences,
                     provider: format!("{:?}", provider_type),
                 });
-            } else {
-                report.add_valid_param("stop_sequences".to_string());
+                has_errors = true;
             }
         }
 
-        // Check for unsupported parameters
-        let used_params = Self::extract_used_params(params);
-        for param in used_params {
-            if !supported_params.contains(&param.as_str()) {
-                report.add_warning(ValidationWarning::UnsupportedParameter {
-                    parameter: param,
-                    provider: format!("{:?}", provider_type),
-                });
-            }
-        }
-
-        if report.has_errors() {
+        if has_errors {
             Err(LlmError::InvalidParameter(format!(
                 "Parameter validation failed for {:?}: {}",
                 provider_type,
@@ -156,16 +140,13 @@ impl EnhancedParameterValidator {
         }
 
         // Check model compatibility
-        if !params.model.is_empty() {
-            if !Self::is_model_supported(&params.model, target_provider) {
-                let suggested_model =
-                    Self::suggest_alternative_model(&params.model, target_provider);
-                report.add_incompatibility(ParameterIncompatibility {
-                    parameter: "model".to_string(),
-                    issue: format!("Model '{}' not supported by target provider", params.model),
-                    suggestion: suggested_model.map(|m| format!("Use '{}' instead", m)),
-                });
-            }
+        if !params.model.is_empty() && !Self::is_model_supported(&params.model, target_provider) {
+            let suggested_model = Self::suggest_alternative_model(&params.model, target_provider);
+            report.add_incompatibility(ParameterIncompatibility {
+                parameter: "model".to_string(),
+                issue: format!("Model '{}' not supported by target provider", params.model),
+                suggestion: suggested_model.map(|m| format!("Use '{}' instead", m)),
+            });
         }
 
         report
@@ -231,7 +212,31 @@ impl EnhancedParameterValidator {
         report
     }
 
-    // Helper methods
+    // Helper methods for simplified validation
+
+    /// Get temperature range for a provider (min, max)
+    fn get_temperature_range(provider_type: &ProviderType) -> (f32, f32) {
+        match provider_type {
+            ProviderType::OpenAi => (0.0, 2.0),
+            ProviderType::Anthropic => (0.0, 1.0),
+            ProviderType::Gemini => (0.0, 2.0),
+            ProviderType::XAI => (0.0, 2.0),
+            ProviderType::Ollama => (0.0, 2.0),
+            ProviderType::Custom(_) => (0.0, 2.0),
+        }
+    }
+
+    /// Get max tokens range for a provider (min, max)
+    fn get_max_tokens_range(provider_type: &ProviderType) -> (u32, u32) {
+        match provider_type {
+            ProviderType::OpenAi => (1, 128000),
+            ProviderType::Anthropic => (1, 200000),
+            ProviderType::Gemini => (1, 2097152),
+            ProviderType::XAI => (1, 131072),
+            ProviderType::Ollama => (1, 32768),
+            ProviderType::Custom(_) => (1, 100000),
+        }
+    }
 
     fn is_model_supported(model: &str, provider_type: &ProviderType) -> bool {
         match provider_type {

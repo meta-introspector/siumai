@@ -36,7 +36,7 @@ Add Siumai to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-siumai = "0.2.0"
+siumai = "0.3.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 

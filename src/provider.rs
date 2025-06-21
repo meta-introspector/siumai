@@ -58,22 +58,7 @@ impl Siumai {
         }
     }
 
-    /// Register a capability implementation
-    pub fn register_capability<T: Any + Send + Sync>(
-        &mut self,
-        capability_name: &str,
-        implementation: T,
-    ) {
-        self.capabilities
-            .insert(capability_name.to_string(), Box::new(implementation));
-    }
 
-    /// Get a capability implementation
-    pub fn get_capability<T: Any>(&self, capability_name: &str) -> Option<&T> {
-        self.capabilities
-            .get(capability_name)
-            .and_then(|cap| cap.downcast_ref::<T>())
-    }
 
     /// Check if a capability is supported
     pub fn supports(&self, capability: &str) -> bool {
@@ -90,71 +75,33 @@ impl Siumai {
         self.client.as_ref()
     }
 
-    /// Execute a capability-specific operation
-    /// This provides a type-safe way to access provider capabilities
-    pub async fn with_capability<T, F, R>(
-        &self,
-        capability_name: &str,
-        operation: F,
-    ) -> Result<R, LlmError>
-    where
-        F: FnOnce(&T) -> R,
-        T: Any,
-    {
-        if !self.supports(capability_name) {
-            return Err(LlmError::UnsupportedOperation(format!(
-                "Provider {} does not support {}",
-                self.provider_name(),
-                capability_name
-            )));
-        }
 
-        let capability = self.get_capability::<T>(capability_name).ok_or_else(|| {
-            LlmError::InternalError(format!(
-                "Capability {} not properly registered",
-                capability_name
-            ))
-        })?;
 
-        Ok(operation(capability))
+    /// Type-safe audio capability access
+    ///
+    /// Note: This method provides access regardless of reported capability support.
+    /// Actual support depends on the specific model being used.
+    pub fn audio_capability(&self) -> AudioCapabilityProxy {
+        AudioCapabilityProxy::new(self, self.supports("audio"))
     }
 
-    /// Check if audio capability is available and execute operation
-    pub async fn with_audio<F, R>(&self, _operation: F) -> Result<R, LlmError>
-    where
-        F: FnOnce(&dyn AudioCapability) -> R,
-    {
-        if !self.supports("audio") {
-            return Err(LlmError::UnsupportedOperation(format!(
-                "Provider {} does not support audio",
-                self.provider_name()
-            )));
-        }
-
-        // For now, we'll return an error since we need proper capability registration
-        Err(LlmError::UnsupportedOperation(
-            "Audio capability access not yet implemented. Use provider-specific client."
-                .to_string(),
-        ))
+    /// Type-safe embedding capability access
+    ///
+    /// Note: This method provides access regardless of reported capability support.
+    /// Actual support depends on the specific model being used.
+    pub fn embedding_capability(&self) -> EmbeddingCapabilityProxy {
+        EmbeddingCapabilityProxy::new(self, self.supports("embedding"))
     }
 
-    /// Check if embedding capability is available and execute operation
-    pub async fn with_embedding<F, R>(&self, _operation: F) -> Result<R, LlmError>
-    where
-        F: FnOnce(&dyn EmbeddingCapability) -> R,
-    {
-        if !self.supports("embedding") {
-            return Err(LlmError::UnsupportedOperation(format!(
-                "Provider {} does not support embedding",
-                self.provider_name()
-            )));
-        }
-
-        Err(LlmError::UnsupportedOperation(
-            "Embedding capability access not yet implemented. Use provider-specific client."
-                .to_string(),
-        ))
+    /// Type-safe vision capability access
+    ///
+    /// Note: This method provides access regardless of reported capability support.
+    /// Actual support depends on the specific model being used.
+    pub fn vision_capability(&self) -> VisionCapabilityProxy {
+        VisionCapabilityProxy::new(self, self.supports("vision"))
     }
+
+
 }
 
 #[async_trait::async_trait]
@@ -195,6 +142,10 @@ impl LlmClient for Siumai {
 
     fn capabilities(&self) -> ProviderCapabilities {
         self.metadata.capabilities.clone()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 
@@ -528,6 +479,142 @@ impl SiumaiBuilder {
         };
 
         Ok(Siumai::new(client))
+    }
+}
+
+/// Type-safe proxy for audio capabilities
+pub struct AudioCapabilityProxy<'a> {
+    provider: &'a Siumai,
+    reported_support: bool,
+}
+
+impl<'a> AudioCapabilityProxy<'a> {
+    pub fn new(provider: &'a Siumai, reported_support: bool) -> Self {
+        Self { provider, reported_support }
+    }
+
+    /// Check if the provider reports audio support (for reference only)
+    ///
+    /// Note: This is based on static capability information and may not reflect
+    /// the actual capabilities of the current model. Use as a hint, not a restriction.
+    /// The library will never block operations based on this information.
+    pub fn is_reported_as_supported(&self) -> bool {
+        self.reported_support
+    }
+
+    /// Get provider name for debugging
+    pub fn provider_name(&self) -> &'static str {
+        self.provider.provider_name()
+    }
+
+    /// Get a support status message (optional, for user-controlled warnings)
+    ///
+    /// Returns a message about support status that you can choose to display or ignore.
+    /// The library itself will not automatically warn or log anything.
+    pub fn support_status_message(&self) -> String {
+        if self.reported_support {
+            format!("Provider {} reports audio support", self.provider_name())
+        } else {
+            format!(
+                "Provider {} does not report audio support, but this may still work depending on the model",
+                self.provider_name()
+            )
+        }
+    }
+
+    /// Placeholder for future audio operations
+    ///
+    /// This will attempt the operation regardless of reported support.
+    /// Actual errors will come from the API if the model doesn't support it.
+    pub async fn placeholder_operation(&self) -> Result<String, LlmError> {
+        // No automatic warnings - let the user decide if they want to check support
+        Err(LlmError::UnsupportedOperation(
+            "Audio operations not yet implemented. Use provider-specific client.".to_string(),
+        ))
+    }
+}
+
+/// Type-safe proxy for embedding capabilities
+pub struct EmbeddingCapabilityProxy<'a> {
+    provider: &'a Siumai,
+    reported_support: bool,
+}
+
+impl<'a> EmbeddingCapabilityProxy<'a> {
+    pub fn new(provider: &'a Siumai, reported_support: bool) -> Self {
+        Self { provider, reported_support }
+    }
+
+    /// Check if the provider reports embedding support (for reference only)
+    pub fn is_reported_as_supported(&self) -> bool {
+        self.reported_support
+    }
+
+    /// Get provider name for debugging
+    pub fn provider_name(&self) -> &'static str {
+        self.provider.provider_name()
+    }
+
+    /// Get a support status message (optional, for user-controlled information)
+    pub fn support_status_message(&self) -> String {
+        if self.reported_support {
+            format!("Provider {} reports embedding support", self.provider_name())
+        } else {
+            format!(
+                "Provider {} does not report embedding support, but this may still work depending on the model",
+                self.provider_name()
+            )
+        }
+    }
+
+    /// Placeholder for future embedding operations
+    pub async fn placeholder_operation(&self) -> Result<String, LlmError> {
+        // No automatic warnings - let the user decide if they want to check support
+        Err(LlmError::UnsupportedOperation(
+            "Embedding operations not yet implemented. Use provider-specific client.".to_string(),
+        ))
+    }
+}
+
+/// Type-safe proxy for vision capabilities
+pub struct VisionCapabilityProxy<'a> {
+    provider: &'a Siumai,
+    reported_support: bool,
+}
+
+impl<'a> VisionCapabilityProxy<'a> {
+    pub fn new(provider: &'a Siumai, reported_support: bool) -> Self {
+        Self { provider, reported_support }
+    }
+
+    /// Check if the provider reports vision support (for reference only)
+    pub fn is_reported_as_supported(&self) -> bool {
+        self.reported_support
+    }
+
+    /// Get provider name for debugging
+    pub fn provider_name(&self) -> &'static str {
+        self.provider.provider_name()
+    }
+
+    /// Get a support status message (optional, for user-controlled information)
+    pub fn support_status_message(&self) -> String {
+        if self.reported_support {
+            format!("Provider {} reports vision support", self.provider_name())
+        } else {
+            format!(
+                "Provider {} does not report vision support, but this may still work depending on the model",
+                self.provider_name()
+            )
+        }
+    }
+
+    /// Placeholder for future vision operations
+    pub async fn placeholder_operation(&self) -> Result<String, LlmError> {
+        // No automatic warnings - let the user decide if they want to check support
+        Err(LlmError::UnsupportedOperation(
+            "Vision operations not yet implemented. Use provider-specific client.".to_string(),
+        ))
     }
 }
 

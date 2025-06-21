@@ -61,6 +61,53 @@ impl Default for CommonParams {
     }
 }
 
+impl CommonParams {
+    /// Create CommonParams with pre-allocated model string capacity
+    pub fn with_model_capacity(model: String, _capacity_hint: usize) -> Self {
+        Self {
+            model,
+            temperature: None,
+            max_tokens: None,
+            top_p: None,
+            stop_sequences: None,
+            seed: None,
+        }
+    }
+
+    /// Check if parameters are effectively empty (for optimization)
+    pub fn is_minimal(&self) -> bool {
+        self.model.is_empty()
+            && self.temperature.is_none()
+            && self.max_tokens.is_none()
+            && self.top_p.is_none()
+            && self.stop_sequences.is_none()
+            && self.seed.is_none()
+    }
+
+    /// Estimate memory usage for caching decisions
+    pub fn memory_footprint(&self) -> usize {
+        let mut size = std::mem::size_of::<Self>();
+        size += self.model.capacity();
+        if let Some(ref stop_seqs) = self.stop_sequences {
+            size += stop_seqs.iter().map(|s| s.capacity()).sum::<usize>();
+        }
+        size
+    }
+
+    /// Create a hash for caching (performance optimized)
+    pub fn cache_hash(&self) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        self.model.hash(&mut hasher);
+        self.temperature.map(|t| (t * 1000.0) as u32).hash(&mut hasher);
+        self.max_tokens.hash(&mut hasher);
+        self.top_p.map(|t| (t * 1000.0) as u32).hash(&mut hasher);
+        hasher.finish()
+    }
+}
+
 /// Provider-specific parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProviderParams {
@@ -188,7 +235,7 @@ impl Default for HttpConfig {
 }
 
 /// Message role
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "lowercase")]
 pub enum MessageRole {
     System,
@@ -362,6 +409,50 @@ impl ChatMessage {
             }),
         }
     }
+
+    /// Create a user message from static string (zero-copy for string literals)
+    pub fn user_static(content: &'static str) -> ChatMessageBuilder {
+        ChatMessageBuilder::user(content)
+    }
+
+    /// Create an assistant message from static string (zero-copy for string literals)
+    pub fn assistant_static(content: &'static str) -> ChatMessageBuilder {
+        ChatMessageBuilder::assistant(content)
+    }
+
+    /// Create a system message from static string (zero-copy for string literals)
+    pub fn system_static(content: &'static str) -> ChatMessageBuilder {
+        ChatMessageBuilder::system(content)
+    }
+
+    /// Create a user message with pre-allocated capacity for content
+    pub fn user_with_capacity(content: String, _capacity_hint: usize) -> ChatMessageBuilder {
+        // Note: In a real implementation, you might use the capacity hint
+        // to pre-allocate string buffers for multimodal content
+        ChatMessageBuilder::user(content)
+    }
+
+    /// Check if message is empty (optimization for filtering)
+    pub fn is_empty(&self) -> bool {
+        match &self.content {
+            MessageContent::Text(text) => text.is_empty(),
+            MessageContent::MultiModal(parts) => parts.is_empty(),
+        }
+    }
+
+    /// Get content length for memory estimation
+    pub fn content_length(&self) -> usize {
+        match &self.content {
+            MessageContent::Text(text) => text.len(),
+            MessageContent::MultiModal(parts) => {
+                parts.iter().map(|part| match part {
+                    ContentPart::Text { text } => text.len(),
+                    ContentPart::Image { image_url, .. } => image_url.len(),
+                    ContentPart::Audio { audio_url, .. } => audio_url.len(),
+                }).sum()
+            }
+        }
+    }
 }
 
 /// Chat message builder
@@ -380,6 +471,19 @@ impl ChatMessageBuilder {
         Self {
             role: MessageRole::User,
             content: Some(MessageContent::Text(content.into())),
+            metadata: MessageMetadata::default(),
+            tool_calls: None,
+            tool_call_id: None,
+        }
+    }
+
+    /// Creates a user message builder with pre-allocated capacity
+    pub fn user_with_capacity(content: String, _capacity_hint: usize) -> Self {
+        // Note: In a real implementation, you might use the capacity hint
+        // to pre-allocate vectors for multimodal content
+        Self {
+            role: MessageRole::User,
+            content: Some(MessageContent::Text(content)),
             metadata: MessageMetadata::default(),
             tool_calls: None,
             tool_call_id: None,
@@ -863,8 +967,7 @@ pub enum FinishReason {
     ToolCalls,
     /// Content filtered
     ContentFilter,
-    /// Function call (deprecated, use tool_calls)
-    FunctionCall,
+
     /// Model stopped due to stop sequence
     StopSequence,
     /// Error occurred

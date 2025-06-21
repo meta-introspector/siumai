@@ -332,6 +332,10 @@ impl LlmClient for OllamaClient {
             .with_custom_feature("model_management", true)
             .with_custom_feature("local_models", true)
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 impl LlmProvider for OllamaClient {

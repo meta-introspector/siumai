@@ -1,0 +1,51 @@
+name: 📚 Documentation Issue
+description: Report issues with documentation or request improvements
+title: "[Docs]: "
+labels: ["docs"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve the documentation! Report issues or suggest improvements.
+
+  - type: input
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs attention?
+      placeholder: "e.g., README, Examples, API docs"
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Location
+      description: Where is the documentation issue located?
+      placeholder: |
+        - File: README.md, line 123
+        - Section: "Getting Started"
+        - URL: https://docs.rs/siumai
+        - Example: examples/01_getting_started/quick_start.rs
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Documentation
+      description: What does the current documentation say? (copy/paste the relevant section)
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected/Suggested Documentation
+      description: What should the documentation say instead? How can it be improved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context that would help us improve the documentation?

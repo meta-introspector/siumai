@@ -11,6 +11,7 @@
 //! - **Type Safety**: Leverages Rust's type system to ensure compile-time safety.
 //! - **HTTP Customization**: Supports passing in a reqwest client and custom HTTP configurations.
 //! - **Library First**: Focuses on core library functionality, avoiding application-layer features.
+//! - **Flexible Capability Access**: Capability checks serve as hints rather than restrictions, allowing users to try new model features.
 //!
 //! ## Quick Start
 //!
@@ -34,6 +35,41 @@
 //!     if let Some(text) = response.content_text() {
 //!         println!("Response: {}", text);
 //!     }
+//!
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ## Capability Access Philosophy
+//!
+//! Siumai takes a **permissive and quiet approach** to capability access. It never blocks operations
+//! based on static capability information, and doesn't generate noise with automatic warnings.
+//! The actual API determines what's supported:
+//!
+//! ```rust,no_run
+//! use siumai::prelude::*;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let client = Siumai::builder()
+//!         .openai()
+//!         .api_key("your-api-key")
+//!         .model("gpt-4o")  // This model supports vision
+//!         .build()
+//!         .await?;
+//!
+//!     // Get vision capability - this always works, regardless of "official" support
+//!     let vision = client.vision_capability();
+//!
+//!     // Optionally check support status if you want to (no automatic warnings)
+//!     if !vision.is_reported_as_supported() {
+//!         // You can choose to show a warning, or just proceed silently
+//!         println!("Note: Vision not officially supported, but trying anyway!");
+//!     }
+//!
+//!     // The actual operation will succeed or fail based on the model's real capabilities
+//!     // No pre-emptive blocking, no automatic noise
+//!     // vision.analyze_image(...).await?;
 //!
 //!     Ok(())
 //! }

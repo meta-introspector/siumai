@@ -238,6 +238,10 @@ impl LlmClient for OpenAiClient {
     fn capabilities(&self) -> ProviderCapabilities {
         LlmProvider::capabilities(self)
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]

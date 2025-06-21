@@ -10,17 +10,17 @@ use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::types::*;
 
-/// Chat capability trait - the most fundamental LLM capability.
+/// Core chat capability trait - the most fundamental LLM capability.
 ///
-/// This trait provides the core chat functionality that most LLM providers implement.
-/// It supports both streaming and non-streaming chat, with optional tool calling.
+/// This trait provides only the essential chat functionality that all LLM providers must implement.
+/// It follows the single responsibility principle by focusing solely on core chat operations.
 ///
 /// # API References
 /// - OpenAI: https://platform.openai.com/docs/guides/tools
 /// - Anthropic: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview
 /// - xAI: https://docs.x.ai/docs/guides/function-calling
 #[async_trait]
-pub trait ChatCapability {
+pub trait ChatCapability: Send + Sync {
     /// Sends a chat request to the provider with a sequence of messages.
     ///
     /// # Arguments
@@ -62,7 +62,15 @@ pub trait ChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError>;
+}
 
+/// Extended chat capabilities providing convenience methods and advanced features.
+///
+/// This trait extends the core ChatCapability with useful convenience methods
+/// that are commonly needed but not essential for basic chat functionality.
+/// It follows the interface segregation principle by separating optional features.
+#[async_trait]
+pub trait ChatExtensions: ChatCapability {
     /// Get current memory contents if provider supports memory.
     ///
     /// # Returns
@@ -96,8 +104,6 @@ pub trait ChatCapability {
             .ok_or_else(|| LlmError::InternalError("No text in summary response".to_string()))
             .map(|s| s.to_string())
     }
-
-    // === Convenience Methods ===
 
     /// Simple text completion - just send a prompt and get a response.
     ///
@@ -270,6 +276,9 @@ pub trait ChatCapability {
         self.ask_with_system(system_prompt, prompt).await
     }
 }
+
+/// Automatic implementation of ChatExtensions for all types that implement ChatCapability
+impl<T: ChatCapability> ChatExtensions for T {}
 
 /// Unified audio processing capability interface.
 ///

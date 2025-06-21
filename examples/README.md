@@ -1,184 +1,207 @@
-# Siumai Unified Interface Examples
+# Siumai Examples
 
-This directory contains example code demonstrating the functionality of the Siumai unified interface.
+Practical examples for the Siumai Rust library, organized by learning path and use case.
 
-## What is the Siumai Interface?
+## Quick Start
 
-The Siumai interface is a unified LLM provider interface. It allows you to:
+| I need to... | Go to |
+|--------------|-------|
+| **Get started quickly** | [quick_start.rs](01_getting_started/quick_start.rs) |
+| **Learn basic chat** | [chat_basics.rs](02_core_features/chat_basics.rs) |
+| **Compare providers** | [provider_comparison.rs](01_getting_started/provider_comparison.rs) |
+| **Use streaming** | [streaming_chat.rs](02_core_features/streaming_chat.rs) |
+| **Set up Ollama** | [basic_setup.rs](04_providers/ollama/basic_setup.rs) |
+| **Handle errors** | [error_handling.rs](02_core_features/error_handling.rs) |
+| **Build a chatbot** | [simple_chatbot.rs](05_use_cases/simple_chatbot.rs) |
+| **Use OpenAI features** | [openai/](04_providers/openai/) |
 
-- 🔄 **Dynamically Switch Providers** - Switch between different LLM providers at runtime.
-- 🔍 **Capability Detection** - Automatically detect the features supported by a provider.
-- 🛡️ **Type Safety** - Maintain Rust's compile-time type checking.
-- 📦 **Unified API** - Interact with different providers using the same code.
+## Directory Structure
 
-## Basic Usage
+### 01_getting_started
+*First-time users*
 
-### Creating a Siumai Provider
+- [quick_start.rs](01_getting_started/quick_start.rs) - Basic usage with multiple providers
+- [provider_comparison.rs](01_getting_started/provider_comparison.rs) - Compare different AI providers
+- [basic_usage.rs](01_getting_started/basic_usage.rs) - Core concepts and message types
+- [convenience_methods.rs](01_getting_started/convenience_methods.rs) - Simplified APIs
 
+### 02_core_features
+*Essential functionality*
+
+- [chat_basics.rs](02_core_features/chat_basics.rs) - Foundation of AI interactions
+- [streaming_chat.rs](02_core_features/streaming_chat.rs) - Real-time response streaming
+- [unified_interface.rs](02_core_features/unified_interface.rs) - Provider-agnostic interface
+- [error_handling.rs](02_core_features/error_handling.rs) - Production-ready error management
+- [parameter_mapping.rs](02_core_features/parameter_mapping.rs) - Parameter conversion between providers
+- [capability_detection.rs](02_core_features/capability_detection.rs) - Feature detection
+
+### 03_advanced_features
+*Specialized capabilities*
+
+- [thinking_models.rs](03_advanced_features/thinking_models.rs) - AI reasoning and thinking process
+- [multimodal_processing.rs](03_advanced_features/multimodal_processing.rs) - Text, image, and audio
+- [batch_processing.rs](03_advanced_features/batch_processing.rs) - High-volume concurrent processing
+- [custom_configurations.rs](03_advanced_features/custom_configurations.rs) - Advanced setup patterns
+
+### 04_providers
+*Provider-specific features*
+
+| Provider | Features | Directory |
+|----------|----------|-----------|
+| OpenAI | GPT models, DALL-E, Whisper | [openai/](04_providers/openai/) |
+| Anthropic | Claude models, thinking | [anthropic/](04_providers/anthropic/) |
+| Google | Gemini models, files API | [google/](04_providers/google/) |
+| Ollama | Local models, privacy | [ollama/](04_providers/ollama/) |
+| OpenAI Compatible | DeepSeek, Groq, etc. | [openai_compatible/](04_providers/openai_compatible/) |
+
+### 05_use_cases
+*Complete applications*
+
+- [simple_chatbot.rs](05_use_cases/simple_chatbot.rs) - Interactive chatbot with memory
+- [code_assistant.rs](05_use_cases/code_assistant.rs) - Programming helper
+- [content_generator.rs](05_use_cases/content_generator.rs) - Text generation tool
+- [api_integration.rs](05_use_cases/api_integration.rs) - REST API with AI capabilities
+
+## Setup
+
+Set API keys for the providers you want to use:
+
+```bash
+export OPENAI_API_KEY="your-openai-key"
+export ANTHROPIC_API_KEY="your-anthropic-key"
+export GROQ_API_KEY="your-groq-key"
+```
+
+For Ollama (local):
+```bash
+# Install Ollama from https://ollama.ai
+ollama serve
+ollama pull llama3.2
+```
+
+Run examples:
+
+```bash
+# Getting started
+cargo run --example quick_start
+cargo run --example provider_comparison
+
+# Core features
+cargo run --example chat_basics
+cargo run --example streaming_chat
+
+# Provider-specific
+cargo run --example basic_setup  # Ollama
+cargo run --example enhanced_features  # OpenAI
+
+# Use cases
+cargo run --example simple_chatbot
+```
+
+## Learning Path
+
+**Beginner**: Start with `quick_start.rs` → `provider_comparison.rs` → `chat_basics.rs`
+
+**Intermediate**: Focus on `streaming_chat.rs` → `unified_interface.rs` → `simple_chatbot.rs`
+
+**Advanced**: Study `thinking_models.rs` → `batch_processing.rs` → provider-specific features
+
+**Production**: Explore `error_handling.rs` → `custom_configurations.rs` → `api_integration.rs`
+
+## Key Concepts
+
+### Message Types
 ```rust
 use siumai::prelude::*;
 
-// Method 1: Create from an existing client
-let openai_client = llm()
+let messages = vec![
+    system!("You are a helpful assistant"),
+    user!("Hello!"),
+    assistant!("Hi there! How can I help?"),
+];
+```
+
+### Provider Creation
+```rust
+// OpenAI
+let client = LlmBuilder::new()
     .openai()
     .api_key("your-key")
-    .model("gpt-4")
+    .model("gpt-4o-mini")
     .build()
     .await?;
 
-let siumai = Siumai::new(Box::new(openai_client));
-
-// Method 2: Using the siumai() builder (Planned)
-let siumai = siumai()
-    .provider(ProviderType::OpenAi)
+// Anthropic
+let client = LlmBuilder::new()
+    .anthropic()
     .api_key("your-key")
-    .model("gpt-4")
+    .model("claude-3-5-haiku-20241022")
+    .build()
+    .await?;
+
+// Ollama (local)
+let client = LlmBuilder::new()
+    .ollama()
+    .base_url("http://localhost:11434")
+    .model("llama3.2")
     .build()
     .await?;
 ```
 
 ### Basic Chat
-
 ```rust
-let messages = vec![user!("Hello, world!")];
-let response = siumai.chat(messages).await?;
-println!("Response: {}", response.text().unwrap_or(""));
+let response = client.chat(messages).await?;
+if let Some(text) = response.content_text() {
+    println!("AI: {}", text);
+}
 ```
 
-### Capability Detection
-
+### Streaming
 ```rust
-// Check provider information
-println!("Provider: {}", siumai.provider_name());
-println!("Type: {:?}", siumai.metadata().provider_type);
-
-// Check for specific capabilities
-if siumai.supports("audio") {
-    println!("✅ Audio processing supported");
-}
-
-if siumai.supports("vision") {
-    println!("✅ Vision processing supported");
-}
-
-// Get all capabilities
-let caps = siumai.capabilities();
-println!("Streaming: {}", caps.streaming);
-println!("Tools: {}", caps.tools);
-```
-
-### Streaming Response
-
-```rust
-if siumai.supports("streaming") {
-    let mut stream = siumai.chat_stream(messages, None).await?;
-    
-    while let Some(event) = stream.next().await {
-        match event? {
-            ChatStreamEvent::ContentDelta { delta, .. } => {
-                print!("{}", delta);
-            }
-            ChatStreamEvent::StreamEnd { .. } => {
-                println!("\n✅ Complete");
-                break;
-            }
-            _ => {}
+let mut stream = client.chat_stream(messages, None).await?;
+while let Some(event) = stream.next().await {
+    match event? {
+        ChatStreamEvent::ContentDelta { delta, .. } => {
+            print!("{}", delta);
         }
+        ChatStreamEvent::Done { .. } => break,
+        _ => {}
     }
 }
 ```
 
-## Advanced Usage
-
-### Provider-Independent Functions
+## Error Handling
 
 ```rust
-async fn chat_with_any_provider(provider: &Siumai) -> Result<String, LlmError> {
-    let messages = vec![user!("What is AI?")];
-    let response = provider.chat(messages).await?;
-    Ok(response.text().unwrap_or("").to_string())
-}
-
-// Can be used with any provider
-let openai_siumai = Siumai::new(Box::new(openai_client));
-let anthropic_siumai = Siumai::new(Box::new(anthropic_client));
-
-let openai_response = chat_with_any_provider(&openai_siumai).await?;
-let anthropic_response = chat_with_any_provider(&anthropic_siumai).await?;
-```
-
-### Task-Based Provider Selection
-
-```rust
-async fn select_provider_for_task(task: &str) -> Result<Siumai, LlmError> {
-    match task {
-        "image_generation" => {
-            // Select OpenAI for image generation
-            let client = llm().openai().model("dall-e-3").build().await?;
-            Ok(Siumai::new(Box::new(client)))
-        }
-        "reasoning" => {
-            // Select Anthropic for complex reasoning
-            let client = llm().anthropic().model("claude-3-opus").build().await?;
-            Ok(Siumai::new(Box::new(client)))
-        }
-        _ => {
-            // Default to GPT-4
-            let client = llm().openai().model("gpt-4").build().await?;
-            Ok(Siumai::new(Box::new(client)))
-        }
+match client.chat(messages).await {
+    Ok(response) => {
+        // Handle successful response
+    }
+    Err(LlmError::AuthenticationError(msg)) => {
+        // Handle auth errors
+    }
+    Err(LlmError::RateLimitError(msg)) => {
+        // Handle rate limits
+    }
+    Err(e) => {
+        // Handle other errors
     }
 }
 ```
 
-### Provider Fallback Strategy
+## Best Practices
 
-```rust
-async fn chat_with_fallback(message: &str) -> Result<String, LlmError> {
-    let providers = vec![
-        ("openai", "gpt-4"),
-        ("anthropic", "claude-3-sonnet"),
-        ("openai", "gpt-3.5-turbo"), // Fallback to a cheaper model
-    ];
+1. **Always handle errors gracefully**
+2. **Use environment variables for API keys**
+3. **Monitor token usage in production**
+4. **Implement retry logic for transient errors**
+5. **Choose the right provider for your use case**
+6. **Use streaming for better user experience**
+7. **Test with multiple providers for reliability**
 
-    for (provider_name, model) in providers {
-        if let Ok(client) = create_client(provider_name, model).await {
-            let siumai = Siumai::new(Box::new(client));
-            if let Ok(response) = siumai.chat(vec![user!(message)]).await {
-                return Ok(response.text().unwrap_or("").to_string());
-            }
-        }
-    }
+## Resources
 
-    Err(LlmError::InternalError("All providers failed".to_string()))
-}
-```
-
-## Example Files
-
-- **`siumai_interface.rs`** - A complete demonstration of the siumai interface.
-
-## Running the Examples
-
-```bash
-# Run the siumai interface example
-cargo run --example siumai_interface
-
-```
-
-
-## Advantages
-
-1.  **Type Safety** - Compile-time checks prevent runtime errors.
-2.  **Performance** - Zero-cost abstractions maintain Rust's performance benefits.
-3.  **Flexibility** - Dynamic provider switching and capability detection.
-4.  **Consistency** - A unified API design that is easy to learn and use.
-5.  **Extensibility** - Easy to add new providers and features.
-
-## Future Plans
-
-- [ ] Complete implementation of the `siumai()` builder.
-- [ ] Support for more providers (Gemini, xAI, etc.).
-- [ ] Advanced capability composition and type-safe access.
-- [ ] Performance optimizations and caching mechanisms.
-- [ ] More comprehensive examples and documentation.
+- [Main Documentation](../README.md)
+- [API Reference](https://docs.rs/siumai/)
+- [GitHub Repository](https://github.com/YumchaLabs/siumai)
+- [Crates.io](https://crates.io/crates/siumai)

@@ -1,6 +1,6 @@
 [package]
 name = "siumai"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 description = "A unified LLM interface library for Rust"
@@ -57,3 +57,111 @@ urlencoding = "2.1"
 tokio-test = "0.4"
 mockito = "1.0"
 env_logger = "0.11"
+futures-util = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Examples configuration
+[[example]]
+name = "quick_start"
+path = "examples/01_getting_started/quick_start.rs"
+
+[[example]]
+name = "provider_comparison"
+path = "examples/01_getting_started/provider_comparison.rs"
+
+[[example]]
+name = "chat_basics"
+path = "examples/02_core_features/chat_basics.rs"
+
+[[example]]
+name = "streaming_chat"
+path = "examples/02_core_features/streaming_chat.rs"
+
+[[example]]
+name = "unified_interface"
+path = "examples/02_core_features/unified_interface.rs"
+
+[[example]]
+name = "error_handling"
+path = "examples/02_core_features/error_handling.rs"
+
+[[example]]
+name = "capability_detection"
+path = "examples/02_core_features/capability_detection.rs"
+
+[[example]]
+name = "thinking_models"
+path = "examples/03_advanced_features/thinking_models.rs"
+
+[[example]]
+name = "batch_processing"
+path = "examples/03_advanced_features/batch_processing.rs"
+
+[[example]]
+name = "openai_basic_chat"
+path = "examples/04_providers/openai/basic_chat.rs"
+
+[[example]]
+name = "simple_chatbot"
+path = "examples/05_use_cases/simple_chatbot.rs"
+
+# Additional examples
+[[example]]
+name = "basic_usage"
+path = "examples/01_getting_started/basic_usage.rs"
+
+[[example]]
+name = "convenience_methods"
+path = "examples/01_getting_started/convenience_methods.rs"
+
+[[example]]
+name = "anthropic_basic_chat"
+path = "examples/04_providers/anthropic/basic_chat.rs"
+
+[[example]]
+name = "anthropic_thinking_showcase"
+path = "examples/04_providers/anthropic/thinking_showcase.rs"
+
+[[example]]
+name = "google_basic_usage"
+path = "examples/04_providers/google/basic_usage.rs"
+
+[[example]]
+name = "ollama_basic_setup"
+path = "examples/04_providers/ollama/basic_setup.rs"
+
+[[example]]
+name = "openai_enhanced_features"
+path = "examples/04_providers/openai/enhanced_features.rs"
+
+[[example]]
+name = "openai_vision_processing"
+path = "examples/04_providers/openai/vision_processing.rs"
+
+[[example]]
+name = "openai_compatible_models_showcase"
+path = "examples/04_providers/openai_compatible/models_showcase.rs"
+
+[[example]]
+name = "api_integration"
+path = "examples/05_use_cases/api_integration.rs"
+
+[[example]]
+name = "code_assistant"
+path = "examples/05_use_cases/code_assistant.rs"
+
+[[example]]
+name = "content_generator"
+path = "examples/05_use_cases/content_generator.rs"
+
+[[example]]
+name = "response_cache"
+path = "examples/02_core_features/response_cache.rs"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+

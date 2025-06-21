@@ -1,0 +1,65 @@
+name: 🤖 New Provider Request
+description: Request support for a new AI provider
+title: "[Provider]: Add support for "
+labels: ["provider"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Request support for a new AI provider! Please provide details about the provider and its capabilities.
+
+  - type: input
+    id: provider-name
+    attributes:
+      label: Provider Name
+      description: Name of the AI provider you'd like to see supported
+      placeholder: "e.g., Cohere, Hugging Face, Mistral AI, DeepSeek"
+    validations:
+      required: true
+
+  - type: input
+    id: provider-website
+    attributes:
+      label: Provider Website/Documentation
+      description: Link to the provider's official website or API documentation
+      placeholder: "https://..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: capabilities
+    attributes:
+      label: Provider Capabilities
+      description: What capabilities does this provider support?
+      placeholder: "e.g., Chat, Streaming, Tool calling, Image generation, etc."
+
+  - type: textarea
+    id: models
+    attributes:
+      label: Available Models
+      description: List the main models offered by this provider
+      placeholder: |
+        - model-name-1: Description
+        - model-name-2: Description
+
+
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Why do you need this specific provider? What unique features does it offer?
+      placeholder: Describe your specific use case and why existing providers don't meet your needs.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I can help implement this provider
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Any other relevant information about this provider (pricing, limitations, special features, etc.)
