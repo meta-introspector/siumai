@@ -41,12 +41,12 @@ async fn demonstrate_basic_capability_detection() {
     println!("🔍 Basic Capability Detection:\n");
 
     let providers = create_test_providers().await;
-    
+
     for (name, client) in providers {
         println!("   Provider: {name}");
-        
+
         let capabilities = detect_capabilities(client.as_ref(), &name).await;
-        
+
         println!("      📋 Detected Capabilities:");
         for (feature, supported) in capabilities {
             let status = if supported { "✅" } else { "❌" };
@@ -61,7 +61,7 @@ async fn demonstrate_feature_availability() {
     println!("🎯 Feature Availability Checking:\n");
 
     let providers = create_test_providers().await;
-    
+
     let features_to_test = vec![
         "streaming",
         "vision",
@@ -73,7 +73,7 @@ async fn demonstrate_feature_availability() {
 
     for feature in features_to_test {
         println!("   Feature: {feature}");
-        
+
         for (name, client) in &providers {
             let available = check_feature_availability(client.as_ref(), name, feature).await;
             let status = if available { "✅" } else { "❌" };
@@ -88,26 +88,32 @@ async fn demonstrate_graceful_feature_degradation() {
     println!("🎭 Graceful Feature Degradation:\n");
 
     let providers = create_test_providers().await;
-    
+
     if let Some((name, client)) = providers.into_iter().next() {
         println!("   Using provider: {name}");
-        
+
         // Test streaming with fallback
         println!("   Testing streaming with fallback:");
         match try_streaming_with_fallback(client.as_ref()).await {
             Ok(response) => {
-                println!("      ✅ Got response: {}", &response[..response.len().min(100)]);
+                println!(
+                    "      ✅ Got response: {}",
+                    &response[..response.len().min(100)]
+                );
             }
             Err(e) => {
                 println!("      ❌ Failed: {e}");
             }
         }
-        
+
         // Test vision with fallback
         println!("\n   Testing vision with fallback:");
         match try_vision_with_fallback(client.as_ref()).await {
             Ok(response) => {
-                println!("      ✅ Got response: {}", &response[..response.len().min(100)]);
+                println!(
+                    "      ✅ Got response: {}",
+                    &response[..response.len().min(100)]
+                );
             }
             Err(e) => {
                 println!("      ❌ Failed: {e}");
@@ -116,7 +122,7 @@ async fn demonstrate_graceful_feature_degradation() {
     } else {
         println!("   ⚠️  No providers available for testing");
     }
-    
+
     println!();
 }
 
@@ -125,20 +131,29 @@ async fn demonstrate_provider_metadata() {
     println!("📊 Provider Metadata:\n");
 
     let providers = create_test_providers().await;
-    
+
     for (name, client) in providers {
         println!("   Provider: {name}");
-        
+
         let metadata = get_provider_metadata(client.as_ref(), &name).await;
-        
+
         println!("      📋 Metadata:");
         println!("         Type: {}", metadata.provider_type);
         println!("         Model: {}", metadata.model);
-        println!("         Max tokens: {}", metadata.max_tokens.unwrap_or_default());
+        println!(
+            "         Max tokens: {}",
+            metadata.max_tokens.unwrap_or_default()
+        );
         println!("         Context window: {}", metadata.context_window);
-        println!("         Supports streaming: {}", metadata.supports_streaming);
+        println!(
+            "         Supports streaming: {}",
+            metadata.supports_streaming
+        );
         println!("         Supports vision: {}", metadata.supports_vision);
-        println!("         Cost per 1K tokens: ${:.4}", metadata.cost_per_1k_tokens);
+        println!(
+            "         Cost per 1K tokens: ${:.4}",
+            metadata.cost_per_1k_tokens
+        );
         println!();
     }
 }
@@ -148,13 +163,13 @@ async fn demonstrate_adaptive_behavior() {
     println!("🤖 Adaptive Behavior:\n");
 
     let providers = create_test_providers().await;
-    
+
     if let Some((name, client)) = providers.into_iter().next() {
         println!("   Using provider: {name}");
-        
+
         // Adapt behavior based on capabilities
         let message = "Explain machine learning in simple terms";
-        
+
         match adaptive_chat(client.as_ref(), &name, message).await {
             Ok(response) => {
                 println!("   ✅ Adaptive response received");
@@ -167,7 +182,7 @@ async fn demonstrate_adaptive_behavior() {
     } else {
         println!("   ⚠️  No providers available for testing");
     }
-    
+
     println!();
 }
 
@@ -184,7 +199,10 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
             .build()
             .await
         {
-            providers.push(("OpenAI".to_string(), Box::new(client) as Box<dyn ChatCapability + Send + Sync>));
+            providers.push((
+                "OpenAI".to_string(),
+                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+            ));
         }
     }
 
@@ -197,7 +215,10 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
             .build()
             .await
         {
-            providers.push(("Anthropic".to_string(), Box::new(client) as Box<dyn ChatCapability + Send + Sync>));
+            providers.push((
+                "Anthropic".to_string(),
+                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+            ));
         }
     }
 
@@ -212,7 +233,10 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
         // Test if Ollama is actually available
         let test_messages = vec![user!("Hi")];
         if client.chat(test_messages).await.is_ok() {
-            providers.push(("Ollama".to_string(), Box::new(client) as Box<dyn ChatCapability + Send + Sync>));
+            providers.push((
+                "Ollama".to_string(),
+                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+            ));
         }
     }
 
@@ -220,17 +244,26 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
 }
 
 /// Detect capabilities of a provider
-async fn detect_capabilities(client: &dyn ChatCapability, provider_name: &str) -> HashMap<String, bool> {
+async fn detect_capabilities(
+    client: &dyn ChatCapability,
+    provider_name: &str,
+) -> HashMap<String, bool> {
     let mut capabilities = HashMap::new();
 
     // Basic chat (all providers should support this)
     capabilities.insert("Basic Chat".to_string(), true);
 
     // Streaming support
-    capabilities.insert("Streaming".to_string(), test_streaming_support(client).await);
+    capabilities.insert(
+        "Streaming".to_string(),
+        test_streaming_support(client).await,
+    );
 
     // Vision support (simplified detection)
-    capabilities.insert("Vision".to_string(), provider_supports_vision(provider_name));
+    capabilities.insert(
+        "Vision".to_string(),
+        provider_supports_vision(provider_name),
+    );
 
     // Audio support
     capabilities.insert("Audio".to_string(), provider_supports_audio(provider_name));
@@ -239,16 +272,26 @@ async fn detect_capabilities(client: &dyn ChatCapability, provider_name: &str) -
     capabilities.insert("Tools".to_string(), provider_supports_tools(provider_name));
 
     // JSON mode
-    capabilities.insert("JSON Mode".to_string(), provider_supports_json_mode(provider_name));
+    capabilities.insert(
+        "JSON Mode".to_string(),
+        provider_supports_json_mode(provider_name),
+    );
 
     // Thinking process
-    capabilities.insert("Thinking".to_string(), provider_supports_thinking(provider_name));
+    capabilities.insert(
+        "Thinking".to_string(),
+        provider_supports_thinking(provider_name),
+    );
 
     capabilities
 }
 
 /// Check if a specific feature is available
-async fn check_feature_availability(client: &dyn ChatCapability, provider_name: &str, feature: &str) -> bool {
+async fn check_feature_availability(
+    client: &dyn ChatCapability,
+    provider_name: &str,
+    feature: &str,
+) -> bool {
     match feature {
         "streaming" => test_streaming_support(client).await,
         "vision" => provider_supports_vision(provider_name),
@@ -295,12 +338,12 @@ fn provider_supports_thinking(provider_name: &str) -> bool {
 /// Try streaming with fallback to regular chat
 async fn try_streaming_with_fallback(client: &dyn ChatCapability) -> Result<String, LlmError> {
     let messages = vec![user!("Count from 1 to 5")];
-    
+
     // Try streaming first
     if let Ok(mut stream) = client.chat_stream(messages.clone(), None).await {
         use futures_util::StreamExt;
         let mut result = String::new();
-        
+
         while let Some(event) = stream.next().await {
             match event? {
                 ChatStreamEvent::ContentDelta { delta, .. } => {
@@ -310,27 +353,38 @@ async fn try_streaming_with_fallback(client: &dyn ChatCapability) -> Result<Stri
                 _ => {}
             }
         }
-        
+
         Ok(format!("Streaming: {result}"))
     } else {
         // Fallback to regular chat
         let response = client.chat(messages).await?;
-        Ok(format!("Fallback: {}", response.content_text().unwrap_or_default()))
+        Ok(format!(
+            "Fallback: {}",
+            response.content_text().unwrap_or_default()
+        ))
     }
 }
 
 /// Try vision with fallback to text-only
 async fn try_vision_with_fallback(client: &dyn ChatCapability) -> Result<String, LlmError> {
     // Try vision request (simplified)
-    let messages = vec![user!("Describe what you see in this image: [image would be here]")];
-    
+    let messages = vec![user!(
+        "Describe what you see in this image: [image would be here]"
+    )];
+
     if let Ok(response) = client.chat(messages.clone()).await {
-        Ok(format!("Vision: {}", response.content_text().unwrap_or_default()))
+        Ok(format!(
+            "Vision: {}",
+            response.content_text().unwrap_or_default()
+        ))
     } else {
         // Fallback to text-only
         let fallback_messages = vec![user!("Explain how image analysis works")];
         let response = client.chat(fallback_messages).await?;
-        Ok(format!("Text fallback: {}", response.content_text().unwrap_or_default()))
+        Ok(format!(
+            "Text fallback: {}",
+            response.content_text().unwrap_or_default()
+        ))
     }
 }
 
@@ -347,7 +401,10 @@ struct ProviderMetadata {
 }
 
 /// Get provider metadata
-async fn get_provider_metadata(_client: &dyn ChatCapability, provider_name: &str) -> ProviderMetadata {
+async fn get_provider_metadata(
+    _client: &dyn ChatCapability,
+    provider_name: &str,
+) -> ProviderMetadata {
     match provider_name {
         "OpenAI" => ProviderMetadata {
             provider_type: "Cloud API".to_string(),
@@ -389,25 +446,29 @@ async fn get_provider_metadata(_client: &dyn ChatCapability, provider_name: &str
 }
 
 /// Adaptive chat that adjusts behavior based on capabilities
-async fn adaptive_chat(client: &dyn ChatCapability, provider_name: &str, message: &str) -> Result<String, LlmError> {
+async fn adaptive_chat(
+    client: &dyn ChatCapability,
+    provider_name: &str,
+    message: &str,
+) -> Result<String, LlmError> {
     let metadata = get_provider_metadata(client, provider_name).await;
-    
+
     // Adjust message based on capabilities
     let adjusted_message = if metadata.supports_vision {
         format!("{message} (Note: This provider supports vision)")
     } else {
         message.to_string()
     };
-    
+
     let messages = vec![user!(&adjusted_message)];
-    
+
     // Use streaming if supported, otherwise regular chat
     if metadata.supports_streaming {
         // Try streaming
         if let Ok(mut stream) = client.chat_stream(messages.clone(), None).await {
             use futures_util::StreamExt;
             let mut result = String::new();
-            
+
             while let Some(event) = stream.next().await {
                 match event? {
                     ChatStreamEvent::ContentDelta { delta, .. } => {
@@ -417,7 +478,7 @@ async fn adaptive_chat(client: &dyn ChatCapability, provider_name: &str, message
                     _ => {}
                 }
             }
-            
+
             Ok(result)
         } else {
             // Fallback to regular chat

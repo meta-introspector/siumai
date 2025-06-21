@@ -51,19 +51,25 @@ impl OpenAiCompatibleProvider for DeepSeekProvider {
     fn validate_config(config: &super::config::OpenAiCompatibleConfig) -> Result<(), LlmError> {
         // DeepSeek-specific validation
         if config.api_key.is_empty() {
-            return Err(LlmError::ConfigurationError("DeepSeek API key is required".to_string()));
+            return Err(LlmError::ConfigurationError(
+                "DeepSeek API key is required".to_string(),
+            ));
         }
 
         // Validate reasoning and coding parameters
         if let Some(reasoning) = config.provider_params.get("reasoning") {
             if !reasoning.is_boolean() {
-                return Err(LlmError::ConfigurationError("reasoning parameter must be boolean".to_string()));
+                return Err(LlmError::ConfigurationError(
+                    "reasoning parameter must be boolean".to_string(),
+                ));
             }
         }
 
         if let Some(coding) = config.provider_params.get("coding") {
             if !coding.is_boolean() {
-                return Err(LlmError::ConfigurationError("coding parameter must be boolean".to_string()));
+                return Err(LlmError::ConfigurationError(
+                    "coding parameter must be boolean".to_string(),
+                ));
             }
         }
 
@@ -93,7 +99,10 @@ impl OpenAiCompatibleProvider for DeepSeekProvider {
         if let Some(budget) = params.get("thinking_budget") {
             if let Some(budget_val) = budget.as_u64() {
                 // Add to request parameters (this would be used in request building)
-                params.insert("max_reasoning_tokens".to_string(), serde_json::Value::Number(budget_val.into()));
+                params.insert(
+                    "max_reasoning_tokens".to_string(),
+                    serde_json::Value::Number(budget_val.into()),
+                );
             }
         }
 
@@ -123,14 +132,18 @@ impl OpenAiCompatibleProvider for OpenRouterProvider {
     fn validate_config(config: &super::config::OpenAiCompatibleConfig) -> Result<(), LlmError> {
         // OpenRouter-specific validation
         if config.api_key.is_empty() {
-            return Err(LlmError::ConfigurationError("OpenRouter API key is required".to_string()));
+            return Err(LlmError::ConfigurationError(
+                "OpenRouter API key is required".to_string(),
+            ));
         }
 
         // Validate site_url if provided
         if let Some(site_url) = config.provider_params.get("site_url") {
             if let Some(url_str) = site_url.as_str() {
                 if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
-                    return Err(LlmError::ConfigurationError("site_url must be a valid HTTP/HTTPS URL".to_string()));
+                    return Err(LlmError::ConfigurationError(
+                        "site_url must be a valid HTTP/HTTPS URL".to_string(),
+                    ));
                 }
             }
         }
@@ -144,14 +157,20 @@ impl OpenAiCompatibleProvider for OpenRouterProvider {
         // Transform site_url to HTTP-Referer header
         if let Some(site_url) = params.remove("site_url") {
             if let Some(url_str) = site_url.as_str() {
-                params.insert("http_referer".to_string(), serde_json::Value::String(url_str.to_string()));
+                params.insert(
+                    "http_referer".to_string(),
+                    serde_json::Value::String(url_str.to_string()),
+                );
             }
         }
 
         // Transform app_name to X-Title header
         if let Some(app_name) = params.remove("app_name") {
             if let Some(name_str) = app_name.as_str() {
-                params.insert("x_title".to_string(), serde_json::Value::String(name_str.to_string()));
+                params.insert(
+                    "x_title".to_string(),
+                    serde_json::Value::String(name_str.to_string()),
+                );
             }
         }
 
@@ -162,9 +181,12 @@ impl OpenAiCompatibleProvider for OpenRouterProvider {
                     .iter()
                     .filter_map(|v| v.as_str().map(std::string::ToString::to_string))
                     .collect();
-                params.insert("fallback_models".to_string(), serde_json::Value::Array(
-                    models.into_iter().map(serde_json::Value::String).collect()
-                ));
+                params.insert(
+                    "fallback_models".to_string(),
+                    serde_json::Value::Array(
+                        models.into_iter().map(serde_json::Value::String).collect(),
+                    ),
+                );
             }
         }
 
@@ -260,7 +282,10 @@ mod tests {
     fn test_deepseek_param_transformation() {
         let mut params = HashMap::new();
         params.insert("reasoning".to_string(), serde_json::Value::Bool(true));
-        params.insert("thinking_budget".to_string(), serde_json::Value::Number(1000.into()));
+        params.insert(
+            "thinking_budget".to_string(),
+            serde_json::Value::Number(1000.into()),
+        );
 
         assert!(DeepSeekProvider::transform_params(&mut params).is_ok());
         assert!(params.contains_key("max_reasoning_tokens"));
@@ -280,8 +305,14 @@ mod tests {
     #[test]
     fn test_openrouter_param_transformation() {
         let mut params = HashMap::new();
-        params.insert("site_url".to_string(), serde_json::Value::String("https://example.com".to_string()));
-        params.insert("app_name".to_string(), serde_json::Value::String("Test App".to_string()));
+        params.insert(
+            "site_url".to_string(),
+            serde_json::Value::String("https://example.com".to_string()),
+        );
+        params.insert(
+            "app_name".to_string(),
+            serde_json::Value::String("Test App".to_string()),
+        );
 
         assert!(OpenRouterProvider::transform_params(&mut params).is_ok());
         assert!(params.contains_key("http_referer"));

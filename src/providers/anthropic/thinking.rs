@@ -162,7 +162,9 @@ impl ThinkingResponseParser {
                         if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
                             if item_type == "thinking" {
                                 if let Some(text_delta) = item.get("text") {
-                                    return text_delta.as_str().map(std::string::ToString::to_string);
+                                    return text_delta
+                                        .as_str()
+                                        .map(std::string::ToString::to_string);
                                 }
                             }
                         }

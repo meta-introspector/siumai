@@ -39,26 +39,29 @@ impl OllamaChatCapability {
     }
 
     /// Build chat request body
-    pub fn build_chat_request_body(&self, request: &ChatRequest) -> Result<OllamaChatRequest, LlmError> {
+    pub fn build_chat_request_body(
+        &self,
+        request: &ChatRequest,
+    ) -> Result<OllamaChatRequest, LlmError> {
         // Get model from request
         let model = request.common_params.model.clone();
         if model.is_empty() {
-            return Err(LlmError::ConfigurationError("Model is required".to_string()));
+            return Err(LlmError::ConfigurationError(
+                "Model is required".to_string(),
+            ));
         }
 
         validate_model_name(&model)?;
 
         // Convert messages
-        let messages: Vec<OllamaChatMessage> = request
-            .messages
-            .iter()
-            .map(convert_chat_message)
-            .collect();
+        let messages: Vec<OllamaChatMessage> =
+            request.messages.iter().map(convert_chat_message).collect();
 
         // Convert tools if present
-        let tools = request.tools.as_ref().map(|tools| {
-            tools.iter().map(convert_tool).collect()
-        });
+        let tools = request
+            .tools
+            .as_ref()
+            .map(|tools| tools.iter().map(convert_tool).collect());
 
         // Build model options
         let options = build_model_options(
@@ -91,7 +94,11 @@ impl OllamaChatCapability {
             tools,
             stream: Some(request.stream),
             format,
-            options: if options.is_empty() { None } else { Some(options) },
+            options: if options.is_empty() {
+                None
+            } else {
+                Some(options)
+            },
             keep_alive: self.ollama_params.keep_alive.clone(),
         })
     }
@@ -105,7 +112,8 @@ impl OllamaChatCapability {
             Some(Usage {
                 prompt_tokens: response.prompt_eval_count.unwrap_or(0),
                 completion_tokens: response.eval_count.unwrap_or(0),
-                total_tokens: response.prompt_eval_count.unwrap_or(0) + response.eval_count.unwrap_or(0),
+                total_tokens: response.prompt_eval_count.unwrap_or(0)
+                    + response.eval_count.unwrap_or(0),
                 cached_tokens: None,
                 reasoning_tokens: None,
             })
@@ -114,27 +122,40 @@ impl OllamaChatCapability {
         };
 
         // Parse finish reason
-        let finish_reason = response.done_reason.as_deref().map(|reason| {
-            match reason {
+        let finish_reason = response
+            .done_reason
+            .as_deref()
+            .map(|reason| match reason {
                 "stop" => FinishReason::Stop,
                 "length" => FinishReason::Length,
                 _ => FinishReason::Other(reason.to_string()),
-            }
-        }).or({
-            if response.done { Some(FinishReason::Stop) } else { None }
-        });
+            })
+            .or({
+                if response.done {
+                    Some(FinishReason::Stop)
+                } else {
+                    None
+                }
+            });
 
         // Create metadata with performance metrics
         let mut metadata = std::collections::HashMap::new();
-        if let Some(tokens_per_second) = calculate_tokens_per_second(response.eval_count, response.eval_duration) {
-            metadata.insert("tokens_per_second".to_string(), serde_json::Value::Number(
-                serde_json::Number::from_f64(tokens_per_second).unwrap_or_else(|| serde_json::Number::from(0))
-            ));
+        if let Some(tokens_per_second) =
+            calculate_tokens_per_second(response.eval_count, response.eval_duration)
+        {
+            metadata.insert(
+                "tokens_per_second".to_string(),
+                serde_json::Value::Number(
+                    serde_json::Number::from_f64(tokens_per_second)
+                        .unwrap_or_else(|| serde_json::Number::from(0)),
+                ),
+            );
         }
         if let Some(total_duration) = response.total_duration {
-            metadata.insert("total_duration_ms".to_string(), serde_json::Value::Number(
-                serde_json::Number::from(total_duration / 1_000_000)
-            ));
+            metadata.insert(
+                "total_duration_ms".to_string(),
+                serde_json::Value::Number(serde_json::Number::from(total_duration / 1_000_000)),
+            );
         }
 
         ChatResponse {
@@ -209,28 +230,28 @@ impl ChatCapability for OllamaChatCapability {
 
         // Create stream from response
         let stream = response.bytes_stream();
-        let mapped_stream = stream.map(|chunk_result| {
-            match chunk_result {
-                Ok(chunk) => {
-                    let chunk_str = String::from_utf8_lossy(&chunk);
-                    for line in chunk_str.lines() {
-                        if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                            if let Ok(ollama_response) = serde_json::from_value::<OllamaChatResponse>(json_value) {
-                                let content_delta = ollama_response.message.content.clone();
-                                return Ok(ChatStreamEvent::ContentDelta {
-                                    delta: content_delta,
-                                    index: Some(0),
-                                });
-                            }
+        let mapped_stream = stream.map(|chunk_result| match chunk_result {
+            Ok(chunk) => {
+                let chunk_str = String::from_utf8_lossy(&chunk);
+                for line in chunk_str.lines() {
+                    if let Ok(Some(json_value)) = parse_streaming_line(line) {
+                        if let Ok(ollama_response) =
+                            serde_json::from_value::<OllamaChatResponse>(json_value)
+                        {
+                            let content_delta = ollama_response.message.content.clone();
+                            return Ok(ChatStreamEvent::ContentDelta {
+                                delta: content_delta,
+                                index: Some(0),
+                            });
                         }
                     }
-                    Ok(ChatStreamEvent::ContentDelta {
-                        delta: String::new(),
-                        index: Some(0),
-                    })
                 }
-                Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
+                Ok(ChatStreamEvent::ContentDelta {
+                    delta: String::new(),
+                    index: Some(0),
+                })
             }
+            Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
         });
 
         Ok(Box::pin(mapped_stream))
@@ -338,8 +359,14 @@ mod tests {
 
         let response = capability.parse_chat_response(ollama_response);
         assert_eq!(response.model, Some("llama3.2".to_string()));
-        assert_eq!(response.content, crate::types::MessageContent::Text("Hello there!".to_string()));
-        assert_eq!(response.finish_reason, Some(crate::types::FinishReason::Stop));
+        assert_eq!(
+            response.content,
+            crate::types::MessageContent::Text("Hello there!".to_string())
+        );
+        assert_eq!(
+            response.finish_reason,
+            Some(crate::types::FinishReason::Stop)
+        );
         assert!(response.usage.is_some());
         assert!(response.metadata.contains_key("total_duration_ms"));
     }

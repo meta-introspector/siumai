@@ -1,17 +1,17 @@
 //! 🧠 Anthropic Basic Chat
-//! 
+//!
 //! This example demonstrates basic Anthropic Claude usage including:
 //! - Claude model selection and optimization
 //! - Parameter tuning for different use cases
 //! - Context window management
 //! - Cost-effective usage patterns
 //! - Claude-specific best practices
-//! 
+//!
 //! Before running, set your API key:
 //! ```bash
 //! export ANTHROPIC_API_KEY="your-anthropic-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example anthropic_basic_chat
@@ -24,11 +24,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🧠 Anthropic Claude Basic Chat Demo\n");
 
     // Get API key
-    let api_key = std::env::var("ANTHROPIC_API_KEY")
-        .unwrap_or_else(|_| {
-            println!("⚠️  ANTHROPIC_API_KEY not set, using demo key");
-            "demo-key".to_string()
-        });
+    let api_key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_else(|_| {
+        println!("⚠️  ANTHROPIC_API_KEY not set, using demo key");
+        "demo-key".to_string()
+    });
 
     println!("🔧 Demonstrating Claude Capabilities:");
     println!("   1. Model Selection and Comparison");
@@ -68,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo different Claude models
 async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Comparing different Claude models...");
-    
+
     // Note: In real usage, you would use actual Claude model names
     let models = vec![
         ("claude-3-haiku", "Fast and efficient for simple tasks"),
@@ -78,7 +77,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
 
     for (model_name, description) in models {
         println!("   Testing {model_name}: {description}");
-        
+
         let ai = Siumai::builder()
             .anthropic()
             .api_key(api_key)
@@ -91,8 +90,9 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
         let messages = vec![
             ChatMessage::user(
                 "Explain quantum computing in one paragraph, \
-                focusing on its key advantages over classical computing."
-            ).build(),
+                focusing on its key advantages over classical computing.",
+            )
+            .build(),
         ];
 
         match ai.chat(messages).await {
@@ -115,17 +115,32 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
 /// Demo parameter optimization for different use cases
 async fn demo_parameter_optimization(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Testing parameter configurations for different use cases...");
-    
+
     let use_cases = vec![
-        ("Creative Writing", 0.8, 1000, "Write a creative opening for a sci-fi story"),
-        ("Technical Analysis", 0.1, 500, "Explain the differences between REST and GraphQL APIs"),
-        ("Balanced Chat", 0.5, 300, "What are the benefits of learning a new programming language?"),
+        (
+            "Creative Writing",
+            0.8,
+            1000,
+            "Write a creative opening for a sci-fi story",
+        ),
+        (
+            "Technical Analysis",
+            0.1,
+            500,
+            "Explain the differences between REST and GraphQL APIs",
+        ),
+        (
+            "Balanced Chat",
+            0.5,
+            300,
+            "What are the benefits of learning a new programming language?",
+        ),
     ];
 
     for (use_case, temperature, max_tokens, prompt) in use_cases {
         println!("   Use case: {use_case}");
         println!("     Temperature: {temperature}, Max tokens: {max_tokens}");
-        
+
         let ai = Siumai::builder()
             .anthropic()
             .api_key(api_key)
@@ -155,7 +170,7 @@ async fn demo_parameter_optimization(api_key: &str) -> Result<(), Box<dyn std::e
 /// Demo context window management
 async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating context window management...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -167,12 +182,15 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
 
     // Simulate a conversation with context building
     let mut conversation = Vec::new();
-    
+
     // Initial context
-    conversation.push(ChatMessage::system(
-        "You are a helpful programming tutor. Keep track of what we've discussed \
-        and build upon previous topics in our conversation."
-    ).build());
+    conversation.push(
+        ChatMessage::system(
+            "You are a helpful programming tutor. Keep track of what we've discussed \
+        and build upon previous topics in our conversation.",
+        )
+        .build(),
+    );
 
     // First exchange
     conversation.push(ChatMessage::user("I'm learning Rust. What should I start with?").build());
@@ -189,10 +207,13 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
     }
 
     // Follow-up question that requires context
-    conversation.push(ChatMessage::user(
-        "Great! Now I understand ownership. Can you give me a practical example \
-        that builds on what you just explained?"
-    ).build());
+    conversation.push(
+        ChatMessage::user(
+            "Great! Now I understand ownership. Can you give me a practical example \
+        that builds on what you just explained?",
+        )
+        .build(),
+    );
 
     println!("   Using context for follow-up...");
     let conversation_len = conversation.len();
@@ -200,7 +221,10 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
         Ok(response) => {
             if let Some(_text) = response.text() {
                 println!("   🔗 Context-aware response provided");
-                println!("   Total conversation length: {} messages", conversation_len + 1);
+                println!(
+                    "   Total conversation length: {} messages",
+                    conversation_len + 1
+                );
             }
         }
         Err(e) => println!("   ❌ Error: {e}"),
@@ -220,10 +244,10 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
 /// Demo cost-effective usage patterns
 async fn demo_cost_effective_usage(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating cost-effective usage patterns...");
-    
+
     // Strategy 1: Use appropriate model for task complexity
     println!("   Strategy 1: Model selection based on task complexity");
-    
+
     let simple_ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -246,14 +270,17 @@ async fn demo_cost_effective_usage(api_key: &str) -> Result<(), Box<dyn std::err
 
     // Strategy 2: Batch multiple questions
     println!("   Strategy 2: Batch processing multiple questions");
-    
-    let batch_questions = vec![ChatMessage::user(
-        "Answer these questions briefly:\n\
+
+    let batch_questions = vec![
+        ChatMessage::user(
+            "Answer these questions briefly:\n\
         1. What is the capital of France?\n\
         2. What is 2 + 2?\n\
         3. Name one benefit of exercise\n\
-        4. What color is the sky?"
-    ).build()];
+        4. What color is the sky?",
+        )
+        .build(),
+    ];
 
     match simple_ai.chat(batch_questions).await {
         Ok(response) => {
@@ -285,7 +312,7 @@ async fn demo_cost_effective_usage(api_key: &str) -> Result<(), Box<dyn std::err
 /// Demo Claude-specific features
 async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Exploring Claude-specific capabilities...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -297,10 +324,13 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
 
     // Feature 1: Constitutional AI and helpfulness
     println!("   Feature 1: Constitutional AI - Helpful and harmless responses");
-    let constitutional_test = vec![ChatMessage::user(
-        "I'm feeling overwhelmed with my workload. Can you help me create \
-        a strategy to manage my tasks better while maintaining work-life balance?"
-    ).build()];
+    let constitutional_test = vec![
+        ChatMessage::user(
+            "I'm feeling overwhelmed with my workload. Can you help me create \
+        a strategy to manage my tasks better while maintaining work-life balance?",
+        )
+        .build(),
+    ];
 
     match ai.chat(constitutional_test).await {
         Ok(response) => {
@@ -314,21 +344,28 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
 
     // Feature 2: Long-form reasoning
     println!("   Feature 2: Long-form reasoning and analysis");
-    let reasoning_test = vec![ChatMessage::user(
-        "Walk me through the pros and cons of microservices vs monolithic \
+    let reasoning_test = vec![
+        ChatMessage::user(
+            "Walk me through the pros and cons of microservices vs monolithic \
         architecture, considering factors like scalability, complexity, \
-        and team organization."
-    ).build()];
+        and team organization.",
+        )
+        .build(),
+    ];
 
     match ai.chat(reasoning_test).await {
         Ok(response) => {
             if let Some(text) = response.text() {
-                println!("   🧠 Detailed analysis provided ({} characters)", text.len());
-                println!("   Structure: {}", 
-                    if text.contains("Pros:") || text.contains("Advantages:") { 
-                        "Well-structured comparison" 
-                    } else { 
-                        "Comprehensive analysis" 
+                println!(
+                    "   🧠 Detailed analysis provided ({} characters)",
+                    text.len()
+                );
+                println!(
+                    "   Structure: {}",
+                    if text.contains("Pros:") || text.contains("Advantages:") {
+                        "Well-structured comparison"
+                    } else {
+                        "Comprehensive analysis"
                     }
                 );
             }
@@ -338,16 +375,20 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
 
     // Feature 3: Code understanding and generation
     println!("   Feature 3: Code understanding and generation");
-    let code_test = vec![ChatMessage::user(
-        "Write a simple Rust function that calculates the factorial of a number \
-        and explain how it works, including error handling."
-    ).build()];
+    let code_test = vec![
+        ChatMessage::user(
+            "Write a simple Rust function that calculates the factorial of a number \
+        and explain how it works, including error handling.",
+        )
+        .build(),
+    ];
 
     match ai.chat(code_test).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   💻 Code generation completed");
-                println!("   Includes: {}",
+                println!(
+                    "   Includes: {}",
                     if text.contains("fn") && text.contains("error") {
                         "Function definition and error handling"
                     } else {

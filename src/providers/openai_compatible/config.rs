@@ -61,7 +61,7 @@ impl OpenAiCompatibleConfig {
     pub fn with_provider_param<T: serde::Serialize>(
         mut self,
         key: String,
-        value: T
+        value: T,
     ) -> Result<Self, LlmError> {
         let json_value = serde_json::to_value(value)
             .map_err(|e| LlmError::ConfigurationError(format!("Invalid parameter value: {e}")))?;
@@ -76,7 +76,9 @@ impl OpenAiCompatibleConfig {
         default_model: &str,
     ) -> Result<crate::providers::openai::config::OpenAiConfig, LlmError> {
         // Get base URL and model with provider defaults
-        let base_url = self.base_url.unwrap_or_else(|| default_base_url.to_string());
+        let base_url = self
+            .base_url
+            .unwrap_or_else(|| default_base_url.to_string());
         let mut model = self.model.unwrap_or_else(|| default_model.to_string());
 
         // Handle provider-specific model selection

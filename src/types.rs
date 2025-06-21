@@ -48,8 +48,6 @@ pub struct CommonParams {
     pub seed: Option<u64>,
 }
 
-
-
 impl CommonParams {
     /// Create `CommonParams` with pre-allocated model string capacity
     pub const fn with_model_capacity(model: String, _capacity_hint: usize) -> Self {
@@ -78,7 +76,10 @@ impl CommonParams {
         let mut size = std::mem::size_of::<Self>();
         size += self.model.capacity();
         if let Some(ref stop_seqs) = self.stop_sequences {
-            size += stop_seqs.iter().map(std::string::String::capacity).sum::<usize>();
+            size += stop_seqs
+                .iter()
+                .map(std::string::String::capacity)
+                .sum::<usize>();
         }
         size
     }
@@ -90,7 +91,9 @@ impl CommonParams {
 
         let mut hasher = DefaultHasher::new();
         self.model.hash(&mut hasher);
-        self.temperature.map(|t| (t * 1000.0) as u32).hash(&mut hasher);
+        self.temperature
+            .map(|t| (t * 1000.0) as u32)
+            .hash(&mut hasher);
         self.max_tokens.hash(&mut hasher);
         self.top_p.map(|t| (t * 1000.0) as u32).hash(&mut hasher);
         hasher.finish()
@@ -152,8 +155,7 @@ impl ProviderParams {
 
     /// Quick setup for Anthropic-specific parameters.
     pub fn anthropic() -> Self {
-        Self::new()
-            .with_param("max_tokens", 4096)
+        Self::new().with_param("max_tokens", 4096)
     }
 
     /// Quick setup for Gemini-specific parameters.
@@ -318,8 +320,6 @@ pub struct MessageMetadata {
     pub custom: HashMap<String, serde_json::Value>,
 }
 
-
-
 /// Response metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseMetadata {
@@ -424,13 +424,14 @@ impl ChatMessage {
     pub fn content_length(&self) -> usize {
         match &self.content {
             MessageContent::Text(text) => text.len(),
-            MessageContent::MultiModal(parts) => {
-                parts.iter().map(|part| match part {
+            MessageContent::MultiModal(parts) => parts
+                .iter()
+                .map(|part| match part {
                     ContentPart::Text { text } => text.len(),
                     ContentPart::Image { image_url, .. } => image_url.len(),
                     ContentPart::Audio { audio_url, .. } => audio_url.len(),
-                }).sum()
-            }
+                })
+                .sum(),
         }
     }
 }
@@ -868,7 +869,9 @@ impl ChatResponse {
 
     /// Check if the response has tool calls
     pub fn has_tool_calls(&self) -> bool {
-        self.tool_calls.as_ref().is_some_and(|calls| !calls.is_empty())
+        self.tool_calls
+            .as_ref()
+            .is_some_and(|calls| !calls.is_empty())
     }
 
     /// Get tool calls
@@ -890,8 +893,6 @@ impl ChatResponse {
     pub fn thinking_or_empty(&self) -> &str {
         self.thinking.as_deref().unwrap_or("")
     }
-
-
 }
 
 /// Usage statistics
@@ -1200,8 +1201,6 @@ impl OpenAiBuiltInTool {
     }
 }
 
-
-
 // Audio-related types
 /// Text-to-speech request
 #[derive(Debug, Clone)]
@@ -1446,8 +1445,6 @@ use std::pin::Pin;
 
 /// Audio stream for streaming TTS
 pub type AudioStream = Pin<Box<dyn Stream<Item = Result<AudioStreamEvent, LlmError>> + Send>>;
-
-
 
 // Image generation types
 /// Image generation request
@@ -1733,8 +1730,6 @@ pub struct CompletionResponse {
 /// Completion stream for streaming completions
 pub type CompletionStream =
     Pin<Box<dyn Stream<Item = Result<CompletionStreamEvent, LlmError>> + Send>>;
-
-
 
 // Other placeholder types - to be completed in subsequent implementations
 pub type VisionRequest = ();

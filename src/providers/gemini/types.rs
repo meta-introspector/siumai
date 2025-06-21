@@ -738,7 +738,10 @@ impl Content {
     pub fn user_text(text: String) -> Self {
         Self {
             role: Some("user".to_string()),
-            parts: vec![Part::Text { text, thought: None }],
+            parts: vec![Part::Text {
+                text,
+                thought: None,
+            }],
         }
     }
 
@@ -746,7 +749,10 @@ impl Content {
     pub fn model_text(text: String) -> Self {
         Self {
             role: Some("model".to_string()),
-            parts: vec![Part::Text { text, thought: None }],
+            parts: vec![Part::Text {
+                text,
+                thought: None,
+            }],
         }
     }
 
@@ -754,7 +760,10 @@ impl Content {
     pub fn system_text(text: String) -> Self {
         Self {
             role: None, // System instructions don't have a role
-            parts: vec![Part::Text { text, thought: None }],
+            parts: vec![Part::Text {
+                text,
+                thought: None,
+            }],
         }
     }
 }
@@ -762,12 +771,18 @@ impl Content {
 impl Part {
     /// Create a text part
     pub const fn text(text: String) -> Self {
-        Self::Text { text, thought: None }
+        Self::Text {
+            text,
+            thought: None,
+        }
     }
 
     /// Create a thought summary part
     pub const fn thought_summary(text: String) -> Self {
-        Self::Text { text, thought: Some(true) }
+        Self::Text {
+            text,
+            thought: Some(true),
+        }
     }
 
     /// Create an inline data part

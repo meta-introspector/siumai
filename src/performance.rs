@@ -24,8 +24,6 @@ pub struct PerformanceMetrics {
     pub provider_metrics: HashMap<String, ProviderMetrics>,
 }
 
-
-
 /// Latency metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LatencyMetrics {
@@ -156,8 +154,6 @@ pub struct MemoryMetrics {
     /// Number of deallocations
     pub deallocations: u64,
 }
-
-
 
 /// Provider-specific metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -386,7 +382,7 @@ impl Default for MonitorConfig {
 }
 
 // Re-export commonly used types at module level
-pub use optimization::{ResponseCache, CacheStats};
+pub use optimization::{CacheStats, ResponseCache};
 
 /// Performance optimization utilities
 pub mod optimization {

@@ -48,10 +48,8 @@ use crate::types::*;
 
 // Import parameter types - these will be moved to providers modules later
 use crate::params::{AnthropicParams, OpenAiParams, ResponseFormat, ToolChoice};
-use crate::providers::*;
 use crate::providers::ollama::config::OllamaParams;
-
-
+use crate::providers::*;
 
 /// Quick `OpenAI` client creation with minimal configuration.
 ///
@@ -77,12 +75,10 @@ pub async fn quick_openai() -> Result<crate::providers::openai::OpenAiClient, Ll
 }
 
 /// Quick `OpenAI` client creation with custom model.
-pub async fn quick_openai_with_model(model: &str) -> Result<crate::providers::openai::OpenAiClient, LlmError> {
-    LlmBuilder::new()
-        .openai()
-        .model(model)
-        .build()
-        .await
+pub async fn quick_openai_with_model(
+    model: &str,
+) -> Result<crate::providers::openai::OpenAiClient, LlmError> {
+    LlmBuilder::new().openai().model(model).build().await
 }
 
 /// Quick Anthropic client creation with minimal configuration.
@@ -93,12 +89,10 @@ pub async fn quick_anthropic() -> Result<crate::providers::anthropic::AnthropicC
 }
 
 /// Quick Anthropic client creation with custom model.
-pub async fn quick_anthropic_with_model(model: &str) -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
-    LlmBuilder::new()
-        .anthropic()
-        .model(model)
-        .build()
-        .await
+pub async fn quick_anthropic_with_model(
+    model: &str,
+) -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
+    LlmBuilder::new().anthropic().model(model).build().await
 }
 
 /// Quick Gemini client creation with minimal configuration.
@@ -109,12 +103,10 @@ pub async fn quick_gemini() -> Result<crate::providers::gemini::GeminiClient, Ll
 }
 
 /// Quick Gemini client creation with custom model.
-pub async fn quick_gemini_with_model(model: &str) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
-    LlmBuilder::new()
-        .gemini()
-        .model(model)
-        .build()
-        .await
+pub async fn quick_gemini_with_model(
+    model: &str,
+) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
+    LlmBuilder::new().gemini().model(model).build().await
 }
 
 /// Quick Ollama client creation with minimal configuration.
@@ -125,12 +117,10 @@ pub async fn quick_ollama() -> Result<crate::providers::ollama::OllamaClient, Ll
 }
 
 /// Quick Ollama client creation with custom model.
-pub async fn quick_ollama_with_model(model: &str) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
-    LlmBuilder::new()
-        .ollama()
-        .model(model)
-        .build()
-        .await
+pub async fn quick_ollama_with_model(
+    model: &str,
+) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
+    LlmBuilder::new().ollama().model(model).build().await
 }
 
 /// Core LLM builder that provides common configuration options.
@@ -403,7 +393,11 @@ impl LlmBuilder {
     ///     Ok(())
     /// }
     /// ```
-    pub fn deepseek(self) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::DeepSeekProvider> {
+    pub fn deepseek(
+        self,
+    ) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
+        crate::providers::openai_compatible::DeepSeekProvider,
+    > {
         crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
     }
 
@@ -431,7 +425,11 @@ impl LlmBuilder {
     ///     Ok(())
     /// }
     /// ```
-    pub fn openrouter(self) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::OpenRouterProvider> {
+    pub fn openrouter(
+        self,
+    ) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
+        crate::providers::openai_compatible::OpenRouterProvider,
+    > {
         crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
     }
 
@@ -498,9 +496,9 @@ impl LlmBuilder {
             builder = builder.default_headers(headers);
         }
 
-        builder.build().map_err(|e| {
-            LlmError::ConfigurationError(format!("Failed to build HTTP client: {e}"))
-        })
+        builder
+            .build()
+            .map_err(|e| LlmError::ConfigurationError(format!("Failed to build HTTP client: {e}")))
     }
 }
 
@@ -812,7 +810,11 @@ impl AnthropicBuilder {
 
         // Convert AnthropicParams to AnthropicSpecificParams
         let specific_params = crate::providers::anthropic::types::AnthropicSpecificParams {
-            beta_features: self.anthropic_params.beta_features.clone().unwrap_or_default(),
+            beta_features: self
+                .anthropic_params
+                .beta_features
+                .clone()
+                .unwrap_or_default(),
             cache_control: self.anthropic_params.cache_control.as_ref().map(|_cc| {
                 crate::providers::anthropic::cache::CacheControl::ephemeral() // Convert from params::CacheControl
             }),
@@ -1049,7 +1051,9 @@ impl GeminiBuilder {
         // Basic validation of thinking configuration
         if let Some(thinking_config) = &self.thinking_config {
             thinking_config.validate().map_err(|e| {
-                crate::error::LlmError::ConfigurationError(format!("Invalid thinking configuration: {e}"))
+                crate::error::LlmError::ConfigurationError(format!(
+                    "Invalid thinking configuration: {e}"
+                ))
             })?;
         }
 
@@ -1221,7 +1225,10 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `options` - `HashMap` of options
-    pub fn options(mut self, options: std::collections::HashMap<String, serde_json::Value>) -> Self {
+    pub fn options(
+        mut self,
+        options: std::collections::HashMap<String, serde_json::Value>,
+    ) -> Self {
         self.ollama_params.options = Some(options);
         self
     }
@@ -1291,7 +1298,9 @@ impl OllamaBuilder {
 
     /// Build the Ollama client
     pub async fn build(self) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
-        let base_url = self.base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+        let base_url = self
+            .base_url
+            .unwrap_or_else(|| "http://localhost:11434".to_string());
 
         let mut config = crate::providers::ollama::OllamaConfig::builder()
             .base_url(base_url)
@@ -1306,7 +1315,10 @@ impl OllamaBuilder {
         let config = config.build()?;
         let http_client = self.base.build_http_client()?;
 
-        Ok(crate::providers::ollama::OllamaClient::new(config, http_client))
+        Ok(crate::providers::ollama::OllamaClient::new(
+            config,
+            http_client,
+        ))
     }
 }
 

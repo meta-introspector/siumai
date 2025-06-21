@@ -53,7 +53,10 @@ impl OllamaEmbeddingCapability {
             serde_json::Value::String(texts[0].clone())
         } else {
             serde_json::Value::Array(
-                texts.iter().map(|t| serde_json::Value::String(t.clone())).collect()
+                texts
+                    .iter()
+                    .map(|t| serde_json::Value::String(t.clone()))
+                    .collect(),
             )
         };
 
@@ -71,7 +74,11 @@ impl OllamaEmbeddingCapability {
             model,
             input,
             truncate: Some(true), // Default to true for safety
-            options: if options.is_empty() { None } else { Some(options) },
+            options: if options.is_empty() {
+                None
+            } else {
+                Some(options)
+            },
             keep_alive: self.ollama_params.keep_alive.clone(),
         })
     }
@@ -79,7 +86,8 @@ impl OllamaEmbeddingCapability {
     /// Parse embedding response
     fn parse_embedding_response(&self, response: OllamaEmbeddingResponse) -> EmbeddingResponse {
         // Convert f64 to f32
-        let embeddings: Vec<Vec<f32>> = response.embeddings
+        let embeddings: Vec<Vec<f32>> = response
+            .embeddings
             .into_iter()
             .map(|embedding| embedding.into_iter().map(|x| x as f32).collect())
             .collect();
@@ -96,7 +104,11 @@ impl OllamaEmbeddingCapability {
     }
 
     /// Embed single text
-    pub async fn embed_single(&self, text: String, model: Option<String>) -> Result<Vec<f64>, LlmError> {
+    pub async fn embed_single(
+        &self,
+        text: String,
+        model: Option<String>,
+    ) -> Result<Vec<f64>, LlmError> {
         let headers = build_headers(&self.http_config.headers)?;
         let body = self.build_embedding_request_body(&[text], model.as_deref())?;
         let url = format!("{}/api/embed", self.base_url);
@@ -118,7 +130,7 @@ impl OllamaEmbeddingCapability {
         }
 
         let ollama_response: OllamaEmbeddingResponse = response.json().await?;
-        
+
         if ollama_response.embeddings.is_empty() {
             return Err(LlmError::ParseError("No embeddings returned".to_string()));
         }
@@ -215,11 +227,13 @@ mod tests {
         );
 
         let texts = vec!["Hello world".to_string()];
-        let body = capability.build_embedding_request_body(&texts, Some("nomic-embed-text")).unwrap();
-        
+        let body = capability
+            .build_embedding_request_body(&texts, Some("nomic-embed-text"))
+            .unwrap();
+
         assert_eq!(body.model, "nomic-embed-text");
         assert_eq!(body.truncate, Some(true));
-        
+
         if let serde_json::Value::String(input_text) = body.input {
             assert_eq!(input_text, "Hello world");
         } else {
@@ -237,10 +251,12 @@ mod tests {
         );
 
         let texts = vec!["Hello".to_string(), "World".to_string()];
-        let body = capability.build_embedding_request_body(&texts, Some("nomic-embed-text")).unwrap();
-        
+        let body = capability
+            .build_embedding_request_body(&texts, Some("nomic-embed-text"))
+            .unwrap();
+
         assert_eq!(body.model, "nomic-embed-text");
-        
+
         if let serde_json::Value::Array(input_array) = body.input {
             assert_eq!(input_array.len(), 2);
         } else {

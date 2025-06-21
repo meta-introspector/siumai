@@ -86,8 +86,6 @@ async fn demonstrate_error_types() {
             demonstrate_error_handling(&e);
         }
     }
-
-
 }
 
 /// Demonstrate retry strategies for transient errors
@@ -133,7 +131,7 @@ async fn demonstrate_rate_limit_handling() {
 
     // Simulate rate limit scenario
     println!("   Testing rate limit detection and handling...");
-    
+
     match handle_rate_limits("Test rate limit handling").await {
         Ok(response) => {
             println!("   ✅ Successfully handled rate limits");
@@ -186,7 +184,7 @@ async fn demonstrate_error_classification() {
 
     for error in test_errors {
         println!("   Error: {error}");
-        
+
         let classification = classify_error_for_monitoring(&error);
         println!("      Classification: {classification:?}");
         println!("      Action: {}", get_recommended_action(&classification));
@@ -240,13 +238,18 @@ async fn test_rate_limit() -> Result<ChatResponse, LlmError> {
 /// Test invalid request scenario
 async fn test_invalid_request() -> Result<ChatResponse, LlmError> {
     // Simulate invalid request
-    Err(LlmError::InternalError("Invalid request format".to_string()))
+    Err(LlmError::InternalError(
+        "Invalid request format".to_string(),
+    ))
 }
 
 /// Retry with exponential backoff
-async fn retry_with_exponential_backoff(message: &str, max_retries: u32) -> Result<ChatResponse, LlmError> {
+async fn retry_with_exponential_backoff(
+    message: &str,
+    max_retries: u32,
+) -> Result<ChatResponse, LlmError> {
     let mut delay = Duration::from_millis(100);
-    
+
     for attempt in 1..=max_retries {
         match try_chat_request(message).await {
             Ok(response) => {
@@ -264,7 +267,7 @@ async fn retry_with_exponential_backoff(message: &str, max_retries: u32) -> Resu
             }
         }
     }
-    
+
     Err(LlmError::InternalError("Max retries exceeded".to_string()))
 }
 
@@ -272,7 +275,7 @@ async fn retry_with_exponential_backoff(message: &str, max_retries: u32) -> Resu
 async fn retry_with_jitter(message: &str, max_retries: u32) -> Result<ChatResponse, LlmError> {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    
+
     for attempt in 1..=max_retries {
         match try_chat_request(message).await {
             Ok(response) => {
@@ -283,7 +286,7 @@ async fn retry_with_jitter(message: &str, max_retries: u32) -> Result<ChatRespon
                 let base_delay = 100 * (1 << (attempt - 1)); // Exponential base
                 let jitter = rng.gen_range(0..=base_delay / 2); // Add jitter
                 let delay = Duration::from_millis(base_delay + jitter);
-                
+
                 println!("      ⏳ Attempt {attempt} failed, retrying in {delay:?} (with jitter)");
                 sleep(delay).await;
             }
@@ -292,7 +295,7 @@ async fn retry_with_jitter(message: &str, max_retries: u32) -> Result<ChatRespon
             }
         }
     }
-    
+
     Err(LlmError::InternalError("Max retries exceeded".to_string()))
 }
 
@@ -303,7 +306,7 @@ async fn handle_rate_limits(message: &str) -> Result<ChatResponse, LlmError> {
         Err(LlmError::RateLimitError(_)) => {
             println!("   ⏳ Rate limit detected, waiting 60 seconds...");
             sleep(Duration::from_secs(60)).await;
-            
+
             // Retry after rate limit wait
             try_chat_request(message).await
         }
@@ -333,7 +336,9 @@ async fn chat_with_graceful_degradation(message: &str) -> Result<(String, ChatRe
     }
 
     // Final fallback: return a helpful error message
-    Err(LlmError::InternalError("All providers unavailable".to_string()))
+    Err(LlmError::InternalError(
+        "All providers unavailable".to_string(),
+    ))
 }
 
 /// Try a chat request with the best available provider
@@ -349,16 +354,17 @@ async fn try_chat_request(message: &str) -> Result<ChatResponse, LlmError> {
         let messages = vec![user!(message)];
         client.chat(messages).await
     } else {
-        Err(LlmError::AuthenticationError("No API key available".to_string()))
+        Err(LlmError::AuthenticationError(
+            "No API key available".to_string(),
+        ))
     }
 }
 
 /// Check if an error is retryable
 const fn is_retryable_error(error: &LlmError) -> bool {
-    matches!(error, 
-        LlmError::TimeoutError(_) | 
-        LlmError::RateLimitError(_) |
-        LlmError::InternalError(_)
+    matches!(
+        error,
+        LlmError::TimeoutError(_) | LlmError::RateLimitError(_) | LlmError::InternalError(_)
     )
 }
 
@@ -374,9 +380,9 @@ const fn is_rate_limit_error(error: &LlmError) -> bool {
 
 /// Check if an error is a client error (4xx)
 const fn is_client_error(error: &LlmError) -> bool {
-    matches!(error, 
-        LlmError::AuthenticationError(_) |
-        LlmError::ModelNotSupported(_)
+    matches!(
+        error,
+        LlmError::AuthenticationError(_) | LlmError::ModelNotSupported(_)
     )
 }
 
@@ -423,7 +429,10 @@ fn demonstrate_error_handling(error: &LlmError) {
 
     let classification = classify_error_for_monitoring(error);
     println!("         - Classification: {classification:?}");
-    println!("         - Recommended action: {}", get_recommended_action(&classification));
+    println!(
+        "         - Recommended action: {}",
+        get_recommended_action(&classification)
+    );
 }
 
 /*

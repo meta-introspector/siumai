@@ -54,7 +54,10 @@ impl GeminiChatCapability {
         // Add text content
         if let crate::types::MessageContent::Text(text) = &message.content {
             if !text.is_empty() {
-                parts.push(Part::Text { text: text.clone(), thought: None });
+                parts.push(Part::Text {
+                    text: text.clone(),
+                    thought: None,
+                });
             }
         } else {
             // Handle other content types if needed
@@ -238,7 +241,10 @@ impl GeminiChatCapability {
         }
 
         // Calculate usage
-        let usage = response.usage_metadata.as_ref().map(|usage_metadata| Usage {
+        let usage = response
+            .usage_metadata
+            .as_ref()
+            .map(|usage_metadata| Usage {
                 prompt_tokens: usage_metadata.prompt_token_count.unwrap_or(0) as u32,
                 completion_tokens: usage_metadata.candidates_token_count.unwrap_or(0) as u32,
                 total_tokens: usage_metadata.total_token_count.unwrap_or(0) as u32,
@@ -348,8 +354,8 @@ impl ChatCapability for GeminiChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        use futures::stream::StreamExt;
         use crate::stream::ChatStreamEvent;
+        use futures::stream::StreamExt;
 
         let request = self.build_request_body(&messages, tools.as_deref())?;
 
@@ -380,9 +386,7 @@ impl ChatCapability for GeminiChatCapability {
         // Parse JSON stream (Gemini uses JSON lines, not SSE)
         let stream = response
             .bytes_stream()
-            .map(|result| {
-                result.map_err(|e| LlmError::HttpError(e.to_string()))
-            })
+            .map(|result| result.map_err(|e| LlmError::HttpError(e.to_string())))
             .filter_map(|chunk_result| async move {
                 match chunk_result {
                     Ok(chunk) => {
@@ -401,16 +405,24 @@ impl ChatCapability for GeminiChatCapability {
                                             if let Part::Text { text, thought } = part {
                                                 // Handle both regular text and thought summaries
                                                 let event = if thought.unwrap_or(false) {
-                                                    ChatStreamEvent::ThinkingDelta { delta: text.clone() }
+                                                    ChatStreamEvent::ThinkingDelta {
+                                                        delta: text.clone(),
+                                                    }
                                                 } else {
-                                                    ChatStreamEvent::ContentDelta { delta: text.clone(), index: None }
+                                                    ChatStreamEvent::ContentDelta {
+                                                        delta: text.clone(),
+                                                        index: None,
+                                                    }
                                                 };
                                                 return Some(Ok(event));
                                             }
                                         }
                                     }
                                 }
-                                Some(Ok(ChatStreamEvent::ContentDelta { delta: String::new(), index: None }))
+                                Some(Ok(ChatStreamEvent::ContentDelta {
+                                    delta: String::new(),
+                                    index: None,
+                                }))
                             }
                             Err(_) => {
                                 // Skip malformed JSON

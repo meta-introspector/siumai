@@ -62,28 +62,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Demonstrates the most basic way to chat with an AI
 async fn simple_chat_example(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Creating a simple AI client...");
-    
+
     // Create AI client with minimal configuration
     let ai = Siumai::builder()
-        .openai()  // Using OpenAI as it's available in Provider
+        .openai() // Using OpenAI as it's available in Provider
         .api_key(api_key)
         .model("gpt-4o-mini")
         .build()
         .await?;
 
     // Simple question
-    let messages = vec![
-        ChatMessage::user("What is the capital of France?").build()
-    ];
+    let messages = vec![ChatMessage::user("What is the capital of France?").build()];
 
     println!("   Asking: What is the capital of France?");
-    
+
     match ai.chat(messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🤖 AI: {}", text.trim());
             }
-            
+
             // Show usage information if available
             if let Some(usage) = &response.usage {
                 println!("   📊 Tokens used: {}", usage.total_tokens);
@@ -101,9 +99,9 @@ fn message_types_example() {
     println!("   Creating different message types...");
 
     // System message - sets the AI's behavior
-    let system_msg = ChatMessage::system(
-        "You are a helpful assistant that explains things simply and clearly."
-    ).build();
+    let system_msg =
+        ChatMessage::system("You are a helpful assistant that explains things simply and clearly.")
+            .build();
     println!("   📋 System: {:?}", system_msg.role);
 
     // User message - your input
@@ -112,8 +110,9 @@ fn message_types_example() {
 
     // Assistant message - AI's previous response (for conversation context)
     let assistant_msg = ChatMessage::assistant(
-        "Quantum computing uses quantum mechanics to process information..."
-    ).build();
+        "Quantum computing uses quantum mechanics to process information...",
+    )
+    .build();
     println!("   🤖 Assistant: {:?}", assistant_msg.role);
 
     // Show how to build a conversation
@@ -194,7 +193,10 @@ async fn parameter_customization_example(api_key: &str) -> Result<(), Box<dyn st
         .build()
         .await?;
 
-    match creative_ai.chat(vec![ChatMessage::user(prompt).build()]).await {
+    match creative_ai
+        .chat(vec![ChatMessage::user(prompt).build()])
+        .await
+    {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("     {}", text.trim());
@@ -216,7 +218,10 @@ async fn parameter_customization_example(api_key: &str) -> Result<(), Box<dyn st
         .build()
         .await?;
 
-    match focused_ai.chat(vec![ChatMessage::user(prompt).build()]).await {
+    match focused_ai
+        .chat(vec![ChatMessage::user(prompt).build()])
+        .await
+    {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("     {}", text.trim());
@@ -260,8 +265,10 @@ async fn error_handling_example(api_key: &str) -> Result<(), Box<dyn std::error:
 
     match ai.chat(empty_messages).await {
         Ok(response) => {
-            println!("     ✅ Handled empty messages: {}",
-                    response.text().unwrap_or("No response".to_string()));
+            println!(
+                "     ✅ Handled empty messages: {}",
+                response.text().unwrap_or("No response".to_string())
+            );
         }
         Err(e) => println!("     ❌ Expected error with empty messages: {e}"),
     }

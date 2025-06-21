@@ -16,7 +16,7 @@
 //! # Install Ollama (visit https://ollama.ai)
 //! # Start Ollama service
 //! ollama serve
-//! 
+//!
 //! # Pull a model
 //! ollama pull llama3.2
 //! ollama pull llama3.2:1b  # Smaller model for testing
@@ -27,8 +27,8 @@
 //! cargo run --example basic_setup
 //! ```
 
-use siumai::prelude::*;
 use futures_util::StreamExt;
+use siumai::prelude::*;
 use std::io::{self, Write};
 
 #[tokio::main]
@@ -61,10 +61,12 @@ async fn test_ollama_connection() {
     {
         Ok(client) => {
             println!("   ✅ Ollama client created successfully");
-            
+
             // Test with a simple request
-            let messages = vec![user!("Hello! Please respond with just 'Hi there!' to test the connection.")];
-            
+            let messages = vec![user!(
+                "Hello! Please respond with just 'Hi there!' to test the connection."
+            )];
+
             match client.chat(messages).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
@@ -83,7 +85,7 @@ async fn test_ollama_connection() {
             print_ollama_troubleshooting();
         }
     }
-    
+
     println!();
 }
 
@@ -93,9 +95,7 @@ async fn demonstrate_basic_chat() {
 
     match create_ollama_client().await {
         Ok(client) => {
-            let messages = vec![
-                user!("Explain what Ollama is in 2-3 sentences.")
-            ];
+            let messages = vec![user!("Explain what Ollama is in 2-3 sentences.")];
 
             match client.chat(messages).await {
                 Ok(response) => {
@@ -103,11 +103,11 @@ async fn demonstrate_basic_chat() {
                     if let Some(text) = response.content_text() {
                         println!("   🦙 Ollama: {text}");
                     }
-                    
+
                     if let Some(usage) = response.usage {
                         println!("   📊 Usage: {} tokens total", usage.total_tokens);
                     }
-                    
+
                     println!("   ✅ Basic chat successful");
                 }
                 Err(e) => {
@@ -119,7 +119,7 @@ async fn demonstrate_basic_chat() {
             println!("   ❌ Failed to create client: {e}");
         }
     }
-    
+
     println!();
 }
 
@@ -129,9 +129,9 @@ async fn demonstrate_streaming_chat() {
 
     match create_ollama_client().await {
         Ok(client) => {
-            let messages = vec![
-                user!("Write a short story about a robot learning to paint. Make it about 150 words.")
-            ];
+            let messages = vec![user!(
+                "Write a short story about a robot learning to paint. Make it about 150 words."
+            )];
 
             println!("   User: Write a short story about a robot learning to paint...");
             println!("   🦙 Ollama (streaming): ");
@@ -165,7 +165,7 @@ async fn demonstrate_streaming_chat() {
             println!("   ❌ Failed to create client: {e}");
         }
     }
-    
+
     println!();
 }
 
@@ -187,7 +187,7 @@ async fn demonstrate_model_management() {
     }
 
     println!("\n   🧪 Testing Model Availability:");
-    
+
     // Test the primary model
     match test_model("llama3.2").await {
         Ok(()) => println!("      ✅ llama3.2 is available and working"),
@@ -198,7 +198,9 @@ async fn demonstrate_model_management() {
     }
 
     // Test smaller model
-    if let Ok(()) = test_model("llama3.2:1b").await { println!("      ✅ llama3.2:1b is available (faster option)") } else {
+    if let Ok(()) = test_model("llama3.2:1b").await {
+        println!("      ✅ llama3.2:1b is available (faster option)")
+    } else {
         println!("      ⚠️  llama3.2:1b not available");
         println!("      💡 Try: ollama pull llama3.2:1b");
     }

@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 #![allow(clippy::redundant_pattern_matching)]
 #![allow(clippy::unwrap_or_default)]
-//! 
+//!
 //! This example demonstrates how to integrate Siumai into a REST API service with:
 //! - HTTP server with AI endpoints
 //! - Request/response handling and validation
@@ -11,18 +11,18 @@
 //! - Async processing and streaming
 //! - Error handling and logging
 //! - Production-ready patterns
-//! 
+//!
 //! Before running, set your API key:
 //! ```bash
 //! export OPENAI_API_KEY="your-key"
 //! export GROQ_API_KEY="your-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example api_integration
 //! ```
-//! 
+//!
 //! Test with:
 //! ```bash
 //! curl -X POST http://localhost:8080/api/chat \
@@ -31,12 +31,12 @@
 //!   -d '{"message": "Hello, how are you?"}'
 //! ```
 
-use siumai::prelude::*;
 use serde::{Deserialize, Serialize};
+use siumai::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 
 // Mock HTTP server types (in a real implementation, use axum, warp, or actix-web)
 type HttpRequest = String;
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize the API server
     let server = ApiServer::new().await?;
-    
+
     println!("🚀 AI API Server started on http://localhost:8080");
     println!("📖 Available endpoints:");
     println!("   POST /api/chat        - Chat with AI");
@@ -99,7 +99,7 @@ impl ApiServer {
         // Initialize rate limiter and stats
         let rate_limiter = Arc::new(RwLock::new(RateLimiter::new()));
         let stats = Arc::new(RwLock::new(ApiStats::new()));
-        
+
         // Demo authentication tokens
         let auth_tokens = vec![
             "demo-key-123".to_string(),
@@ -118,7 +118,7 @@ impl ApiServer {
     /// Handle chat endpoint
     async fn handle_chat(&self, request: ChatRequest) -> Result<ChatResponse, ApiError> {
         let start_time = Instant::now();
-        
+
         // Validate request
         if request.message.trim().is_empty() {
             return Err(ApiError::BadRequest("Message cannot be empty".to_string()));
@@ -132,11 +132,14 @@ impl ApiServer {
         messages.push(ChatMessage::user(&request.message).build());
 
         // Get AI response
-        let response = self.ai.chat(messages).await
+        let response = self
+            .ai
+            .chat(messages)
+            .await
             .map_err(|e| ApiError::InternalError(format!("AI error: {e}")))?;
 
         let response_time = start_time.elapsed();
-        
+
         // Update stats
         {
             let mut stats = self.stats.write().await;
@@ -157,9 +160,12 @@ impl ApiServer {
     }
 
     /// Handle content generation endpoint
-    async fn handle_generate(&self, request: GenerateRequest) -> Result<GenerateResponse, ApiError> {
+    async fn handle_generate(
+        &self,
+        request: GenerateRequest,
+    ) -> Result<GenerateResponse, ApiError> {
         let start_time = Instant::now();
-        
+
         // Validate request
         if request.prompt.trim().is_empty() {
             return Err(ApiError::BadRequest("Prompt cannot be empty".to_string()));
@@ -167,10 +173,16 @@ impl ApiServer {
 
         // Build system prompt based on type
         let system_prompt = match request.content_type.as_str() {
-            "blog" => "You are a professional blog writer. Create engaging, well-structured content.",
-            "email" => "You are a professional email writer. Create clear, concise, and appropriate emails.",
+            "blog" => {
+                "You are a professional blog writer. Create engaging, well-structured content."
+            }
+            "email" => {
+                "You are a professional email writer. Create clear, concise, and appropriate emails."
+            }
             "marketing" => "You are a marketing copywriter. Create compelling, persuasive content.",
-            "technical" => "You are a technical writer. Create clear, accurate technical documentation.",
+            "technical" => {
+                "You are a technical writer. Create clear, accurate technical documentation."
+            }
             _ => "You are a helpful content generator. Create high-quality content.",
         };
 
@@ -180,11 +192,14 @@ impl ApiServer {
         ];
 
         // Get AI response
-        let response = self.ai.chat(messages).await
+        let response = self
+            .ai
+            .chat(messages)
+            .await
             .map_err(|e| ApiError::InternalError(format!("AI error: {e}")))?;
 
         let response_time = start_time.elapsed();
-        
+
         // Update stats
         {
             let mut stats = self.stats.write().await;
@@ -203,14 +218,15 @@ impl ApiServer {
     /// Handle text analysis endpoint
     async fn handle_analyze(&self, request: AnalyzeRequest) -> Result<AnalyzeResponse, ApiError> {
         let start_time = Instant::now();
-        
+
         // Validate request
         if request.text.trim().is_empty() {
             return Err(ApiError::BadRequest("Text cannot be empty".to_string()));
         }
 
         // Build analysis prompt
-        let system_prompt = "You are a text analysis expert. Analyze the provided text and provide insights.";
+        let system_prompt =
+            "You are a text analysis expert. Analyze the provided text and provide insights.";
         let user_prompt = format!(
             "Analyze this text for:\n\
             1. Sentiment (positive/negative/neutral)\n\
@@ -228,11 +244,14 @@ impl ApiServer {
         ];
 
         // Get AI response
-        let response = self.ai.chat(messages).await
+        let response = self
+            .ai
+            .chat(messages)
+            .await
             .map_err(|e| ApiError::InternalError(format!("AI error: {e}")))?;
 
         let response_time = start_time.elapsed();
-        
+
         // Update stats
         {
             let mut stats = self.stats.write().await;
@@ -251,15 +270,23 @@ impl ApiServer {
     /// Get health status
     async fn get_health(&self) -> HealthResponse {
         // Test AI provider
-        let ai_healthy = match self.ai.chat(vec![ChatMessage::user("Health check").build()]).await {
+        let ai_healthy = match self
+            .ai
+            .chat(vec![ChatMessage::user("Health check").build()])
+            .await
+        {
             Ok(_) => true,
             Err(_) => false,
         };
 
         let stats = self.stats.read().await;
-        
+
         HealthResponse {
-            status: if ai_healthy { "healthy".to_string() } else { "unhealthy".to_string() },
+            status: if ai_healthy {
+                "healthy".to_string()
+            } else {
+                "unhealthy".to_string()
+            },
             ai_provider: "groq".to_string(),
             model: "llama-3.1-8b-instant".to_string(),
             ai_responsive: ai_healthy,
@@ -272,7 +299,7 @@ impl ApiServer {
     /// Get usage statistics
     async fn get_stats(&self) -> StatsResponse {
         let stats = self.stats.read().await;
-        
+
         StatsResponse {
             total_requests: stats.total_requests,
             requests_by_endpoint: stats.requests_by_endpoint.clone(),
@@ -304,10 +331,13 @@ impl ApiServer {
             message: "What is artificial intelligence?".to_string(),
             system: Some("You are a helpful AI assistant.".to_string()),
         };
-        
+
         match self.handle_chat(chat_request).await {
             Ok(response) => {
-                println!("✅ Chat response: {}", &response.response[..100.min(response.response.len())]);
+                println!(
+                    "✅ Chat response: {}",
+                    &response.response[..100.min(response.response.len())]
+                );
                 println!("   Response time: {}ms", response.response_time_ms);
             }
             Err(e) => println!("❌ Chat error: {e:?}"),
@@ -321,10 +351,13 @@ impl ApiServer {
             prompt: "Write a short introduction to machine learning".to_string(),
             content_type: "technical".to_string(),
         };
-        
+
         match self.handle_generate(generate_request).await {
             Ok(response) => {
-                println!("✅ Generated content: {}", &response.content[..100.min(response.content.len())]);
+                println!(
+                    "✅ Generated content: {}",
+                    &response.content[..100.min(response.content.len())]
+                );
                 println!("   Response time: {}ms", response.response_time_ms);
             }
             Err(e) => println!("❌ Generate error: {e:?}"),
@@ -345,7 +378,10 @@ impl ApiServer {
         println!("📊 Usage statistics:");
         let stats = self.get_stats().await;
         println!("   Total Requests: {}", stats.total_requests);
-        println!("   Average Response Time: {}ms", stats.average_response_time_ms);
+        println!(
+            "   Average Response Time: {}ms",
+            stats.average_response_time_ms
+        );
         println!("   Success Rate: {:.1}%", stats.success_rate * 100.0);
 
         Ok(())
@@ -445,14 +481,17 @@ impl RateLimiter {
     fn new() -> Self {
         Self {
             requests: HashMap::new(),
-            max_requests: 100, // 100 requests per window
+            max_requests: 100,                        // 100 requests per window
             window_duration: Duration::from_secs(60), // 1 minute window
         }
     }
 
     fn check_limit(&mut self, client_id: &str) -> bool {
         let now = Instant::now();
-        let client_requests = self.requests.entry(client_id.to_string()).or_insert_with(Vec::new);
+        let client_requests = self
+            .requests
+            .entry(client_id.to_string())
+            .or_insert_with(Vec::new);
 
         // Remove old requests outside the window
         client_requests.retain(|&time| now.duration_since(time) < self.window_duration);
@@ -495,7 +534,10 @@ impl ApiStats {
             self.successful_requests += 1;
         }
 
-        *self.requests_by_endpoint.entry(endpoint.to_string()).or_insert(0) += 1;
+        *self
+            .requests_by_endpoint
+            .entry(endpoint.to_string())
+            .or_insert(0) += 1;
 
         self.total_response_time += response_time;
         self.average_response_time = self.total_response_time / self.total_requests as u32;

@@ -21,10 +21,10 @@
 //! cargo run --example simple_chatbot
 //! ```
 
-use siumai::prelude::*;
 use futures_util::StreamExt;
-use std::io::{self, Write};
+use siumai::prelude::*;
 use std::collections::VecDeque;
+use std::io::{self, Write};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -64,7 +64,7 @@ impl Chatbot {
     /// Create a new chatbot with the best available provider
     async fn new() -> Result<Self, LlmError> {
         let (client, provider_name) = Self::create_best_client().await?;
-        
+
         let mut conversation = VecDeque::new();
         conversation.push_back(system!(
             "You are a helpful, friendly AI assistant. Keep responses concise but informative. \
@@ -81,7 +81,8 @@ impl Chatbot {
     }
 
     /// Try to create a client with the best available provider
-    async fn create_best_client() -> Result<(Box<dyn ChatCapability + Send + Sync>, String), LlmError> {
+    async fn create_best_client()
+    -> Result<(Box<dyn ChatCapability + Send + Sync>, String), LlmError> {
         // Try OpenAI first
         if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
             if !api_key.is_empty() {
@@ -140,7 +141,7 @@ impl Chatbot {
         }
 
         Err(LlmError::InternalError(
-            "No AI providers available. Please set API keys or start Ollama.".to_string()
+            "No AI providers available. Please set API keys or start Ollama.".to_string(),
         ))
     }
 
@@ -148,7 +149,14 @@ impl Chatbot {
     fn show_welcome(&self) {
         println!("🎉 Chatbot initialized successfully!");
         println!("📡 Using provider: {}", self.provider_name);
-        println!("💬 Streaming: {}", if self.use_streaming { "enabled" } else { "disabled" });
+        println!(
+            "💬 Streaming: {}",
+            if self.use_streaming {
+                "enabled"
+            } else {
+                "disabled"
+            }
+        );
         println!();
         println!("💡 Commands:");
         println!("   /help     - Show this help message");
@@ -224,7 +232,14 @@ impl Chatbot {
             }
             "/stream" => {
                 self.use_streaming = !self.use_streaming;
-                println!("🌊 Streaming {}", if self.use_streaming { "enabled" } else { "disabled" });
+                println!(
+                    "🌊 Streaming {}",
+                    if self.use_streaming {
+                        "enabled"
+                    } else {
+                        "disabled"
+                    }
+                );
             }
             "/quit" | "/exit" => {
                 return Ok(true); // Signal to exit
@@ -274,12 +289,12 @@ impl Chatbot {
     fn show_history(&self) {
         println!("\n📚 Conversation History:");
         println!("{}", "=".repeat(50));
-        
+
         for (i, message) in self.conversation.iter().enumerate() {
             if i == 0 {
                 continue; // Skip system message
             }
-            
+
             match message.role {
                 MessageRole::User => {
                     if let Some(text) = message.content.text() {
@@ -294,11 +309,11 @@ impl Chatbot {
                 _ => {}
             }
         }
-        
+
         if self.conversation.len() <= 1 {
             println!("(No conversation history yet)");
         }
-        
+
         println!("{}", "=".repeat(50));
     }
 

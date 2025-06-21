@@ -118,6 +118,7 @@ pub mod prelude {
     pub use crate::error::LlmError;
     pub use crate::multimodal::*;
     pub use crate::performance::*;
+    pub use crate::provider::Siumai;
     pub use crate::provider::*;
     pub use crate::provider_features::*;
     pub use crate::retry_strategy::*;
@@ -125,13 +126,10 @@ pub mod prelude {
     pub use crate::traits::*;
     pub use crate::types::*;
     pub use crate::web_search::*;
-    pub use crate::{assistant, provider, system, tool, user, Provider};
-    pub use crate::provider::Siumai;
+    pub use crate::{Provider, assistant, provider, system, tool, user};
     pub use crate::{
-        quick_openai, quick_openai_with_model,
-        quick_anthropic, quick_anthropic_with_model,
-        quick_gemini, quick_gemini_with_model,
-        quick_ollama, quick_ollama_with_model
+        quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
+        quick_ollama, quick_ollama_with_model, quick_openai, quick_openai_with_model,
     };
 }
 
@@ -185,12 +183,16 @@ impl Provider {
     }
 
     /// Create an `OpenRouter` client builder
-    pub fn openrouter() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::OpenRouterProvider> {
+    pub fn openrouter() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
+        crate::providers::openai_compatible::OpenRouterProvider,
+    > {
         crate::builder::LlmBuilder::new().openrouter()
     }
 
     /// Create a `DeepSeek` client builder
-    pub fn deepseek() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::DeepSeekProvider> {
+    pub fn deepseek() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
+        crate::providers::openai_compatible::DeepSeekProvider,
+    > {
         crate::builder::LlmBuilder::new().deepseek()
     }
 }
@@ -234,10 +236,8 @@ impl crate::provider::Siumai {
 
 // Re-export convenience functions and builder
 pub use crate::builder::{
-    LlmBuilder,
+    LlmBuilder, quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
     quick_openai, quick_openai_with_model,
-    quick_anthropic, quick_anthropic_with_model,
-    quick_gemini, quick_gemini_with_model
 };
 
 // Convenient macro definitions

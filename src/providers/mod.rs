@@ -14,8 +14,8 @@ pub use gemini::GeminiClient;
 pub use ollama::OllamaClient;
 pub use openai::OpenAiClient;
 pub use openai_compatible::{
-    OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
-    DeepSeekProvider, OpenRouterProvider
+    DeepSeekProvider, OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
+    OpenRouterProvider,
 };
 
 use crate::traits::ProviderCapabilities;

@@ -2,38 +2,36 @@
 //!
 //! Common utility functions for Ollama provider implementation.
 
+use super::types::*;
 use crate::error::LlmError;
 use crate::types::{ChatMessage, Tool, ToolCall};
-use super::types::*;
-use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, USER_AGENT};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
 use std::collections::HashMap;
 
 /// Build HTTP headers for Ollama requests
 pub fn build_headers(additional_headers: &HashMap<String, String>) -> Result<HeaderMap, LlmError> {
     let mut headers = HeaderMap::new();
-    
+
     // Set content type
-    headers.insert(
-        CONTENT_TYPE,
-        HeaderValue::from_static("application/json"),
-    );
-    
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+
     // Set user agent
     headers.insert(
         USER_AGENT,
         HeaderValue::from_str(&format!("siumai/{}", env!("CARGO_PKG_VERSION")))
             .map_err(|e| LlmError::HttpError(format!("Invalid user agent: {e}")))?,
     );
-    
+
     // Add additional headers
     for (key, value) in additional_headers {
-        let header_name: reqwest::header::HeaderName = key.parse()
+        let header_name: reqwest::header::HeaderName = key
+            .parse()
             .map_err(|e| LlmError::HttpError(format!("Invalid header name '{key}': {e}")))?;
         let header_value = HeaderValue::from_str(value)
             .map_err(|e| LlmError::HttpError(format!("Invalid header value for '{key}': {e}")))?;
         headers.insert(header_name, header_value);
     }
-    
+
     Ok(headers)
 }
 
@@ -45,13 +43,15 @@ pub fn convert_chat_message(message: &ChatMessage) -> OllamaChatMessage {
         crate::types::MessageRole::Assistant => "assistant",
         crate::types::MessageRole::Developer => "system", // Map developer to system
         crate::types::MessageRole::Tool => "tool",
-    }.to_string();
+    }
+    .to_string();
 
     let content_str = match &message.content {
         crate::types::MessageContent::Text(text) => text.clone(),
         crate::types::MessageContent::MultiModal(parts) => {
             // Extract text from multimodal content
-            parts.iter()
+            parts
+                .iter()
                 .filter_map(|part| {
                     if let crate::types::ContentPart::Text { text } = part {
                         Some(text.as_str())
@@ -73,7 +73,8 @@ pub fn convert_chat_message(message: &ChatMessage) -> OllamaChatMessage {
 
     // Extract images from multimodal content
     if let crate::types::MessageContent::MultiModal(parts) = &message.content {
-        let images: Vec<String> = parts.iter()
+        let images: Vec<String> = parts
+            .iter()
             .filter_map(|part| {
                 if let crate::types::ContentPart::Image { image_url, .. } = part {
                     Some(image_url.clone())
@@ -90,9 +91,7 @@ pub fn convert_chat_message(message: &ChatMessage) -> OllamaChatMessage {
 
     // Convert tool calls if present
     if let Some(tool_calls) = &message.tool_calls {
-        ollama_message.tool_calls = Some(
-            tool_calls.iter().map(convert_tool_call).collect()
-        );
+        ollama_message.tool_calls = Some(tool_calls.iter().map(convert_tool_call).collect());
     }
 
     ollama_message
@@ -114,9 +113,18 @@ pub fn convert_tool(tool: &Tool) -> OllamaTool {
 pub fn convert_tool_call(tool_call: &ToolCall) -> OllamaToolCall {
     OllamaToolCall {
         function: OllamaFunctionCall {
-            name: tool_call.function.as_ref().map(|f| f.name.clone()).unwrap_or_default(),
-            arguments: tool_call.function.as_ref()
-                .map(|f| serde_json::from_str(&f.arguments).unwrap_or(serde_json::Value::Object(serde_json::Map::new())))
+            name: tool_call
+                .function
+                .as_ref()
+                .map(|f| f.name.clone())
+                .unwrap_or_default(),
+            arguments: tool_call
+                .function
+                .as_ref()
+                .map(|f| {
+                    serde_json::from_str(&f.arguments)
+                        .unwrap_or(serde_json::Value::Object(serde_json::Map::new()))
+                })
                 .unwrap_or(serde_json::Value::Object(serde_json::Map::new())),
         },
     }
@@ -136,7 +144,9 @@ pub fn convert_from_ollama_message(message: &OllamaChatMessage) -> ChatMessage {
 
     // If there are images, create multimodal content
     if let Some(images) = &message.images {
-        let mut parts = vec![crate::types::ContentPart::Text { text: message.content.clone() }];
+        let mut parts = vec![crate::types::ContentPart::Text {
+            text: message.content.clone(),
+        }];
         for image_url in images {
             parts.push(crate::types::ContentPart::Image {
                 image_url: image_url.clone(),
@@ -157,7 +167,10 @@ pub fn convert_from_ollama_message(message: &OllamaChatMessage) -> ChatMessage {
     // Convert tool calls if present
     if let Some(tool_calls) = &message.tool_calls {
         chat_message.tool_calls = Some(
-            tool_calls.iter().map(convert_from_ollama_tool_call).collect()
+            tool_calls
+                .iter()
+                .map(convert_from_ollama_tool_call)
+                .collect(),
         );
     }
 
@@ -179,24 +192,24 @@ pub fn convert_from_ollama_tool_call(tool_call: &OllamaToolCall) -> ToolCall {
 /// Parse streaming response line
 pub fn parse_streaming_line(line: &str) -> Result<Option<serde_json::Value>, LlmError> {
     let line = line.trim();
-    
+
     // Skip empty lines and comments
     if line.is_empty() || line.starts_with(':') {
         return Ok(None);
     }
-    
+
     // Remove "data: " prefix if present
     let json_str = if let Some(stripped) = line.strip_prefix("data: ") {
         stripped
     } else {
         line
     };
-    
+
     // Skip [DONE] marker
     if json_str == "[DONE]" {
         return Ok(None);
     }
-    
+
     // Parse JSON
     serde_json::from_str(json_str)
         .map(Some)
@@ -217,14 +230,14 @@ pub fn validate_model_name(model: &str) -> Result<(), LlmError> {
             "Model name cannot be empty".to_string(),
         ));
     }
-    
+
     // Basic validation - model names should not contain invalid characters
     if model.contains(' ') || model.contains('\n') || model.contains('\t') {
         return Err(LlmError::ConfigurationError(
             "Model name contains invalid characters".to_string(),
         ));
     }
-    
+
     Ok(())
 }
 
@@ -238,49 +251,69 @@ pub fn build_model_options(
     additional_options: Option<&HashMap<String, serde_json::Value>>,
 ) -> HashMap<String, serde_json::Value> {
     let mut options = HashMap::new();
-    
+
     if let Some(temp) = temperature {
-        options.insert("temperature".to_string(), serde_json::Value::Number(
-            serde_json::Number::from_f64(temp as f64).unwrap_or_else(|| serde_json::Number::from(0))
-        ));
+        options.insert(
+            "temperature".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(temp as f64)
+                    .unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+        );
     }
-    
+
     if let Some(max_tokens) = max_tokens {
-        options.insert("num_predict".to_string(), serde_json::Value::Number(
-            serde_json::Number::from(max_tokens)
-        ));
+        options.insert(
+            "num_predict".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(max_tokens)),
+        );
     }
-    
+
     if let Some(top_p) = top_p {
-        options.insert("top_p".to_string(), serde_json::Value::Number(
-            serde_json::Number::from_f64(top_p as f64).unwrap_or_else(|| serde_json::Number::from(0))
-        ));
+        options.insert(
+            "top_p".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(top_p as f64)
+                    .unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+        );
     }
-    
+
     if let Some(freq_penalty) = frequency_penalty {
-        options.insert("frequency_penalty".to_string(), serde_json::Value::Number(
-            serde_json::Number::from_f64(freq_penalty as f64).unwrap_or_else(|| serde_json::Number::from(0))
-        ));
+        options.insert(
+            "frequency_penalty".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(freq_penalty as f64)
+                    .unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+        );
     }
-    
+
     if let Some(pres_penalty) = presence_penalty {
-        options.insert("presence_penalty".to_string(), serde_json::Value::Number(
-            serde_json::Number::from_f64(pres_penalty as f64).unwrap_or_else(|| serde_json::Number::from(0))
-        ));
+        options.insert(
+            "presence_penalty".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(pres_penalty as f64)
+                    .unwrap_or_else(|| serde_json::Number::from(0)),
+            ),
+        );
     }
-    
+
     // Add additional options
     if let Some(additional) = additional_options {
         for (key, value) in additional {
             options.insert(key.clone(), value.clone());
         }
     }
-    
+
     options
 }
 
 /// Calculate tokens per second from Ollama response metrics
-pub fn calculate_tokens_per_second(eval_count: Option<u32>, eval_duration: Option<u64>) -> Option<f64> {
+pub fn calculate_tokens_per_second(
+    eval_count: Option<u32>,
+    eval_duration: Option<u64>,
+) -> Option<f64> {
     match (eval_count, eval_duration) {
         (Some(count), Some(duration)) if duration > 0 => {
             // Convert nanoseconds to seconds and calculate tokens/second
@@ -295,12 +328,11 @@ pub fn calculate_tokens_per_second(eval_count: Option<u32>, eval_duration: Optio
 mod tests {
     use super::*;
 
-
     #[test]
     fn test_build_headers() {
         let additional = HashMap::new();
         let headers = build_headers(&additional).unwrap();
-        
+
         assert!(headers.contains_key(CONTENT_TYPE));
         assert!(headers.contains_key(USER_AGENT));
     }
@@ -310,7 +342,9 @@ mod tests {
         let message = ChatMessage {
             role: crate::types::MessageRole::User,
             content: crate::types::MessageContent::MultiModal(vec![
-                crate::types::ContentPart::Text { text: "Hello".to_string() },
+                crate::types::ContentPart::Text {
+                    text: "Hello".to_string(),
+                },
                 crate::types::ContentPart::Image {
                     image_url: "image1".to_string(),
                     detail: None,
@@ -337,8 +371,14 @@ mod tests {
 
     #[test]
     fn test_calculate_tokens_per_second() {
-        assert_eq!(calculate_tokens_per_second(Some(100), Some(1_000_000_000)), Some(100.0));
-        assert_eq!(calculate_tokens_per_second(Some(50), Some(500_000_000)), Some(100.0));
+        assert_eq!(
+            calculate_tokens_per_second(Some(100), Some(1_000_000_000)),
+            Some(100.0)
+        );
+        assert_eq!(
+            calculate_tokens_per_second(Some(50), Some(500_000_000)),
+            Some(100.0)
+        );
         assert_eq!(calculate_tokens_per_second(None, Some(1_000_000_000)), None);
         assert_eq!(calculate_tokens_per_second(Some(100), None), None);
         assert_eq!(calculate_tokens_per_second(Some(100), Some(0)), None);

@@ -200,10 +200,7 @@ impl LlmError {
     }
 
     /// Creates a new contextual error with metadata.
-    pub fn contextual_error(
-        context: impl Into<String>,
-        message: impl Into<String>,
-    ) -> Self {
+    pub fn contextual_error(context: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ContextualError {
             context: context.into(),
             message: message.into(),
@@ -246,16 +243,24 @@ impl LlmError {
             Self::HttpError(e) => {
                 // More comprehensive check for retryable HTTP errors
                 let retryable_keywords = [
-                    "timeout", "connect", "network", "dns", "socket",
-                    "connection reset", "connection refused", "temporary failure"
+                    "timeout",
+                    "connect",
+                    "network",
+                    "dns",
+                    "socket",
+                    "connection reset",
+                    "connection refused",
+                    "temporary failure",
                 ];
-                retryable_keywords.iter().any(|keyword| e.to_lowercase().contains(keyword))
+                retryable_keywords
+                    .iter()
+                    .any(|keyword| e.to_lowercase().contains(keyword))
             }
             Self::ApiError { code, .. } => {
                 // More nuanced retry logic based on HTTP status codes
                 match *code {
                     // 4xx errors that are retryable
-                    408 | 429 => true,  // Request Timeout, Too Many Requests
+                    408 | 429 => true, // Request Timeout, Too Many Requests
                     // 5xx errors are generally retryable
                     500..=599 => true,
                     // Other 4xx errors are not retryable
@@ -269,9 +274,12 @@ impl LlmError {
             Self::ConnectionError(_) => true,
             Self::QuotaExceededError(_) => false, // Don't retry quota errors
             Self::AuthenticationError(_) => false, // Don't retry auth errors
-            Self::ModelNotSupported(_) => false, // Don't retry unsupported models
+            Self::ModelNotSupported(_) => false,  // Don't retry unsupported models
             Self::InvalidInput(_) | Self::InvalidParameter(_) => false, // Don't retry validation errors
-            Self::ContextualError { source_error: Some(source), .. } => source.is_retryable(),
+            Self::ContextualError {
+                source_error: Some(source),
+                ..
+            } => source.is_retryable(),
             Self::ContextualError { .. } => false, // Conservative approach for unknown contextual errors
             _ => false,
         }
@@ -307,23 +315,30 @@ impl LlmError {
     /// Gets the error category for better error handling.
     pub fn category(&self) -> ErrorCategory {
         match self {
-            Self::HttpError(_) | Self::ConnectionError(_) | Self::TimeoutError(_) => ErrorCategory::Network,
+            Self::HttpError(_) | Self::ConnectionError(_) | Self::TimeoutError(_) => {
+                ErrorCategory::Network
+            }
             Self::AuthenticationError(_) | Self::MissingApiKey(_) => ErrorCategory::Authentication,
             Self::RateLimitError(_) | Self::QuotaExceededError(_) => ErrorCategory::RateLimit,
-            Self::ApiError { code, .. } => {
-                match *code {
-                    400..=499 => ErrorCategory::Client,
-                    500..=599 => ErrorCategory::Server,
-                    _ => ErrorCategory::Unknown,
-                }
-            }
+            Self::ApiError { code, .. } => match *code {
+                400..=499 => ErrorCategory::Client,
+                500..=599 => ErrorCategory::Server,
+                _ => ErrorCategory::Unknown,
+            },
             Self::JsonError(_) | Self::ParseError(_) => ErrorCategory::Parsing,
-            Self::InvalidInput(_) | Self::InvalidParameter(_) | Self::ToolValidationError(_) => ErrorCategory::Validation,
+            Self::InvalidInput(_) | Self::InvalidParameter(_) | Self::ToolValidationError(_) => {
+                ErrorCategory::Validation
+            }
             Self::ConfigurationError(_) => ErrorCategory::Configuration,
-            Self::ModelNotSupported(_) | Self::UnsupportedOperation(_) | Self::UnsupportedToolType(_) => ErrorCategory::Unsupported,
+            Self::ModelNotSupported(_)
+            | Self::UnsupportedOperation(_)
+            | Self::UnsupportedToolType(_) => ErrorCategory::Unsupported,
             Self::StreamError(_) => ErrorCategory::Stream,
             Self::ProviderError { .. } | Self::ToolCallError(_) => ErrorCategory::Provider,
-            Self::ContextualError { source_error: Some(source), .. } => source.category(),
+            Self::ContextualError {
+                source_error: Some(source),
+                ..
+            } => source.category(),
             Self::ContextualError { .. } => ErrorCategory::Unknown,
             _ => ErrorCategory::Unknown,
         }
@@ -345,11 +360,12 @@ impl LlmError {
                 format!("The model '{model}' is not supported by this provider.")
             }
             Self::ConnectionError(_) | Self::TimeoutError(_) => {
-                "Network connection failed. Please check your internet connection and try again.".to_string()
+                "Network connection failed. Please check your internet connection and try again."
+                    .to_string()
             }
-            Self::ApiError { code: 500..=599, .. } => {
-                "The service is temporarily unavailable. Please try again later.".to_string()
-            }
+            Self::ApiError {
+                code: 500..=599, ..
+            } => "The service is temporarily unavailable. Please try again later.".to_string(),
             _ => self.to_string(),
         }
     }
@@ -360,7 +376,8 @@ impl LlmError {
             Self::AuthenticationError(_) | Self::MissingApiKey(_) => {
                 vec![
                     "Verify your API key is correct and properly formatted".to_string(),
-                    "Check if your API key has the required permissions for this operation".to_string(),
+                    "Check if your API key has the required permissions for this operation"
+                        .to_string(),
                     "Ensure your API key is not expired or revoked".to_string(),
                     "Verify you're using the correct API endpoint".to_string(),
                 ]
@@ -403,7 +420,9 @@ impl LlmError {
                     "Verify parameter types and formats".to_string(),
                 ]
             }
-            Self::ApiError { code: 500..=599, .. } => {
+            Self::ApiError {
+                code: 500..=599, ..
+            } => {
                 vec![
                     "Retry the request after a delay (server error)".to_string(),
                     "Check the service status page for outages".to_string(),
@@ -436,10 +455,12 @@ impl LlmError {
         match self {
             Self::RateLimitError(_) => Some(60), // Wait 1 minute for rate limits
             Self::ApiError { code: 429, .. } => Some(30), // Wait 30 seconds for 429
-            Self::ApiError { code: 500..=599, .. } => Some(5), // Wait 5 seconds for server errors
-            Self::TimeoutError(_) => Some(10), // Wait 10 seconds for timeouts
+            Self::ApiError {
+                code: 500..=599, ..
+            } => Some(5), // Wait 5 seconds for server errors
+            Self::TimeoutError(_) => Some(10),   // Wait 10 seconds for timeouts
             Self::ConnectionError(_) => Some(5), // Wait 5 seconds for connection errors
-            _ => None, // No recommended delay for non-retryable errors
+            _ => None,                           // No recommended delay for non-retryable errors
         }
     }
 
@@ -448,7 +469,9 @@ impl LlmError {
         match self {
             Self::RateLimitError(_) => 3,
             Self::ApiError { code: 429, .. } => 3,
-            Self::ApiError { code: 500..=599, .. } => 5,
+            Self::ApiError {
+                code: 500..=599, ..
+            } => 5,
             Self::TimeoutError(_) => 3,
             Self::ConnectionError(_) => 3,
             _ => 0, // No retries for non-retryable errors

@@ -275,7 +275,10 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
     }
 
     // All modern chat models support tools (except o1 models which don't support tools yet)
-    if capabilities.contains(&"chat".to_string()) && !model_id.contains("o1") && (!model_id.contains("gpt-3.5") || model_id.contains("gpt-3.5-turbo")) {
+    if capabilities.contains(&"chat".to_string())
+        && !model_id.contains("o1")
+        && (!model_id.contains("gpt-3.5") || model_id.contains("gpt-3.5-turbo"))
+    {
         capabilities.push("tools".to_string());
     }
 
@@ -291,8 +294,18 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
 fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64>, Option<f64>) {
     match model_id {
         // GPT-4o models
-        "gpt-4o" => (Some(128_000), Some(16_384), Some(0.000_002_5), Some(0.000_01)),
-        "gpt-4o-mini" => (Some(128_000), Some(16_384), Some(0.000_000_15), Some(0.000_000_6)),
+        "gpt-4o" => (
+            Some(128_000),
+            Some(16_384),
+            Some(0.000_002_5),
+            Some(0.000_01),
+        ),
+        "gpt-4o-mini" => (
+            Some(128_000),
+            Some(16_384),
+            Some(0.000_000_15),
+            Some(0.000_000_6),
+        ),
         "gpt-4o-mini-tts" => (None, None, Some(0.000_015), None), // TTS pricing per character
 
         // GPT-4 Turbo models
@@ -306,10 +319,20 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
 
         // o1 models (reasoning models)
         "o1-preview" => (Some(128_000), Some(32_768), Some(0.000_015), Some(0.000_06)),
-        "o1-mini" => (Some(128_000), Some(65_536), Some(0.000_003), Some(0.000_012)),
+        "o1-mini" => (
+            Some(128_000),
+            Some(65_536),
+            Some(0.000_003),
+            Some(0.000_012),
+        ),
 
         // GPT-3.5 Turbo models
-        "gpt-3.5-turbo" => (Some(16_385), Some(4096), Some(0.000_000_5), Some(0.000_001_5)),
+        "gpt-3.5-turbo" => (
+            Some(16_385),
+            Some(4096),
+            Some(0.000_000_5),
+            Some(0.000_001_5),
+        ),
         "gpt-3.5-turbo-16k" => (Some(16_385), Some(4096), Some(0.000_003), Some(0.000_004)),
 
         // TTS models

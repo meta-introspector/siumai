@@ -152,8 +152,6 @@ impl GeminiClient {
         self
     }
 
-
-
     /// Get the API key
     pub fn api_key(&self) -> &str {
         &self.config.api_key
@@ -332,8 +330,6 @@ impl GeminiBuilder {
         self.config.generation_config = Some(generation_config);
         self
     }
-
-
 
     /// Build the Gemini client
     pub fn build(self) -> Result<GeminiClient, LlmError> {

@@ -1,5 +1,5 @@
 //! ✍️ Content Generator - AI content creation tool
-//! 
+//!
 //! This example demonstrates how to build a comprehensive content generation system with:
 //! - Blog post and article generation
 //! - Marketing copy creation
@@ -7,21 +7,21 @@
 //! - Social media content
 //! - SEO optimization
 //! - Multiple content formats and styles
-//! 
+//!
 //! Before running, set your API key:
 //! ```bash
 //! export OPENAI_API_KEY="your-key"
 //! export GROQ_API_KEY="your-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example content_generator
 //! ```
 
 use siumai::prelude::*;
-use std::io::{self, Write};
 use std::fs;
+use std::io::{self, Write};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize the content generator
     let generator = ContentGenerator::new().await?;
-    
+
     println!("🎉 Content Generator initialized! Available commands:");
     println!("  1. blog <topic>           - Generate blog post");
     println!("  2. marketing <product>    - Create marketing copy");
@@ -127,7 +127,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 break;
             }
             _ => {
-                println!("❌ Unknown command: {}. Type 'help' for available commands.", parts[0]);
+                println!(
+                    "❌ Unknown command: {}. Type 'help' for available commands.",
+                    parts[0]
+                );
             }
         }
         println!();
@@ -165,7 +168,7 @@ impl ContentGenerator {
     /// Generate blog post
     async fn generate_blog_post(&self, topic: &str) -> Result<(), Box<dyn std::error::Error>> {
         println!("📝 Generating blog post about: {topic}");
-        
+
         let system_prompt = "You are a professional blog writer and content strategist. \
             Create engaging, well-structured, and informative blog posts that capture \
             readers' attention and provide real value. Use a conversational yet \
@@ -195,18 +198,24 @@ impl ContentGenerator {
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
             println!("📄 Generated Blog Post:\n{text}");
-            
+
             // Optionally save to file
-            self.save_content_to_file(&text, &format!("blog_{}.md", self.sanitize_filename(topic)))?;
+            self.save_content_to_file(
+                &text,
+                &format!("blog_{}.md", self.sanitize_filename(topic)),
+            )?;
         }
 
         Ok(())
     }
 
     /// Generate marketing copy
-    async fn generate_marketing_copy(&self, product: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn generate_marketing_copy(
+        &self,
+        product: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         println!("🎯 Generating marketing copy for: {product}");
-        
+
         let system_prompt = "You are an expert copywriter and marketing strategist. \
             Create compelling, persuasive marketing copy that drives action. \
             Focus on benefits, emotional appeal, and clear calls-to-action. \
@@ -237,15 +246,21 @@ impl ContentGenerator {
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
             println!("📢 Generated Marketing Copy:\n{text}");
-            
-            self.save_content_to_file(&text, &format!("marketing_{}.md", self.sanitize_filename(product)))?;
+
+            self.save_content_to_file(
+                &text,
+                &format!("marketing_{}.md", self.sanitize_filename(product)),
+            )?;
         }
 
         Ok(())
     }
 
     /// Generate social media content
-    async fn generate_social_media_content(&self, topic: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn generate_social_media_content(
+        &self,
+        topic: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         println!("📱 Generating social media content about: {topic}");
 
         let system_prompt = "You are a social media expert and content creator. \
@@ -278,14 +293,20 @@ impl ContentGenerator {
         if let Some(text) = response.text() {
             println!("📲 Generated Social Media Content:\n{text}");
 
-            self.save_content_to_file(&text, &format!("social_{}.md", self.sanitize_filename(topic)))?;
+            self.save_content_to_file(
+                &text,
+                &format!("social_{}.md", self.sanitize_filename(topic)),
+            )?;
         }
 
         Ok(())
     }
 
     /// Generate email content
-    async fn generate_email_content(&self, purpose: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn generate_email_content(
+        &self,
+        purpose: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         println!("📧 Generating email content for: {purpose}");
 
         let system_prompt = "You are a professional email copywriter and communication expert. \
@@ -322,7 +343,10 @@ impl ContentGenerator {
         if let Some(text) = response.text() {
             println!("📬 Generated Email Content:\n{text}");
 
-            self.save_content_to_file(&text, &format!("email_{}.md", self.sanitize_filename(purpose)))?;
+            self.save_content_to_file(
+                &text,
+                &format!("email_{}.md", self.sanitize_filename(purpose)),
+            )?;
         }
 
         Ok(())
@@ -364,7 +388,10 @@ impl ContentGenerator {
         if let Some(text) = response.text() {
             println!("📖 Generated Technical Documentation:\n{text}");
 
-            self.save_content_to_file(&text, &format!("docs_{}.md", self.sanitize_filename(topic)))?;
+            self.save_content_to_file(
+                &text,
+                &format!("docs_{}.md", self.sanitize_filename(topic)),
+            )?;
         }
 
         Ok(())
@@ -409,14 +436,20 @@ impl ContentGenerator {
         if let Some(text) = response.text() {
             println!("🎯 Generated SEO Content:\n{text}");
 
-            self.save_content_to_file(&text, &format!("seo_{}.md", self.sanitize_filename(keyword)))?;
+            self.save_content_to_file(
+                &text,
+                &format!("seo_{}.md", self.sanitize_filename(keyword)),
+            )?;
         }
 
         Ok(())
     }
 
     /// Generate creative content
-    async fn generate_creative_content(&self, prompt: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn generate_creative_content(
+        &self,
+        prompt: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         println!("🎨 Generating creative content for: {prompt}");
 
         let system_prompt = "You are a creative writer and storyteller. \
@@ -453,14 +486,21 @@ impl ContentGenerator {
         if let Some(text) = response.text() {
             println!("✨ Generated Creative Content:\n{text}");
 
-            self.save_content_to_file(&text, &format!("creative_{}.md", self.sanitize_filename(prompt)))?;
+            self.save_content_to_file(
+                &text,
+                &format!("creative_{}.md", self.sanitize_filename(prompt)),
+            )?;
         }
 
         Ok(())
     }
 
     /// Save content to file
-    fn save_content_to_file(&self, content: &str, filename: &str) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_content_to_file(
+        &self,
+        content: &str,
+        filename: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Create output directory if it doesn't exist
         fs::create_dir_all("generated_content")?;
 

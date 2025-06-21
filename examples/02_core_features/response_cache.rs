@@ -12,8 +12,8 @@
 //! 3. Production-ready chatbot integration
 //! 4. Cache management and monitoring
 
-use siumai::prelude::*;
 use siumai::performance::ResponseCache;
+use siumai::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -129,7 +129,7 @@ async fn demo_without_cache(client: &Siumai) -> Result<(), Box<dyn std::error::E
         "Explain photosynthesis in one sentence",
         "What is 2 + 2?",
         "What is the capital of France?", // Repeated question
-        "What is 2 + 2?", // Repeated question
+        "What is 2 + 2?",                 // Repeated question
     ];
 
     let start_time = Instant::now();
@@ -137,17 +137,25 @@ async fn demo_without_cache(client: &Siumai) -> Result<(), Box<dyn std::error::E
 
     for (i, question) in questions.iter().enumerate() {
         let request_start = Instant::now();
-        
+
         let messages = vec![ChatMessage::user(*question).build()];
         let response = client.chat(messages).await?;
         total_api_calls += 1;
 
         let request_time = request_start.elapsed();
-        
+
         println!("  {}. \"{}\"", i + 1, question);
         println!("     ⏱️  Response time: {}ms", request_time.as_millis());
-        println!("     🤖 Response: {}", 
-            response.text().unwrap_or_default().chars().take(50).collect::<String>() + "...");
+        println!(
+            "     🤖 Response: {}",
+            response
+                .text()
+                .unwrap_or_default()
+                .chars()
+                .take(50)
+                .collect::<String>()
+                + "..."
+        );
         println!();
     }
 
@@ -155,7 +163,10 @@ async fn demo_without_cache(client: &Siumai) -> Result<(), Box<dyn std::error::E
     println!("📈 Without Cache Summary:");
     println!("   Total time: {}ms", total_time.as_millis());
     println!("   API calls made: {total_api_calls}");
-    println!("   Average time per call: {}ms\n", total_time.as_millis() / total_api_calls);
+    println!(
+        "   Average time per call: {}ms\n",
+        total_time.as_millis() / total_api_calls
+    );
 
     Ok(())
 }
@@ -173,7 +184,7 @@ async fn demo_with_cache(client: &Siumai) -> Result<(), Box<dyn std::error::Erro
         "Explain photosynthesis in one sentence",
         "What is 2 + 2?",
         "What is the capital of France?", // Repeated - should hit cache
-        "What is 2 + 2?", // Repeated - should hit cache
+        "What is 2 + 2?",                 // Repeated - should hit cache
         "Explain photosynthesis in one sentence", // Repeated - should hit cache
     ];
 
@@ -183,7 +194,7 @@ async fn demo_with_cache(client: &Siumai) -> Result<(), Box<dyn std::error::Erro
 
     for (i, question) in questions.iter().enumerate() {
         let request_start = Instant::now();
-        
+
         let messages = vec![ChatMessage::user(*question).build()];
         let cache_key = ResponseCache::cache_key(&messages);
 
@@ -196,31 +207,42 @@ async fn demo_with_cache(client: &Siumai) -> Result<(), Box<dyn std::error::Erro
             // Not in cache, make API call
             let response = client.chat(messages).await?;
             api_calls += 1;
-            
+
             // Store in cache
             cache.put(cache_key, response.clone());
-            
+
             println!("  {}. \"{}\" 🌐 API CALL", i + 1, question);
             response
         };
 
         let request_time = request_start.elapsed();
-        
+
         println!("     ⏱️  Response time: {}ms", request_time.as_millis());
-        println!("     🤖 Response: {}", 
-            response.text().unwrap_or_default().chars().take(50).collect::<String>() + "...");
+        println!(
+            "     🤖 Response: {}",
+            response
+                .text()
+                .unwrap_or_default()
+                .chars()
+                .take(50)
+                .collect::<String>()
+                + "..."
+        );
         println!();
     }
 
     let total_time = start_time.elapsed();
     let cache_stats = cache.stats();
-    
+
     println!("📈 With Cache Summary:");
     println!("   Total time: {}ms", total_time.as_millis());
     println!("   API calls made: {api_calls}");
     println!("   Cache hits: {cache_hits}");
     println!("   Cache hit rate: {:.1}%", cache_stats.hit_rate * 100.0);
-    println!("   Average time per request: {}ms\n", total_time.as_millis() / questions.len() as u128);
+    println!(
+        "   Average time per request: {}ms\n",
+        total_time.as_millis() / questions.len() as u128
+    );
 
     Ok(())
 }
@@ -252,10 +274,13 @@ async fn demo_cache_benefits(client: &Siumai) -> Result<(), Box<dyn std::error::
         "How do I reset my password?", // Very common, repeated again
         "How do I cancel my subscription?",
         "What are your business hours?", // Repeated
-        "How can I contact support?", // Repeated
+        "How can I contact support?",    // Repeated
     ];
 
-    println!("🏪 Simulating FAQ system with {} questions", user_queries.len());
+    println!(
+        "🏪 Simulating FAQ system with {} questions",
+        user_queries.len()
+    );
     println!("📋 Unique questions: {}", faq_questions.len());
     println!();
 
@@ -265,8 +290,11 @@ async fn demo_cache_benefits(client: &Siumai) -> Result<(), Box<dyn std::error::
 
     for (i, question) in user_queries.iter().enumerate() {
         let messages = vec![
-            ChatMessage::system("You are a helpful customer service assistant. Provide concise, helpful answers.").build(),
-            ChatMessage::user(*question).build()
+            ChatMessage::system(
+                "You are a helpful customer service assistant. Provide concise, helpful answers.",
+            )
+            .build(),
+            ChatMessage::user(*question).build(),
         ];
         let cache_key = ResponseCache::cache_key(&messages);
 
@@ -285,7 +313,8 @@ async fn demo_cache_benefits(client: &Siumai) -> Result<(), Box<dyn std::error::
             (response, false)
         };
 
-        println!("  {}. {} {}",
+        println!(
+            "  {}. {} {}",
             i + 1,
             if from_cache { "💾" } else { "🌐" },
             question
@@ -301,17 +330,23 @@ async fn demo_cache_benefits(client: &Siumai) -> Result<(), Box<dyn std::error::
     println!("   💾 Cache hit rate: {:.1}%", stats.hit_rate * 100.0);
     println!("   🌐 API calls made: {}", stats.miss_count);
     println!("   💰 Estimated cost: ${total_cost_estimate:.4}");
-    
+
     // Calculate savings
     let total_requests = user_queries.len() as u64;
     let potential_api_calls = total_requests;
     let actual_api_calls = stats.miss_count;
     let calls_saved = potential_api_calls - actual_api_calls;
     let cost_savings_percent = (calls_saved as f64 / potential_api_calls as f64) * 100.0;
-    
+
     println!("   💡 API calls saved: {calls_saved} ({cost_savings_percent:.1}%)");
-    println!("   🚀 Performance improvement: ~{}x faster for cached responses",
-        if stats.hit_rate > 0.0 { (1.0_f64 / (1.0 - stats.hit_rate)).round() as u32 } else { 1 });
+    println!(
+        "   🚀 Performance improvement: ~{}x faster for cached responses",
+        if stats.hit_rate > 0.0 {
+            (1.0_f64 / (1.0 - stats.hit_rate)).round() as u32
+        } else {
+            1
+        }
+    );
     println!();
 
     Ok(())
@@ -328,31 +363,34 @@ async fn demo_cache_management() -> Result<(), Box<dyn std::error::Error>> {
     let dummy_response = ChatResponse::new(MessageContent::Text("Dummy response".to_string()));
 
     println!("📝 Adding responses to cache (capacity: 3):");
-    
+
     // Add responses to cache
     cache.put("key1".to_string(), dummy_response.clone());
     println!("   Added key1 - Cache size: {}", cache.stats().size);
-    
+
     cache.put("key2".to_string(), dummy_response.clone());
     println!("   Added key2 - Cache size: {}", cache.stats().size);
-    
+
     cache.put("key3".to_string(), dummy_response.clone());
     println!("   Added key3 - Cache size: {}", cache.stats().size);
-    
+
     // This should evict the oldest entry (key1)
     cache.put("key4".to_string(), dummy_response.clone());
-    println!("   Added key4 - Cache size: {} (key1 evicted)", cache.stats().size);
+    println!(
+        "   Added key4 - Cache size: {} (key1 evicted)",
+        cache.stats().size
+    );
 
     println!();
     println!("🔍 Testing cache retrieval:");
-    
+
     // Test retrieval
     if cache.get("key1").is_some() {
         println!("   ✅ key1 found");
     } else {
         println!("   ❌ key1 not found (evicted)");
     }
-    
+
     if cache.get("key2").is_some() {
         println!("   ✅ key2 found");
     } else {
@@ -361,14 +399,14 @@ async fn demo_cache_management() -> Result<(), Box<dyn std::error::Error>> {
 
     println!();
     println!("🧹 Testing cache cleanup:");
-    
+
     // Simulate expired entries cleanup
     sleep(Duration::from_millis(100)).await;
     cache.cleanup_expired(Duration::from_millis(50)); // Very short TTL for demo
-    
+
     println!("   Cleaned up expired entries");
     println!("   Final cache size: {}", cache.stats().size);
-    
+
     let final_stats = cache.stats();
     println!();
     println!("📊 Final Cache Statistics:");
@@ -405,7 +443,7 @@ async fn demo_production_chatbot(api_key: &str) -> Result<(), Box<dyn std::error
         "How can I track my order?", // Repeated question
         "What payment methods do you accept?",
         "What are your business hours?", // Repeated again
-        "How can I contact support?", // Repeated question
+        "How can I contact support?",    // Repeated question
     ];
 
     let start_time = Instant::now();
@@ -417,10 +455,11 @@ async fn demo_production_chatbot(api_key: &str) -> Result<(), Box<dyn std::error
         let response = chatbot.chat(question).await?;
         let response_time = response_start.elapsed();
 
-        println!("🤖 Bot ({}ms): {}",
+        println!(
+            "🤖 Bot ({}ms): {}",
             response_time.as_millis(),
-            response.chars().take(100).collect::<String>() +
-            if response.len() > 100 { "..." } else { "" }
+            response.chars().take(100).collect::<String>()
+                + if response.len() > 100 { "..." } else { "" }
         );
         println!();
     }
@@ -434,14 +473,18 @@ async fn demo_production_chatbot(api_key: &str) -> Result<(), Box<dyn std::error
     println!("   Cache hits: {}", stats.hit_count);
     println!("   API calls: {}", stats.miss_count);
     println!("   Cache hit rate: {:.1}%", stats.hit_rate * 100.0);
-    println!("   Average response time: {}ms", total_time.as_millis() / customer_questions.len() as u128);
+    println!(
+        "   Average response time: {}ms",
+        total_time.as_millis() / customer_questions.len() as u128
+    );
 
     // Calculate potential savings
     let potential_cost = customer_questions.len() as f64 * 0.001; // Rough estimate
     let actual_cost = stats.miss_count as f64 * 0.001;
     let savings = potential_cost - actual_cost;
 
-    println!("   💰 Estimated cost savings: ${:.4} ({:.1}%)",
+    println!(
+        "   💰 Estimated cost savings: ${:.4} ({:.1}%)",
         savings,
         (savings / potential_cost) * 100.0
     );

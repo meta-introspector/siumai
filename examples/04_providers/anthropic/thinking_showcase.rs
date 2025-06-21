@@ -8,12 +8,12 @@
 //! - Complex problem solving with visible thought process
 //! - Thinking vs output comparison
 //! - Advanced reasoning patterns
-//! 
+//!
 //! Before running, set your API key:
 //! ```bash
 //! export ANTHROPIC_API_KEY="your-anthropic-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example anthropic_thinking_showcase
@@ -26,11 +26,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🤔 Claude Thinking Process Showcase\n");
 
     // Get API key
-    let api_key = std::env::var("ANTHROPIC_API_KEY")
-        .unwrap_or_else(|_| {
-            println!("⚠️  ANTHROPIC_API_KEY not set, using demo key");
-            "demo-key".to_string()
-        });
+    let api_key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_else(|_| {
+        println!("⚠️  ANTHROPIC_API_KEY not set, using demo key");
+        "demo-key".to_string()
+    });
 
     println!("🧠 Demonstrating Claude Thinking Capabilities:");
     println!("   1. Step-by-Step Problem Solving");
@@ -70,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo step-by-step problem solving
 async fn demo_step_by_step_solving(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating step-by-step problem solving...");
-    
+
     let ai = LlmBuilder::new()
         .anthropic()
         .api_key(api_key)
@@ -96,12 +95,12 @@ async fn demo_step_by_step_solving(api_key: &str) -> Result<(), Box<dyn std::err
     ];
 
     println!("   Analyzing retreat planning problem...");
-    
+
     match ai.chat(messages).await {
         Ok(response) => {
             if let Some(text) = response.content_text() {
                 println!("   📋 Step-by-Step Solution:");
-                
+
                 // Extract and display the thinking process
                 let lines: Vec<&str> = text.lines().collect();
                 for (i, line) in lines.iter().enumerate().take(10) {
@@ -109,7 +108,7 @@ async fn demo_step_by_step_solving(api_key: &str) -> Result<(), Box<dyn std::err
                         println!("   {}: {}", i + 1, line.trim());
                     }
                 }
-                
+
                 if lines.len() > 10 {
                     println!("   ... (showing first 10 steps)");
                 }
@@ -124,7 +123,7 @@ async fn demo_step_by_step_solving(api_key: &str) -> Result<(), Box<dyn std::err
 /// Demo complex reasoning analysis
 async fn demo_complex_reasoning(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Analyzing complex multi-factor problem...");
-    
+
     let ai = LlmBuilder::new()
         .anthropic()
         .api_key(api_key)
@@ -153,12 +152,12 @@ async fn demo_complex_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
     ];
 
     println!("   Performing multi-factor analysis...");
-    
+
     match ai.chat(messages).await {
         Ok(response) => {
             if let Some(text) = response.content_text() {
                 println!("   🧩 Complex Analysis Result:");
-                
+
                 // Look for key reasoning patterns
                 let analysis_sections = vec![
                     ("Factors", "factor"),
@@ -166,14 +165,17 @@ async fn demo_complex_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
                     ("Considerations", "consider"),
                     ("Recommendation", "recommend"),
                 ];
-                
+
                 for (section, keyword) in analysis_sections {
                     if text.to_lowercase().contains(keyword) {
                         println!("   ✅ Includes {section} analysis");
                     }
                 }
-                
-                println!("   📊 Analysis length: {} words", text.split_whitespace().count());
+
+                println!(
+                    "   📊 Analysis length: {} words",
+                    text.split_whitespace().count()
+                );
             }
         }
         Err(e) => println!("   ❌ Error: {e}"),
@@ -185,7 +187,7 @@ async fn demo_complex_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
 /// Demo mathematical problem solving
 async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Solving mathematical problem with reasoning...");
-    
+
     let ai = LlmBuilder::new()
         .anthropic()
         .api_key(api_key)
@@ -199,24 +201,26 @@ async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::e
         ChatMessage::system(
             "You are a mathematics tutor. When solving problems, show \
             each step of your work clearly. Explain the mathematical \
-            principles you're using and why each step is necessary."
-        ).build(),
+            principles you're using and why each step is necessary.",
+        )
+        .build(),
         ChatMessage::user(
             "Solve this optimization problem step by step: \
             A farmer has 100 meters of fencing and wants to create a \
             rectangular enclosure with maximum area. One side of the \
             rectangle will be against an existing wall, so fencing is \
-            only needed for three sides. What dimensions maximize the area?"
-        ).build(),
+            only needed for three sides. What dimensions maximize the area?",
+        )
+        .build(),
     ];
 
     println!("   Working through optimization problem...");
-    
+
     match ai.chat(messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🔢 Mathematical Solution:");
-                
+
                 // Check for mathematical reasoning elements
                 let math_elements = vec![
                     ("Variables", vec!["let", "x", "y", "="]),
@@ -224,16 +228,16 @@ async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::e
                     ("Calculus", vec!["derivative", "maximum", "critical"]),
                     ("Solution", vec!["therefore", "answer", "dimensions"]),
                 ];
-                
+
                 for (element, keywords) in math_elements {
-                    let found = keywords.iter().any(|&keyword| 
-                        text.to_lowercase().contains(keyword)
-                    );
+                    let found = keywords
+                        .iter()
+                        .any(|&keyword| text.to_lowercase().contains(keyword));
                     if found {
                         println!("   ✅ Contains {element} reasoning");
                     }
                 }
-                
+
                 // Show a preview of the solution
                 let first_few_lines: Vec<&str> = text.lines().take(3).collect();
                 for line in first_few_lines {
@@ -252,7 +256,7 @@ async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::e
 /// Demo logical reasoning chains
 async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating logical reasoning chains...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -266,8 +270,9 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
         ChatMessage::system(
             "You are a logic expert. When presented with logical puzzles \
             or reasoning challenges, work through them systematically. \
-            Show your logical steps and explain your reasoning process."
-        ).build(),
+            Show your logical steps and explain your reasoning process.",
+        )
+        .build(),
         ChatMessage::user(
             "Here's a logic puzzle: \
             \
@@ -283,17 +288,18 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
             5. David likes yellow and doesn't live in Sydney \
             \
             Work through this step by step to determine who lives where \
-            and what their favorite colors are."
-        ).build(),
+            and what their favorite colors are.",
+        )
+        .build(),
     ];
 
     println!("   Solving logic puzzle systematically...");
-    
+
     match ai.chat(messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   ⚖️ Logical Reasoning Process:");
-                
+
                 // Check for logical reasoning patterns
                 let logic_patterns = vec![
                     ("Deduction", vec!["therefore", "thus", "so"]),
@@ -301,22 +307,22 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
                     ("Elimination", vec!["can't", "cannot", "not", "eliminate"]),
                     ("Conclusion", vec!["answer", "solution", "result"]),
                 ];
-                
+
                 for (pattern, keywords) in logic_patterns {
-                    let found = keywords.iter().any(|&keyword| 
-                        text.to_lowercase().contains(keyword)
-                    );
+                    let found = keywords
+                        .iter()
+                        .any(|&keyword| text.to_lowercase().contains(keyword));
                     if found {
                         println!("   ✅ Uses {pattern} reasoning");
                     }
                 }
-                
+
                 // Count logical steps
-                let step_count = text.matches("step").count() + 
-                                text.matches("Step").count() +
-                                text.matches("1.").count() +
-                                text.matches("2.").count();
-                
+                let step_count = text.matches("step").count()
+                    + text.matches("Step").count()
+                    + text.matches("1.").count()
+                    + text.matches("2.").count();
+
                 if step_count > 0 {
                     println!("   📊 Identified {step_count} logical steps");
                 }
@@ -331,7 +337,7 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
 /// Demo creative problem solving
 async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Exploring creative problem solving...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -346,8 +352,9 @@ async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error
             "You are a creative problem solver. When faced with challenges, \
             think outside the box and consider unconventional approaches. \
             Show your creative thinking process and explain how you generate \
-            and evaluate different ideas."
-        ).build(),
+            and evaluate different ideas.",
+        )
+        .build(),
         ChatMessage::user(
             "Challenge: A small town's main street businesses are struggling \
             because a new shopping mall opened nearby. The town council wants \
@@ -355,44 +362,58 @@ async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error
             \
             Think creatively about solutions that could make the main street \
             a unique destination. Consider the town's character, community needs, \
-            and innovative approaches to urban revitalization."
-        ).build(),
+            and innovative approaches to urban revitalization.",
+        )
+        .build(),
     ];
 
     println!("   Generating creative solutions...");
-    
+
     match ai.chat(messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🎨 Creative Problem Solving:");
-                
+
                 // Check for creative thinking indicators
                 let creativity_indicators = vec![
-                    ("Innovation", vec!["innovative", "unique", "creative", "novel"]),
-                    ("Alternatives", vec!["alternative", "different", "instead", "rather"]),
-                    ("Community", vec!["community", "local", "residents", "together"]),
-                    ("Experience", vec!["experience", "atmosphere", "feel", "vibe"]),
+                    (
+                        "Innovation",
+                        vec!["innovative", "unique", "creative", "novel"],
+                    ),
+                    (
+                        "Alternatives",
+                        vec!["alternative", "different", "instead", "rather"],
+                    ),
+                    (
+                        "Community",
+                        vec!["community", "local", "residents", "together"],
+                    ),
+                    (
+                        "Experience",
+                        vec!["experience", "atmosphere", "feel", "vibe"],
+                    ),
                 ];
-                
+
                 for (indicator, keywords) in creativity_indicators {
-                    let found = keywords.iter().any(|&keyword| 
-                        text.to_lowercase().contains(keyword)
-                    );
+                    let found = keywords
+                        .iter()
+                        .any(|&keyword| text.to_lowercase().contains(keyword));
                     if found {
                         println!("   ✅ Shows {indicator} thinking");
                     }
                 }
-                
+
                 // Count unique ideas/solutions
                 let idea_markers = vec!["idea", "solution", "approach", "strategy", "concept"];
-                let idea_count = idea_markers.iter()
+                let idea_count = idea_markers
+                    .iter()
                     .map(|&marker| text.to_lowercase().matches(marker).count())
                     .sum::<usize>();
-                
+
                 if idea_count > 0 {
                     println!("   💡 Generated {idea_count} creative concepts");
                 }
-                
+
                 // Show creativity in action
                 println!("   🌟 Creative elements identified in response");
             }

@@ -31,9 +31,8 @@ pub fn build_headers(
     if let Some(org) = organization {
         headers.insert(
             "OpenAI-Organization",
-            HeaderValue::from_str(org).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid organization: {e}"))
-            })?,
+            HeaderValue::from_str(org)
+                .map_err(|e| LlmError::ConfigurationError(format!("Invalid organization: {e}")))?,
         );
     }
 

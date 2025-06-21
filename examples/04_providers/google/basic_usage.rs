@@ -1,17 +1,17 @@
 //! 🔍 Google Gemini Basic Usage
-//! 
+//!
 //! This example demonstrates Google Gemini capabilities including:
 //! - Gemini model selection and optimization
 //! - Multimodal capabilities (text, images, etc.)
 //! - Safety settings and content filtering
 //! - Performance optimization techniques
 //! - Google-specific features and best practices
-//! 
+//!
 //! Before running, set your API key:
 //! ```bash
 //! export GOOGLE_API_KEY="your-google-api-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example google_basic_usage
@@ -24,11 +24,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔍 Google Gemini Basic Usage Demo\n");
 
     // Get API key
-    let api_key = std::env::var("GOOGLE_API_KEY")
-        .unwrap_or_else(|_| {
-            println!("⚠️  GOOGLE_API_KEY not set, using demo key");
-            "demo-key".to_string()
-        });
+    let api_key = std::env::var("GOOGLE_API_KEY").unwrap_or_else(|_| {
+        println!("⚠️  GOOGLE_API_KEY not set, using demo key");
+        "demo-key".to_string()
+    });
 
     println!("🔧 Demonstrating Gemini Capabilities:");
     println!("   1. Model Selection and Comparison");
@@ -68,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo different Gemini models
 async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Comparing different Gemini models...");
-    
+
     let models = vec![
         ("gemini-1.5-flash", "Fast and efficient for most tasks"),
         ("gemini-1.5-pro", "Advanced reasoning and complex tasks"),
@@ -77,7 +76,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
 
     for (model_name, description) in models {
         println!("   Testing {model_name}: {description}");
-        
+
         let ai = Siumai::builder()
             .anthropic()
             .api_key(api_key)
@@ -90,8 +89,9 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
         let messages = vec![
             ChatMessage::user(
                 "Explain the concept of machine learning in simple terms, \
-                focusing on how it differs from traditional programming."
-            ).build(),
+                focusing on how it differs from traditional programming.",
+            )
+            .build(),
         ];
 
         match ai.chat(messages).await {
@@ -114,7 +114,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
 /// Demo multimodal capabilities
 async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating multimodal capabilities...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -129,8 +129,9 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
     let text_messages = vec![
         ChatMessage::user(
             "Describe the process of photosynthesis and its importance \
-            for life on Earth."
-        ).build(),
+            for life on Earth.",
+        )
+        .build(),
     ];
 
     match ai.chat(text_messages).await {
@@ -148,14 +149,18 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
         ChatMessage::user(
             "If I were to show you an image of a sunset over mountains, \
             what elements would you look for to describe the scene? \
-            What questions might you ask about the image?"
-        ).build(),
+            What questions might you ask about the image?",
+        )
+        .build(),
     ];
 
     match ai.chat(multimodal_messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
-                println!("   🖼️ Multimodal guidance: {}", &text[..text.len().min(120)]);
+                println!(
+                    "   🖼️ Multimodal guidance: {}",
+                    &text[..text.len().min(120)]
+                );
             }
         }
         Err(e) => println!("   ❌ Error: {e}"),
@@ -171,8 +176,9 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
                 if n <= 1:\n\
                     return n\n\
                 return fibonacci(n-1) + fibonacci(n-2)\n\
-            ```"
-        ).build(),
+            ```",
+        )
+        .build(),
     ];
 
     match ai.chat(code_messages).await {
@@ -190,7 +196,7 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
 /// Demo safety settings and content filtering
 async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Testing safety settings and content filtering...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -205,14 +211,18 @@ async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::E
     let safe_messages = vec![
         ChatMessage::user(
             "Explain the importance of online safety for children \
-            and provide some practical tips for parents."
-        ).build(),
+            and provide some practical tips for parents.",
+        )
+        .build(),
     ];
 
     match ai.chat(safe_messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
-                println!("   🛡️ Safety guidance provided: {}", &text[..text.len().min(100)]);
+                println!(
+                    "   🛡️ Safety guidance provided: {}",
+                    &text[..text.len().min(100)]
+                );
             }
         }
         Err(e) => println!("   ❌ Error: {e}"),
@@ -223,14 +233,18 @@ async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::E
     let educational_messages = vec![
         ChatMessage::user(
             "Explain the historical significance of the civil rights movement \
-            in the United States, focusing on key achievements and ongoing challenges."
-        ).build(),
+            in the United States, focusing on key achievements and ongoing challenges.",
+        )
+        .build(),
     ];
 
     match ai.chat(educational_messages).await {
         Ok(response) => {
             if let Some(text) = response.text() {
-                println!("   📚 Educational content: {}", &text[..text.len().min(100)]);
+                println!(
+                    "   📚 Educational content: {}",
+                    &text[..text.len().min(100)]
+                );
             }
         }
         Err(e) => println!("   ❌ Error: {e}"),
@@ -249,10 +263,10 @@ async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::E
 /// Demo performance optimization techniques
 async fn demo_performance_optimization(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating performance optimization techniques...");
-    
+
     // Optimization 1: Model selection for task complexity
     println!("   Optimization 1: Model selection based on task");
-    
+
     let fast_ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -275,14 +289,17 @@ async fn demo_performance_optimization(api_key: &str) -> Result<(), Box<dyn std:
 
     // Optimization 2: Batch processing
     println!("   Optimization 2: Batch processing multiple questions");
-    
-    let batch_questions = vec![ChatMessage::user(
-        "Answer these geography questions briefly:\n\
+
+    let batch_questions = vec![
+        ChatMessage::user(
+            "Answer these geography questions briefly:\n\
         1. What is the largest ocean?\n\
         2. Which continent has the most countries?\n\
         3. What is the highest mountain?\n\
-        4. Which river is the longest?"
-    ).build()];
+        4. Which river is the longest?",
+        )
+        .build(),
+    ];
 
     match fast_ai.chat(batch_questions).await {
         Ok(response) => {
@@ -314,7 +331,7 @@ async fn demo_performance_optimization(api_key: &str) -> Result<(), Box<dyn std:
 /// Demo Google-specific features
 async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::Error>> {
     println!("   Exploring Google-specific capabilities...");
-    
+
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
@@ -330,22 +347,27 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
         ChatMessage::system(
             "You are a research assistant helping with a comprehensive analysis. \
             You can handle large amounts of context and maintain coherence \
-            across long conversations."
-        ).build(),
+            across long conversations.",
+        )
+        .build(),
         ChatMessage::user(
             "I'm researching the impact of artificial intelligence on various industries. \
             Can you provide a structured analysis covering healthcare, finance, \
             education, and transportation? For each industry, discuss current applications, \
-            benefits, challenges, and future prospects."
-        ).build(),
+            benefits, challenges, and future prospects.",
+        )
+        .build(),
     ];
 
     match ai.chat(context_test).await {
         Ok(response) => {
             if let Some(text) = response.text() {
-                println!("   📚 Comprehensive analysis provided ({} words)", 
-                        text.split_whitespace().count());
-                println!("   Structure: {}",
+                println!(
+                    "   📚 Comprehensive analysis provided ({} words)",
+                    text.split_whitespace().count()
+                );
+                println!(
+                    "   Structure: {}",
                     if text.contains("Healthcare") && text.contains("Finance") {
                         "Well-organized multi-industry analysis"
                     } else {
@@ -364,15 +386,17 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
             "Compare and contrast renewable energy sources (solar, wind, hydro) \
             considering factors like efficiency, environmental impact, cost, \
             and scalability. Provide a reasoned recommendation for a country \
-            with diverse geography and moderate climate."
-        ).build(),
+            with diverse geography and moderate climate.",
+        )
+        .build(),
     ];
 
     match ai.chat(reasoning_test).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🧠 Reasoning analysis completed");
-                println!("   Analysis includes: {}",
+                println!(
+                    "   Analysis includes: {}",
                     if text.contains("compare") || text.contains("recommendation") {
                         "Comparative analysis and recommendations"
                     } else {
@@ -390,15 +414,17 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
         ChatMessage::user(
             "Explain how AI assistants like Claude could integrate with \
             productivity tools and workflows \
-            to enhance efficiency. Provide specific use case examples."
-        ).build(),
+            to enhance efficiency. Provide specific use case examples.",
+        )
+        .build(),
     ];
 
     match ai.chat(integration_test).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🔗 Integration insights provided");
-                println!("   Focus: {}",
+                println!(
+                    "   Focus: {}",
                     if text.contains("Workspace") || text.contains("workflow") {
                         "Practical integration scenarios"
                     } else {

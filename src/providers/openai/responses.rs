@@ -282,8 +282,11 @@ impl OpenAiResponses {
             model: Some(self.config.common_params.model.clone()),
             usage,
             finish_reason: None, // TODO: Extract finish reason
-            tool_calls: None, // TODO: Extract tool calls from response
-            thinking: provider_data.get("reasoning").and_then(|v| v.as_str()).map(std::string::ToString::to_string),
+            tool_calls: None,    // TODO: Extract tool calls from response
+            thinking: provider_data
+                .get("reasoning")
+                .and_then(|v| v.as_str())
+                .map(std::string::ToString::to_string),
             metadata: provider_data,
         })
     }
@@ -474,9 +477,7 @@ impl OpenAiResponses {
                                 .map(|v| v as u32),
                             cached_tokens: None,
                         };
-                        events.push(crate::stream::ChatStreamEvent::Usage {
-                            usage: usage_info,
-                        });
+                        events.push(crate::stream::ChatStreamEvent::Usage { usage: usage_info });
                     }
                 }
             }

@@ -167,11 +167,15 @@ impl GeminiFiles {
     /// Validate file upload request
     fn validate_upload_request(&self, request: &FileUploadRequest) -> Result<(), LlmError> {
         if request.content.is_empty() {
-            return Err(LlmError::InvalidInput("File content cannot be empty".to_string()));
+            return Err(LlmError::InvalidInput(
+                "File content cannot be empty".to_string(),
+            ));
         }
 
         if request.filename.is_empty() {
-            return Err(LlmError::InvalidInput("Filename cannot be empty".to_string()));
+            return Err(LlmError::InvalidInput(
+                "Filename cannot be empty".to_string(),
+            ));
         }
 
         // Check file size limits (Gemini has specific limits)
@@ -197,21 +201,20 @@ impl FileManagementCapability for GeminiFiles {
 
         // Note: Gemini's file upload is typically done via multipart/form-data
         // but the exact implementation may vary. For now, we'll implement a basic version.
-        
+
         // Create multipart form
-        let form = reqwest::multipart::Form::new()
-            .part(
-                "file",
-                reqwest::multipart::Part::bytes(request.content)
-                    .file_name(request.filename.clone())
-                    .mime_str(
-                        request
-                            .mime_type
-                            .as_deref()
-                            .unwrap_or("application/octet-stream"),
-                    )
-                    .map_err(|e| LlmError::HttpError(format!("Invalid MIME type: {e}")))?,
-            );
+        let form = reqwest::multipart::Form::new().part(
+            "file",
+            reqwest::multipart::Part::bytes(request.content)
+                .file_name(request.filename.clone())
+                .mime_str(
+                    request
+                        .mime_type
+                        .as_deref()
+                        .unwrap_or("application/octet-stream"),
+                )
+                .map_err(|e| LlmError::HttpError(format!("Invalid MIME type: {e}")))?,
+        );
 
         // Add metadata if provided
         let mut form = form;
@@ -233,9 +236,10 @@ impl FileManagementCapability for GeminiFiles {
             return Err(self.handle_response_error(response).await);
         }
 
-        let create_response: CreateFileResponse = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse upload response: {e}"))
-        })?;
+        let create_response: CreateFileResponse = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse upload response: {e}")))?;
 
         let gemini_file = create_response
             .file
@@ -247,7 +251,7 @@ impl FileManagementCapability for GeminiFiles {
     /// List files with optional filtering.
     async fn list_files(&self, query: Option<FileListQuery>) -> Result<FileListResponse, LlmError> {
         let mut endpoint = "files".to_string();
-        
+
         // Add query parameters
         let mut params = Vec::new();
         if let Some(q) = &query {
@@ -274,9 +278,10 @@ impl FileManagementCapability for GeminiFiles {
             return Err(self.handle_response_error(response).await);
         }
 
-        let list_response: ListFilesResponse = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse list response: {e}"))
-        })?;
+        let list_response: ListFilesResponse = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse list response: {e}")))?;
 
         let files: Vec<FileObject> = list_response
             .files
@@ -311,9 +316,10 @@ impl FileManagementCapability for GeminiFiles {
             return Err(self.handle_response_error(response).await);
         }
 
-        let gemini_file: GeminiFile = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse file response: {e}"))
-        })?;
+        let gemini_file: GeminiFile = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse file response: {e}")))?;
 
         Ok(self.convert_gemini_file_to_file_object(gemini_file))
     }
@@ -433,7 +439,7 @@ impl GeminiFiles {
                 "failed" => {
                     return Err(LlmError::ProcessingError(
                         "File processing failed".to_string(),
-                    ))
+                    ));
                 }
                 "processing" => {
                     // Continue waiting
@@ -450,7 +456,7 @@ impl GeminiFiles {
                     return Err(LlmError::ProcessingError(format!(
                         "Unknown file status: {}",
                         file.status
-                    )))
+                    )));
                 }
             }
         }

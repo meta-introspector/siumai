@@ -71,14 +71,14 @@ async fn quick_client_creation(api_key: &str) -> Result<(), Box<dyn std::error::
         .model("gpt-4o-mini")
         .build()
         .await?;
-    
+
     println!("   ✅ Created OpenAI client with default settings");
 
     // Test the quick client
-    let response = openai_client.chat(vec![
-        ChatMessage::user("What is 2+2?").build()
-    ]).await?;
-    
+    let response = openai_client
+        .chat(vec![ChatMessage::user("What is 2+2?").build()])
+        .await?;
+
     if let Some(text) = response.text() {
         println!("   🤖 Quick response: {}", text.trim());
     }
@@ -126,7 +126,10 @@ async fn common_task_helpers(api_key: &str) -> Result<(), Box<dyn std::error::Er
     // Helper 3: Explanation
     println!("   💡 Explanation helper:");
     let response = explain(&ai, "blockchain", "a beginner").await?;
-    println!("      Explanation: {}", &response[..response.len().min(100)]);
+    println!(
+        "      Explanation: {}",
+        &response[..response.len().min(100)]
+    );
 
     // Helper 4: Creative generation
     println!("   🎨 Creative generation helper:");
@@ -151,10 +154,10 @@ async fn preset_configurations(api_key: &str) -> Result<(), Box<dyn std::error::
         .build()
         .await?;
 
-    let response = fast_ai.chat(vec![
-        ChatMessage::user("Say hello briefly").build()
-    ]).await?;
-    
+    let response = fast_ai
+        .chat(vec![ChatMessage::user("Say hello briefly").build()])
+        .await?;
+
     if let Some(text) = response.text() {
         println!("      Response: {}", text.trim());
     }
@@ -205,17 +208,22 @@ fn message_creation_shortcuts() {
     let conversation = vec![
         ChatMessage::system("You are a helpful coding assistant").build(),
         ChatMessage::user("How do I create a vector in Rust?").build(),
-        ChatMessage::assistant("You can create a vector using Vec::new() or the vec! macro.").build(),
+        ChatMessage::assistant("You can create a vector using Vec::new() or the vec! macro.")
+            .build(),
         ChatMessage::user("Can you show me an example?").build(),
     ];
 
-    println!("   💬 Built conversation with {} messages", conversation.len());
+    println!(
+        "   💬 Built conversation with {} messages",
+        conversation.len()
+    );
 
     // Message with context
     let contextual_message = ChatMessage::user(
         "Based on our previous discussion about vectors, \
-        how do I add elements to a vector?"
-    ).build();
+        how do I add elements to a vector?",
+    )
+    .build();
 
     println!("   🔗 Created contextual message");
 }
@@ -234,9 +242,7 @@ async fn conversation_helpers(api_key: &str) -> Result<(), Box<dyn std::error::E
         .await?;
 
     // Start a conversation
-    let mut conversation = vec![
-        ChatMessage::system("You are a helpful programming tutor").build(),
-    ];
+    let mut conversation = vec![ChatMessage::system("You are a helpful programming tutor").build()];
 
     // Helper function to continue conversation
     println!("   🗣️ Starting conversation:");
@@ -255,32 +261,49 @@ async fn conversation_helpers(api_key: &str) -> Result<(), Box<dyn std::error::E
 // Helper functions
 
 /// Simple ask helper
-async fn simple_ask<T: ChatCapability + Sync>(ai: &T, question: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn simple_ask<T: ChatCapability + Sync>(
+    ai: &T,
+    question: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let response = ai.chat(vec![ChatMessage::user(question).build()]).await?;
     Ok(response.text().unwrap_or_default())
 }
 
 /// Translation helper
-async fn translate<T: ChatCapability + Sync>(ai: &T, text: &str, target_language: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn translate<T: ChatCapability + Sync>(
+    ai: &T,
+    text: &str,
+    target_language: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let prompt = format!("Translate this text to {target_language}: {text}");
     let response = ai.chat(vec![ChatMessage::user(&prompt).build()]).await?;
     Ok(response.text().unwrap_or_default())
 }
 
 /// Explanation helper
-async fn explain<T: ChatCapability + Sync>(ai: &T, topic: &str, audience: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn explain<T: ChatCapability + Sync>(
+    ai: &T,
+    topic: &str,
+    audience: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let prompt = format!("Explain {topic} to {audience}");
     let response = ai.chat(vec![ChatMessage::user(&prompt).build()]).await?;
     Ok(response.text().unwrap_or_default())
 }
 
 /// Creative generation helper
-async fn generate_creative<T: ChatCapability + Sync>(ai: &T, content_type: &str, topic: &str) -> Result<String, Box<dyn std::error::Error>> {
+async fn generate_creative<T: ChatCapability + Sync>(
+    ai: &T,
+    content_type: &str,
+    topic: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let prompt = format!("Write a {content_type} about {topic}");
-    let response = ai.chat(vec![
-        ChatMessage::system("You are a creative writer").build(),
-        ChatMessage::user(&prompt).build()
-    ]).await?;
+    let response = ai
+        .chat(vec![
+            ChatMessage::system("You are a creative writer").build(),
+            ChatMessage::user(&prompt).build(),
+        ])
+        .await?;
     Ok(response.text().unwrap_or_default())
 }
 
@@ -288,7 +311,7 @@ async fn generate_creative<T: ChatCapability + Sync>(ai: &T, content_type: &str,
 async fn continue_conversation<T: ChatCapability + Sync>(
     ai: &T,
     conversation: &mut Vec<ChatMessage>,
-    user_input: &str
+    user_input: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     // Add user message
     conversation.push(ChatMessage::user(user_input).build());

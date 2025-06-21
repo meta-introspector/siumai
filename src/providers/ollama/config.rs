@@ -2,8 +2,8 @@
 //!
 //! Configuration structures and builders for Ollama provider.
 
-use crate::types::{CommonParams, HttpConfig};
 use crate::error::LlmError;
+use crate::types::{CommonParams, HttpConfig};
 
 /// Ollama provider configuration
 #[derive(Debug, Clone)]
@@ -245,7 +245,9 @@ impl OllamaConfigBuilder {
         }
 
         let config = OllamaConfig {
-            base_url: self.base_url.unwrap_or_else(|| "http://localhost:11434".to_string()),
+            base_url: self
+                .base_url
+                .unwrap_or_else(|| "http://localhost:11434".to_string()),
             model: self.model,
             common_params,
             http_config: self.http_config.unwrap_or_default(),
@@ -276,7 +278,10 @@ mod tests {
             .keep_alive("10m")
             .raw(true)
             .format("json")
-            .option("temperature", serde_json::Value::Number(serde_json::Number::from_f64(0.7).unwrap()))
+            .option(
+                "temperature",
+                serde_json::Value::Number(serde_json::Number::from_f64(0.7).unwrap()),
+            )
             .build()
             .unwrap();
 
@@ -289,14 +294,10 @@ mod tests {
 
     #[test]
     fn test_config_validation() {
-        let config = OllamaConfig::builder()
-            .base_url("")
-            .build();
+        let config = OllamaConfig::builder().base_url("").build();
         assert!(config.is_err());
 
-        let config = OllamaConfig::builder()
-            .base_url("invalid-url")
-            .build();
+        let config = OllamaConfig::builder().base_url("invalid-url").build();
         assert!(config.is_err());
     }
 }

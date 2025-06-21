@@ -4,18 +4,20 @@
 
 use async_trait::async_trait;
 
-use crate::error::LlmError;
 use crate::LlmClient;
+use crate::error::LlmError;
 use crate::stream::ChatStream;
-use crate::traits::{ChatCapability, EmbeddingCapability, LlmProvider, ModelListingCapability, ProviderCapabilities};
+use crate::traits::{
+    ChatCapability, EmbeddingCapability, LlmProvider, ModelListingCapability, ProviderCapabilities,
+};
 use crate::types::*;
 
 use super::chat::OllamaChatCapability;
 use super::completion::OllamaCompletionCapability;
 use super::config::{OllamaConfig, OllamaParams};
 use super::embeddings::OllamaEmbeddingCapability;
-use super::models::OllamaModelsCapability;
 use super::get_default_models;
+use super::models::OllamaModelsCapability;
 
 /// Ollama Client
 #[allow(dead_code)]
@@ -170,7 +172,7 @@ impl OllamaClient {
     /// Check if Ollama server is running
     pub async fn health_check(&self) -> Result<bool, LlmError> {
         let url = format!("{}/api/version", self.base_url);
-        
+
         match self.http_client.get(&url).send().await {
             Ok(response) => Ok(response.status().is_success()),
             Err(_) => Ok(false),
@@ -180,11 +182,8 @@ impl OllamaClient {
     /// Get Ollama version
     pub async fn version(&self) -> Result<String, LlmError> {
         let url = format!("{}/api/version", self.base_url);
-        
-        let response = self.http_client
-            .get(&url)
-            .send()
-            .await?;
+
+        let response = self.http_client.get(&url).send().await?;
 
         if !response.status().is_success() {
             return Err(LlmError::HttpError(format!(
@@ -237,7 +236,9 @@ impl ChatCapability for OllamaClient {
         };
         request.stream = true;
 
-        let headers = crate::providers::ollama::utils::build_headers(&self.chat_capability.http_config.headers)?;
+        let headers = crate::providers::ollama::utils::build_headers(
+            &self.chat_capability.http_config.headers,
+        )?;
         let body = self.chat_capability.build_chat_request_body(&request)?;
         let url = format!("{}/api/chat", self.base_url);
 
@@ -260,28 +261,33 @@ impl ChatCapability for OllamaClient {
         // Create stream from response
         use futures_util::StreamExt;
         let stream = response.bytes_stream();
-        let mapped_stream = stream.map(|chunk_result| {
-            match chunk_result {
-                Ok(chunk) => {
-                    let chunk_str = String::from_utf8_lossy(&chunk);
-                    for line in chunk_str.lines() {
-                        if let Ok(Some(json_value)) = crate::providers::ollama::utils::parse_streaming_line(line) {
-                            if let Ok(ollama_response) = serde_json::from_value::<crate::providers::ollama::types::OllamaChatResponse>(json_value) {
-                                let content_delta = ollama_response.message.content.clone();
-                                return Ok(crate::types::ChatStreamEvent::ContentDelta {
-                                    delta: content_delta,
-                                    index: Some(0),
-                                });
-                            }
+        let mapped_stream = stream.map(|chunk_result| match chunk_result {
+            Ok(chunk) => {
+                let chunk_str = String::from_utf8_lossy(&chunk);
+                for line in chunk_str.lines() {
+                    if let Ok(Some(json_value)) =
+                        crate::providers::ollama::utils::parse_streaming_line(line)
+                    {
+                        if let Ok(ollama_response) = serde_json::from_value::<
+                            crate::providers::ollama::types::OllamaChatResponse,
+                        >(json_value)
+                        {
+                            let content_delta = ollama_response.message.content.clone();
+                            return Ok(crate::types::ChatStreamEvent::ContentDelta {
+                                delta: content_delta,
+                                index: Some(0),
+                            });
                         }
                     }
-                    Ok(crate::types::ChatStreamEvent::ContentDelta {
-                        delta: String::new(),
-                        index: Some(0),
-                    })
                 }
-                Err(e) => Err(crate::error::LlmError::StreamError(format!("Stream error: {e}"))),
+                Ok(crate::types::ChatStreamEvent::ContentDelta {
+                    delta: String::new(),
+                    index: Some(0),
+                })
             }
+            Err(e) => Err(crate::error::LlmError::StreamError(format!(
+                "Stream error: {e}"
+            ))),
         });
 
         Ok(Box::pin(mapped_stream))
@@ -370,7 +376,7 @@ mod tests {
     fn test_client_creation() {
         let config = OllamaConfig::default();
         let client = OllamaClient::new_with_config(config);
-        
+
         assert_eq!(LlmProvider::provider_name(&client), "ollama");
         assert_eq!(client.base_url(), "http://localhost:11434");
     }
@@ -385,7 +391,10 @@ mod tests {
             .with_keep_alive("10m")
             .with_raw(true)
             .with_format("json")
-            .with_option("top_p", serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()));
+            .with_option(
+                "top_p",
+                serde_json::Value::Number(serde_json::Number::from_f64(0.9).unwrap()),
+            );
 
         assert_eq!(client.common_params().model, "llama3.2".to_string());
         assert_eq!(client.common_params().temperature, Some(0.7));

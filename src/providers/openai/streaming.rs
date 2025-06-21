@@ -333,7 +333,10 @@ impl OpenAiStreaming {
                     return ChatStreamEvent::ToolCallDelta {
                         id: tool_call.id.unwrap_or_default(),
                         function_name: tool_call.function.as_ref().and_then(|f| f.name.clone()),
-                        arguments_delta: tool_call.function.as_ref().and_then(|f| f.arguments.clone()),
+                        arguments_delta: tool_call
+                            .function
+                            .as_ref()
+                            .and_then(|f| f.arguments.clone()),
                         index: Some(choice.index),
                     };
                 }

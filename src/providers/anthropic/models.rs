@@ -252,9 +252,12 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
         id if id.contains("claude-3-5-sonnet") => {
             (Some(200_000), Some(8192), Some(0.000_003), Some(0.000_015))
         }
-        id if id.contains("claude-3-5-haiku") => {
-            (Some(200_000), Some(8192), Some(0.000_000_25), Some(0.000_001_25))
-        }
+        id if id.contains("claude-3-5-haiku") => (
+            Some(200_000),
+            Some(8192),
+            Some(0.000_000_25),
+            Some(0.000_001_25),
+        ),
 
         // Claude 3 models
         id if id.contains("claude-3-opus") => {
@@ -263,9 +266,12 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
         id if id.contains("claude-3-sonnet") => {
             (Some(200_000), Some(4096), Some(0.000_003), Some(0.000_015))
         }
-        id if id.contains("claude-3-haiku") => {
-            (Some(200_000), Some(4096), Some(0.000_000_25), Some(0.000_001_25))
-        }
+        id if id.contains("claude-3-haiku") => (
+            Some(200_000),
+            Some(4096),
+            Some(0.000_000_25),
+            Some(0.000_001_25),
+        ),
 
         // Default for unknown models
         _ => (Some(200_000), Some(4096), None, None),

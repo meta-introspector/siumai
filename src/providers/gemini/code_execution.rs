@@ -212,7 +212,9 @@ impl CodeExecutionParser {
             .and_then(|e| e.as_str())
             .map(std::string::ToString::to_string);
 
-        let execution_time = data.get("execution_time").and_then(serde_json::Value::as_u64);
+        let execution_time = data
+            .get("execution_time")
+            .and_then(serde_json::Value::as_u64);
 
         let artifacts = data
             .get("artifacts")

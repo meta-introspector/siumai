@@ -21,8 +21,8 @@
 //! cargo run --example batch_processing
 //! ```
 
-use siumai::prelude::*;
 use futures::stream::{self, StreamExt};
+use siumai::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
@@ -50,12 +50,13 @@ async fn demonstrate_basic_batch_processing() {
     if let Ok(client) = create_test_client().await {
         // Create a batch of tasks
         let tasks = create_sample_tasks(10);
-        
+
         println!("   Processing {} tasks concurrently...", tasks.len());
         let start_time = Instant::now();
 
         // Process all tasks concurrently
-        let futures: Vec<_> = tasks.into_iter()
+        let futures: Vec<_> = tasks
+            .into_iter()
             .enumerate()
             .map(|(i, task)| {
                 let client = client.clone();
@@ -77,14 +78,16 @@ async fn demonstrate_basic_batch_processing() {
         println!("      ✅ Successful: {successful}");
         println!("      ❌ Failed: {failed}");
         println!("      ⏱️  Total time: {duration:?}");
-        println!("      📈 Throughput: {:.2} tasks/second", 
-            results.len() as f64 / duration.as_secs_f64());
+        println!(
+            "      📈 Throughput: {:.2} tasks/second",
+            results.len() as f64 / duration.as_secs_f64()
+        );
 
         println!("   ✅ Basic batch processing completed");
     } else {
         println!("   ⚠️  No client available for batch processing");
     }
-    
+
     println!();
 }
 
@@ -94,7 +97,7 @@ async fn demonstrate_rate_limited_processing() {
 
     if let Ok(client) = create_test_client().await {
         let tasks = create_sample_tasks(15);
-        
+
         println!("   Processing {} tasks with rate limiting...", tasks.len());
         let start_time = Instant::now();
 
@@ -102,9 +105,10 @@ async fn demonstrate_rate_limited_processing() {
         let results = process_with_rate_limiting(
             client,
             tasks,
-            3,                              // max concurrent
-            Duration::from_millis(500),     // delay between requests
-        ).await;
+            3,                          // max concurrent
+            Duration::from_millis(500), // delay between requests
+        )
+        .await;
 
         let duration = start_time.elapsed();
         let successful = results.iter().filter(|r| r.is_ok()).count();
@@ -114,14 +118,16 @@ async fn demonstrate_rate_limited_processing() {
         println!("      ✅ Successful: {successful}");
         println!("      ❌ Failed: {failed}");
         println!("      ⏱️  Total time: {duration:?}");
-        println!("      🐌 Controlled throughput: {:.2} tasks/second", 
-            results.len() as f64 / duration.as_secs_f64());
+        println!(
+            "      🐌 Controlled throughput: {:.2} tasks/second",
+            results.len() as f64 / duration.as_secs_f64()
+        );
 
         println!("   ✅ Rate-limited processing completed");
     } else {
         println!("   ⚠️  No client available for rate-limited processing");
     }
-    
+
     println!();
 }
 
@@ -131,8 +137,11 @@ async fn demonstrate_progress_tracking() {
 
     if let Ok(client) = create_test_client().await {
         let tasks = create_sample_tasks(20);
-        
-        println!("   Processing {} tasks with progress tracking...", tasks.len());
+
+        println!(
+            "   Processing {} tasks with progress tracking...",
+            tasks.len()
+        );
 
         let results = process_with_progress_tracking(client, tasks).await;
 
@@ -142,14 +151,16 @@ async fn demonstrate_progress_tracking() {
         println!("\n   📊 Final Results:");
         println!("      ✅ Successful: {successful}");
         println!("      ❌ Failed: {failed}");
-        println!("      📈 Success rate: {:.1}%", 
-            (successful as f64 / results.len() as f64) * 100.0);
+        println!(
+            "      📈 Success rate: {:.1}%",
+            (successful as f64 / results.len() as f64) * 100.0
+        );
 
         println!("   ✅ Progress tracking completed");
     } else {
         println!("   ⚠️  No client available for progress tracking");
     }
-    
+
     println!();
 }
 
@@ -162,7 +173,10 @@ async fn demonstrate_error_handling_at_scale() {
         let mut tasks = create_sample_tasks(10);
         tasks.extend(create_error_prone_tasks(5));
 
-        println!("   Processing {} tasks with robust error handling...", tasks.len());
+        println!(
+            "   Processing {} tasks with robust error handling...",
+            tasks.len()
+        );
 
         let results = process_with_error_handling(client, tasks).await;
 
@@ -188,7 +202,7 @@ async fn demonstrate_error_handling_at_scale() {
     } else {
         println!("   ⚠️  No client available for error handling demo");
     }
-    
+
     println!();
 }
 
@@ -214,7 +228,7 @@ async fn demonstrate_memory_efficient_processing() {
             println!("   Processing chunk {}-{}...", chunk_start + 1, chunk_end);
 
             let chunk_results = process_chunk(client.clone(), chunk_tasks).await;
-            
+
             let chunk_successful = chunk_results.iter().filter(|r| r.is_ok()).count();
             let chunk_failed = chunk_results.len() - chunk_successful;
 
@@ -239,7 +253,7 @@ async fn demonstrate_memory_efficient_processing() {
     } else {
         println!("   ⚠️  No client available for memory-efficient processing");
     }
-    
+
     println!();
 }
 
@@ -264,21 +278,29 @@ async fn create_test_client() -> Result<Arc<dyn ChatCapability>, LlmError> {
             .await?;
         Ok(Arc::new(client) as Arc<dyn ChatCapability>)
     } else {
-        Err(LlmError::AuthenticationError("No API key available".to_string()))
+        Err(LlmError::AuthenticationError(
+            "No API key available".to_string(),
+        ))
     }
 }
 
 /// Create sample tasks for processing
 fn create_sample_tasks(count: usize) -> Vec<String> {
     (1..=count)
-        .map(|i| format!("Task {}: What is {}+{}? Answer briefly.", i, i, i+1))
+        .map(|i| format!("Task {}: What is {}+{}? Answer briefly.", i, i, i + 1))
         .collect()
 }
 
 /// Create tasks that are likely to cause errors
 fn create_error_prone_tasks(count: usize) -> Vec<String> {
     (1..=count)
-        .map(|i| format!("Error task {}: [This might cause an error] Process this: {}", i, "x".repeat(1000)))
+        .map(|i| {
+            format!(
+                "Error task {}: [This might cause an error] Process this: {}",
+                i,
+                "x".repeat(1000)
+            )
+        })
         .collect()
 }
 
@@ -321,7 +343,8 @@ async fn process_with_progress_tracking(
     let total = tasks.len();
     let mut completed = 0;
 
-    let futures: Vec<_> = tasks.into_iter()
+    let futures: Vec<_> = tasks
+        .into_iter()
         .map(|task| {
             let client = client.clone();
             async move {
@@ -332,18 +355,18 @@ async fn process_with_progress_tracking(
         .collect();
 
     let mut results = Vec::new();
-    
+
     for future in futures {
         let result = future.await;
         completed += 1;
-        
+
         let progress = (completed as f64 / total as f64) * 100.0;
         print!("\r   Progress: {progress:.1}% ({completed}/{total})");
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
-        
+
         results.push(result);
     }
-    
+
     println!(); // New line after progress
     results
 }
@@ -353,7 +376,8 @@ async fn process_with_error_handling(
     client: Arc<dyn ChatCapability>,
     tasks: Vec<String>,
 ) -> Vec<Result<String, LlmError>> {
-    let futures: Vec<_> = tasks.into_iter()
+    let futures: Vec<_> = tasks
+        .into_iter()
         .map(|task| {
             let client = client.clone();
             async move {
@@ -381,12 +405,11 @@ async fn process_chunk(
     client: Arc<dyn ChatCapability>,
     tasks: Vec<String>,
 ) -> Vec<Result<String, LlmError>> {
-    let futures: Vec<_> = tasks.into_iter()
+    let futures: Vec<_> = tasks
+        .into_iter()
         .map(|task| {
             let client = client.clone();
-            async move {
-                process_single_task(client.as_ref(), &task).await
-            }
+            async move { process_single_task(client.as_ref(), &task).await }
         })
         .collect();
 

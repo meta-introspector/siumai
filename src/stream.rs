@@ -67,12 +67,14 @@ impl StreamProcessor {
                     index,
                 }
             }
-            ChatStreamEvent::ToolCallDelta { id, function_name, arguments_delta, index } => {
+            ChatStreamEvent::ToolCallDelta {
+                id,
+                function_name,
+                arguments_delta,
+                index,
+            } => {
                 let call_id = id.clone();
-                let builder = self
-                    .tool_calls
-                    .entry(call_id.clone())
-                    .or_default();
+                let builder = self.tool_calls.entry(call_id.clone()).or_default();
 
                 builder.id = call_id.clone();
 
@@ -123,13 +125,12 @@ impl StreamProcessor {
                     usage: self.current_usage.clone().unwrap(),
                 }
             }
-            ChatStreamEvent::StreamStart { metadata } => {
-                ProcessedEvent::StreamStart { metadata }
-            }
-            ChatStreamEvent::StreamEnd { response } => {
-                ProcessedEvent::StreamEnd { response }
-            }
-            ChatStreamEvent::Done { finish_reason, usage } => {
+            ChatStreamEvent::StreamStart { metadata } => ProcessedEvent::StreamStart { metadata },
+            ChatStreamEvent::StreamEnd { response } => ProcessedEvent::StreamEnd { response },
+            ChatStreamEvent::Done {
+                finish_reason,
+                usage,
+            } => {
                 if let Some(usage) = usage {
                     if let Some(ref mut current) = self.current_usage {
                         current.merge(&usage);
@@ -138,11 +139,11 @@ impl StreamProcessor {
                     }
                 }
                 ProcessedEvent::StreamEnd {
-                    response: self.build_final_response_with_finish_reason(finish_reason)
+                    response: self.build_final_response_with_finish_reason(finish_reason),
                 }
             }
             ChatStreamEvent::Error { error } => ProcessedEvent::Error {
-                error: LlmError::InternalError(error)
+                error: LlmError::InternalError(error),
             },
         }
     }
@@ -153,7 +154,10 @@ impl StreamProcessor {
     }
 
     /// Build the final response with finish reason
-    pub fn build_final_response_with_finish_reason(&self, finish_reason: Option<FinishReason>) -> ChatResponse {
+    pub fn build_final_response_with_finish_reason(
+        &self,
+        finish_reason: Option<FinishReason>,
+    ) -> ChatResponse {
         let mut metadata = HashMap::new();
 
         if !self.thinking_buffer.is_empty() {

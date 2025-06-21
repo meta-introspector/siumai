@@ -17,8 +17,8 @@
 //! cargo run --example basic_chat
 //! ```
 
-use siumai::prelude::*;
 use siumai::params::ResponseFormat;
+use siumai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -71,20 +71,22 @@ async fn demonstrate_model_selection(api_key: &str) {
         {
             Ok(client) => {
                 let messages = vec![user!(test_prompt)];
-                
+
                 let start_time = std::time::Instant::now();
                 match client.chat(messages).await {
                     Ok(response) => {
                         let duration = start_time.elapsed();
-                        
+
                         if let Some(text) = response.content_text() {
                             println!("      Response: {text}");
                         }
-                        
+
                         if let Some(usage) = &response.usage {
-                            println!("      Tokens: {} total ({} prompt + {} completion)", 
-                                usage.total_tokens, usage.prompt_tokens, usage.completion_tokens);
-                            
+                            println!(
+                                "      Tokens: {} total ({} prompt + {} completion)",
+                                usage.total_tokens, usage.prompt_tokens, usage.completion_tokens
+                            );
+
                             // Estimate cost (approximate rates)
                             let cost = match model {
                                 "gpt-4o-mini" => usage.total_tokens as f64 * 0.00015 / 1000.0,
@@ -94,7 +96,7 @@ async fn demonstrate_model_selection(api_key: &str) {
                             };
                             println!("      Estimated cost: ${cost:.6}");
                         }
-                        
+
                         println!("      Response time: {}ms", duration.as_millis());
                         println!("      ✅ Success");
                     }
@@ -116,9 +118,21 @@ async fn demonstrate_parameter_tuning(api_key: &str) {
     println!("🎛️ Parameter Tuning:\n");
 
     let scenarios = vec![
-        ("Creative Writing", 0.9, "Write a creative short story opening about a time traveler."),
-        ("Technical Analysis", 0.1, "Explain the technical differences between REST and GraphQL APIs."),
-        ("Balanced Response", 0.5, "What are the pros and cons of remote work?"),
+        (
+            "Creative Writing",
+            0.9,
+            "Write a creative short story opening about a time traveler.",
+        ),
+        (
+            "Technical Analysis",
+            0.1,
+            "Explain the technical differences between REST and GraphQL APIs.",
+        ),
+        (
+            "Balanced Response",
+            0.5,
+            "What are the pros and cons of remote work?",
+        ),
     ];
 
     for (scenario, temperature, prompt) in scenarios {
@@ -135,7 +149,7 @@ async fn demonstrate_parameter_tuning(api_key: &str) {
         {
             Ok(client) => {
                 let messages = vec![user!(prompt)];
-                
+
                 match client.chat(messages).await {
                     Ok(response) => {
                         if let Some(text) = response.content_text() {
@@ -166,9 +180,21 @@ async fn demonstrate_token_optimization(api_key: &str) {
     println!("🔧 Token Optimization:\n");
 
     let optimization_strategies = vec![
-        ("Unlimited tokens", None, "Write a comprehensive guide about machine learning."),
-        ("Limited tokens", Some(50), "Write a comprehensive guide about machine learning."),
-        ("Concise prompt", Some(100), "Explain machine learning briefly."),
+        (
+            "Unlimited tokens",
+            None,
+            "Write a comprehensive guide about machine learning.",
+        ),
+        (
+            "Limited tokens",
+            Some(50),
+            "Write a comprehensive guide about machine learning.",
+        ),
+        (
+            "Concise prompt",
+            Some(100),
+            "Explain machine learning briefly.",
+        ),
     ];
 
     for (strategy, max_tokens, prompt) in optimization_strategies {
@@ -187,7 +213,7 @@ async fn demonstrate_token_optimization(api_key: &str) {
         match builder.build().await {
             Ok(client) => {
                 let messages = vec![user!(prompt)];
-                
+
                 match client.chat(messages).await {
                     Ok(response) => {
                         if let Some(text) = response.content_text() {
@@ -199,13 +225,16 @@ async fn demonstrate_token_optimization(api_key: &str) {
                             };
                             println!("      Preview: {preview}");
                         }
-                        
+
                         if let Some(usage) = &response.usage {
                             println!("      Token usage: {} total", usage.total_tokens);
-                            println!("      Efficiency: {:.2} chars/token", 
-                                response.content_text().map_or(0.0, |t| t.len() as f64) / usage.total_tokens as f64);
+                            println!(
+                                "      Efficiency: {:.2} chars/token",
+                                response.content_text().map_or(0.0, |t| t.len() as f64)
+                                    / usage.total_tokens as f64
+                            );
                         }
-                        
+
                         println!("      ✅ Success");
                     }
                     Err(e) => {
@@ -229,10 +258,10 @@ async fn demonstrate_response_formats(api_key: &str) {
     println!("   Format: Standard Text");
     match create_openai_client(api_key, "gpt-4o-mini").await {
         Ok(client) => {
-            let messages = vec![
-                user!("What are the three primary colors? Answer in a simple list.")
-            ];
-            
+            let messages = vec![user!(
+                "What are the three primary colors? Answer in a simple list."
+            )];
+
             match client.chat(messages).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
@@ -262,10 +291,12 @@ async fn demonstrate_response_formats(api_key: &str) {
     {
         Ok(client) => {
             let messages = vec![
-                system!("Respond in valid JSON format with 'colors' array containing the three primary colors."),
-                user!("What are the three primary colors?")
+                system!(
+                    "Respond in valid JSON format with 'colors' array containing the three primary colors."
+                ),
+                user!("What are the three primary colors?"),
             ];
-            
+
             match client.chat(messages).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
@@ -282,7 +313,7 @@ async fn demonstrate_response_formats(api_key: &str) {
             println!("      ❌ JSON client creation failed: {e}");
         }
     }
-    
+
     println!();
 }
 
@@ -293,13 +324,13 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
     match create_openai_client(api_key, "gpt-4o-mini").await {
         Ok(client) => {
             // Build a conversation step by step
-            let mut conversation = vec![
-                system!("You are a helpful math tutor. Keep responses concise and encouraging.")
-            ];
+            let mut conversation = vec![system!(
+                "You are a helpful math tutor. Keep responses concise and encouraging."
+            )];
 
             // First exchange
             conversation.push(user!("I need help with algebra. What are variables?"));
-            
+
             match client.chat(conversation.clone()).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
@@ -316,7 +347,7 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
 
             // Second exchange - AI remembers context
             conversation.push(user!("Can you give me a simple example with variables?"));
-            
+
             match client.chat(conversation.clone()).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
@@ -333,7 +364,7 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
 
             // Third exchange - test memory
             conversation.push(user!("What was my original question?"));
-            
+
             match client.chat(conversation).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
@@ -351,7 +382,7 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
             println!("   ❌ Client creation failed: {e}");
         }
     }
-    
+
     println!();
 }
 

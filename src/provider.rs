@@ -59,8 +59,6 @@ impl Siumai {
         }
     }
 
-
-
     /// Check if a capability is supported
     pub fn supports(&self, capability: &str) -> bool {
         self.metadata.capabilities.supports(capability)
@@ -75,8 +73,6 @@ impl Siumai {
     pub fn client(&self) -> &dyn LlmClient {
         self.client.as_ref()
     }
-
-
 
     /// Type-safe audio capability access
     ///
@@ -101,8 +97,6 @@ impl Siumai {
     pub fn vision_capability(&self) -> VisionCapabilityProxy {
         VisionCapabilityProxy::new(self, self.supports("vision"))
     }
-
-
 }
 
 #[async_trait::async_trait]
@@ -340,15 +334,18 @@ impl SiumaiBuilder {
             LlmError::ConfigurationError("Provider type not specified".to_string())
         })?;
 
-        let api_key = self.api_key.ok_or_else(|| {
-            LlmError::ConfigurationError("API key not specified".to_string())
-        })?;
+        let api_key = self
+            .api_key
+            .ok_or_else(|| LlmError::ConfigurationError("API key not specified".to_string()))?;
 
         // Create the appropriate client based on provider type
         let client: Box<dyn LlmClient> = match provider_type {
             ProviderType::OpenAi => {
                 let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
-                    .with_base_url(self.base_url.unwrap_or_else(|| "https://api.openai.com/v1".to_string()))
+                    .with_base_url(
+                        self.base_url
+                            .unwrap_or_else(|| "https://api.openai.com/v1".to_string()),
+                    )
                     .with_model(self.model.unwrap_or_else(|| "gpt-4o-mini".to_string()));
 
                 // Set common parameters
@@ -368,11 +365,18 @@ impl SiumaiBuilder {
                 }
 
                 let http_client = reqwest::Client::new();
-                Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
-            },
+                Box::new(crate::providers::openai::OpenAiClient::new(
+                    config,
+                    http_client,
+                ))
+            }
             ProviderType::Anthropic => {
-                let base_url = self.base_url.unwrap_or_else(|| "https://api.anthropic.com".to_string());
-                let model = self.model.unwrap_or_else(|| "claude-3-5-sonnet-20241022".to_string());
+                let base_url = self
+                    .base_url
+                    .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+                let model = self
+                    .model
+                    .unwrap_or_else(|| "claude-3-5-sonnet-20241022".to_string());
 
                 // Set model in common params
                 let mut common_params = self.common_params;
@@ -387,19 +391,21 @@ impl SiumaiBuilder {
                     crate::params::AnthropicParams::default(),
                     self.http_config,
                 ))
-            },
+            }
             ProviderType::Gemini => {
                 return Err(LlmError::UnsupportedOperation(
                     "Gemini provider not yet implemented in unified interface".to_string(),
                 ));
-            },
+            }
             ProviderType::XAI => {
                 return Err(LlmError::UnsupportedOperation(
                     "xAI provider not yet implemented in unified interface".to_string(),
                 ));
-            },
+            }
             ProviderType::Ollama => {
-                let base_url = self.base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
+                let base_url = self
+                    .base_url
+                    .unwrap_or_else(|| "http://localhost:11434".to_string());
                 let model = self.model.unwrap_or_else(|| "llama3.2:latest".to_string());
 
                 // Set model in common params
@@ -415,14 +421,20 @@ impl SiumaiBuilder {
                 };
 
                 let http_client = reqwest::Client::new();
-                Box::new(crate::providers::ollama::OllamaClient::new(config, http_client))
-            },
+                Box::new(crate::providers::ollama::OllamaClient::new(
+                    config,
+                    http_client,
+                ))
+            }
             ProviderType::Custom(name) => {
                 match name.as_str() {
                     "deepseek" => {
                         // Use OpenAI-compatible client for DeepSeek
                         let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
-                            .with_base_url(self.base_url.unwrap_or_else(|| "https://api.deepseek.com".to_string()))
+                            .with_base_url(
+                                self.base_url
+                                    .unwrap_or_else(|| "https://api.deepseek.com".to_string()),
+                            )
                             .with_model(self.model.unwrap_or_else(|| "deepseek-chat".to_string()));
 
                         // Set common parameters
@@ -434,13 +446,22 @@ impl SiumaiBuilder {
                         }
 
                         let http_client = reqwest::Client::new();
-                        Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
-                    },
+                        Box::new(crate::providers::openai::OpenAiClient::new(
+                            config,
+                            http_client,
+                        ))
+                    }
                     "openrouter" => {
                         // Use OpenAI-compatible client for OpenRouter
                         let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
-                            .with_base_url(self.base_url.unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string()))
-                            .with_model(self.model.unwrap_or_else(|| "openai/gpt-3.5-turbo".to_string()));
+                            .with_base_url(
+                                self.base_url
+                                    .unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string()),
+                            )
+                            .with_model(
+                                self.model
+                                    .unwrap_or_else(|| "openai/gpt-3.5-turbo".to_string()),
+                            );
 
                         // Set common parameters
                         if let Some(temp) = self.common_params.temperature {
@@ -451,13 +472,22 @@ impl SiumaiBuilder {
                         }
 
                         let http_client = reqwest::Client::new();
-                        Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
-                    },
+                        Box::new(crate::providers::openai::OpenAiClient::new(
+                            config,
+                            http_client,
+                        ))
+                    }
                     "groq" => {
                         // Use OpenAI-compatible client for Groq
-                        let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
-                            .with_base_url(self.base_url.unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string()))
-                            .with_model(self.model.unwrap_or_else(|| "llama-3.3-70b-versatile".to_string()));
+                        let mut config =
+                            crate::providers::openai::OpenAiConfig::new(api_key)
+                                .with_base_url(self.base_url.unwrap_or_else(|| {
+                                    "https://api.groq.com/openai/v1".to_string()
+                                }))
+                                .with_model(
+                                    self.model
+                                        .unwrap_or_else(|| "llama-3.3-70b-versatile".to_string()),
+                                );
 
                         // Set common parameters
                         if let Some(temp) = self.common_params.temperature {
@@ -468,15 +498,18 @@ impl SiumaiBuilder {
                         }
 
                         let http_client = reqwest::Client::new();
-                        Box::new(crate::providers::openai::OpenAiClient::new(config, http_client))
-                    },
+                        Box::new(crate::providers::openai::OpenAiClient::new(
+                            config,
+                            http_client,
+                        ))
+                    }
                     _ => {
-                        return Err(LlmError::UnsupportedOperation(
-                            format!("Custom provider '{name}' not yet implemented"),
-                        ));
+                        return Err(LlmError::UnsupportedOperation(format!(
+                            "Custom provider '{name}' not yet implemented"
+                        )));
                     }
                 }
-            },
+            }
         };
 
         Ok(Siumai::new(client))
@@ -491,7 +524,10 @@ pub struct AudioCapabilityProxy<'a> {
 
 impl<'a> AudioCapabilityProxy<'a> {
     pub const fn new(provider: &'a Siumai, reported_support: bool) -> Self {
-        Self { provider, reported_support }
+        Self {
+            provider,
+            reported_support,
+        }
     }
 
     /// Check if the provider reports audio support (for reference only)
@@ -543,7 +579,10 @@ pub struct EmbeddingCapabilityProxy<'a> {
 
 impl<'a> EmbeddingCapabilityProxy<'a> {
     pub const fn new(provider: &'a Siumai, reported_support: bool) -> Self {
-        Self { provider, reported_support }
+        Self {
+            provider,
+            reported_support,
+        }
     }
 
     /// Check if the provider reports embedding support (for reference only)
@@ -559,7 +598,10 @@ impl<'a> EmbeddingCapabilityProxy<'a> {
     /// Get a support status message (optional, for user-controlled information)
     pub fn support_status_message(&self) -> String {
         if self.reported_support {
-            format!("Provider {} reports embedding support", self.provider_name())
+            format!(
+                "Provider {} reports embedding support",
+                self.provider_name()
+            )
         } else {
             format!(
                 "Provider {} does not report embedding support, but this may still work depending on the model",
@@ -585,7 +627,10 @@ pub struct VisionCapabilityProxy<'a> {
 
 impl<'a> VisionCapabilityProxy<'a> {
     pub const fn new(provider: &'a Siumai, reported_support: bool) -> Self {
-        Self { provider, reported_support }
+        Self {
+            provider,
+            reported_support,
+        }
     }
 
     /// Check if the provider reports vision support (for reference only)
@@ -624,8 +669,6 @@ impl Default for SiumaiBuilder {
         Self::new()
     }
 }
-
-
 
 /// Provider registry for dynamic provider creation
 pub struct ProviderRegistry {

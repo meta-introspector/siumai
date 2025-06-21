@@ -134,8 +134,9 @@ impl OpenAiConfig {
     /// # Arguments
     /// * `config` - Optional web search configuration
     pub fn with_web_search(mut self, config: Option<WebSearchConfig>) -> Self {
-        self.web_search_config = config.unwrap_or_else(|| {
-            WebSearchConfig { enabled: true, ..Default::default() }
+        self.web_search_config = config.unwrap_or_else(|| WebSearchConfig {
+            enabled: true,
+            ..Default::default()
         });
         self
     }

@@ -17,8 +17,8 @@
 //! cargo run --example streaming_chat
 //! ```
 
-use siumai::prelude::*;
 use futures_util::StreamExt;
+use siumai::prelude::*;
 use std::io::{self, Write};
 
 #[tokio::main]
@@ -27,23 +27,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get API key and create provider
     let provider: Box<dyn ChatCapability> = if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
-        Box::new(LlmBuilder::new()
-            .openai()
-            .api_key(&api_key)
-            .model("gpt-4o-mini")
-            .temperature(0.7)
-            .max_tokens(500)
-            .build()
-            .await?)
+        Box::new(
+            LlmBuilder::new()
+                .openai()
+                .api_key(&api_key)
+                .model("gpt-4o-mini")
+                .temperature(0.7)
+                .max_tokens(500)
+                .build()
+                .await?,
+        )
     } else if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
-        Box::new(LlmBuilder::new()
-            .anthropic()
-            .api_key(&api_key)
-            .model("claude-3-5-haiku-20241022")
-            .temperature(0.7)
-            .max_tokens(500)
-            .build()
-            .await?)
+        Box::new(
+            LlmBuilder::new()
+                .anthropic()
+                .api_key(&api_key)
+                .model("claude-3-5-haiku-20241022")
+                .temperature(0.7)
+                .max_tokens(500)
+                .build()
+                .await?,
+        )
     } else {
         println!("⚠️  No API key found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY");
         return Ok(());
@@ -73,7 +77,6 @@ async fn demonstrate_basic_streaming(provider: &dyn ChatCapability) {
 
         // Stream the response
         let mut stream = provider.chat_stream(messages, None).await?;
-        
         while let Some(event) = stream.next().await {
             match event? {
                 ChatStreamEvent::ContentDelta { delta, .. } => {
@@ -91,7 +94,6 @@ async fn demonstrate_basic_streaming(provider: &dyn ChatCapability) {
                 }
             }
         }
-        
         Ok::<_, LlmError>(())
     }.await {
         Ok(()) => {}
@@ -106,9 +108,9 @@ async fn demonstrate_stream_event_types(provider: &dyn ChatCapability) {
     println!("📡 Stream Event Types:\n");
 
     match async {
-        let messages = vec![
-            user!("Write a short poem about programming and explain the metaphors you used.")
-        ];
+        let messages = vec![user!(
+            "Write a short poem about programming and explain the metaphors you used."
+        )];
 
         println!("   User: Write a short poem about programming...");
         println!("   Processing events:\n");
@@ -124,7 +126,10 @@ async fn demonstrate_stream_event_types(provider: &dyn ChatCapability) {
                     total_text.push_str(&delta);
                     println!("   📝 Text chunk {text_chunks} (index: {index:?}): \"{delta}\"");
                 }
-                ChatStreamEvent::Done { finish_reason, usage } => {
+                ChatStreamEvent::Done {
+                    finish_reason,
+                    usage,
+                } => {
                     println!("\n   🏁 Completion event received");
                     if let Some(reason) = finish_reason {
                         println!("   🏁 Finish reason: {reason:?}");
@@ -147,9 +152,11 @@ async fn demonstrate_stream_event_types(provider: &dyn ChatCapability) {
         println!("      • Total text chunks: {text_chunks}");
         println!("      • Final text length: {} characters", total_text.len());
         println!("   ✅ Event types demonstration successful\n");
-        
+
         Ok::<_, LlmError>(())
-    }.await {
+    }
+    .await
+    {
         Ok(()) => {}
         Err(e) => {
             println!("   ❌ Event types demonstration failed: {e}\n");
@@ -170,14 +177,12 @@ async fn demonstrate_stream_error_handling(_provider: &dyn ChatCapability) {
             .build()
             .await?;
 
-        let messages = vec![
-            user!("This should fail due to invalid API key.")
-        ];
+        let messages = vec![user!("This should fail due to invalid API key.")];
 
         println!("   Testing error handling with invalid API key...");
 
         let mut stream = invalid_provider.chat_stream(messages, None).await?;
-        
+
         while let Some(event) = stream.next().await {
             match event {
                 Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
@@ -194,9 +199,11 @@ async fn demonstrate_stream_error_handling(_provider: &dyn ChatCapability) {
                 _ => {}
             }
         }
-        
+
         Ok::<_, LlmError>(())
-    }.await {
+    }
+    .await
+    {
         Ok(()) => {}
         Err(e) => {
             println!("   ✅ Caught exception: {e}");
@@ -278,7 +285,6 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
         println!("      • Early error detection and handling");
 
         println!("   ✅ Performance demonstration completed\n");
-        
         Ok::<_, LlmError>(())
     }.await {
         Ok(()) => {}

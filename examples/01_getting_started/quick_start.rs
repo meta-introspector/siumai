@@ -2,7 +2,7 @@
 //!
 //! This example demonstrates the simplest way to get started with Siumai.
 //! Set environment variables before running:
-//! 
+//!
 //! ```bash
 //! export OPENAI_API_KEY="your-key"
 //! export ANTHROPIC_API_KEY="your-key"
@@ -44,9 +44,7 @@ async fn quick_start_with_openai() {
                 .await
             {
                 Ok(client) => {
-                    let messages = vec![
-                        user!("Hello! Please introduce yourself in one sentence.")
-                    ];
+                    let messages = vec![user!("Hello! Please introduce yourself in one sentence.")];
 
                     match client.chat(messages).await {
                         Ok(response) => {
@@ -86,9 +84,9 @@ async fn quick_start_with_anthropic() {
                 .await
             {
                 Ok(client) => {
-                    let messages = vec![
-                        user!("What is the capital of France? Answer in one sentence.")
-                    ];
+                    let messages = vec![user!(
+                        "What is the capital of France? Answer in one sentence."
+                    )];
 
                     match client.chat(messages).await {
                         Ok(response) => {
@@ -126,9 +124,7 @@ async fn quick_start_with_ollama() {
         .await
     {
         Ok(client) => {
-            let messages = vec![
-                user!("Hello! Introduce yourself in one sentence.")
-            ];
+            let messages = vec![user!("Hello! Introduce yourself in one sentence.")];
 
             match client.chat(messages).await {
                 Ok(response) => {

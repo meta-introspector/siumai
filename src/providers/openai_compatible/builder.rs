@@ -8,7 +8,7 @@ use crate::providers::openai::OpenAiClient;
 use std::marker::PhantomData;
 
 use super::config::OpenAiCompatibleConfig;
-use super::providers::{OpenAiCompatibleProvider, DeepSeekProvider, OpenRouterProvider};
+use super::providers::{DeepSeekProvider, OpenAiCompatibleProvider, OpenRouterProvider};
 
 /// OpenAI-compatible provider builder with type-safe provider selection.
 ///
@@ -28,10 +28,7 @@ impl<P: OpenAiCompatibleProvider> OpenAiCompatibleBuilder<P> {
     pub fn new(base: LlmBuilder) -> Self {
         Self {
             base,
-            config: OpenAiCompatibleConfig::new(
-                P::PROVIDER_ID.to_string(),
-                String::new(),
-            ),
+            config: OpenAiCompatibleConfig::new(P::PROVIDER_ID.to_string(), String::new()),
             _provider: PhantomData,
         }
     }
@@ -104,10 +101,9 @@ impl<P: OpenAiCompatibleProvider> OpenAiCompatibleBuilder<P> {
         P::transform_params(&mut provider_params)?;
 
         // Convert to OpenAI configuration
-        let openai_config = self.config.to_openai_config(
-            P::DEFAULT_BASE_URL,
-            P::DEFAULT_MODEL,
-        )?;
+        let openai_config = self
+            .config
+            .to_openai_config(P::DEFAULT_BASE_URL, P::DEFAULT_MODEL)?;
 
         // Build HTTP client
         let http_client = self.base.build_http_client()?;

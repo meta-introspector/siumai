@@ -87,14 +87,15 @@ async fn demonstrate_message_types() {
                 // Different message types in conversation
                 let messages = vec![
                     // System message - sets AI behavior
-                    system!("You are a helpful math tutor. Explain concepts clearly and encourage learning."),
-
+                    system!(
+                        "You are a helpful math tutor. Explain concepts clearly and encourage learning."
+                    ),
                     // User message - user input
                     user!("I'm struggling with algebra. Can you help me understand variables?"),
-
                     // Assistant message - previous AI response (for context)
-                    assistant!("Of course! Variables in algebra are like containers that hold unknown values. Think of them as boxes with labels like \"x\" or \"y\" that can contain different numbers."),
-
+                    assistant!(
+                        "Of course! Variables in algebra are like containers that hold unknown values. Think of them as boxes with labels like \"x\" or \"y\" that can contain different numbers."
+                    ),
                     // Follow-up user message
                     user!("Can you give me a simple example?"),
                 ];

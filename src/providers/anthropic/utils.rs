@@ -204,13 +204,17 @@ pub fn get_default_models() -> Vec<String> {
 pub fn parse_response_content(content_blocks: &[AnthropicContentBlock]) -> MessageContent {
     // Find the first text block (skip thinking blocks for main content)
     for content_block in content_blocks {
-        if content_block.r#type.as_str() == "text" { return MessageContent::Text(content_block.text.clone().unwrap_or_default()) }
+        if content_block.r#type.as_str() == "text" {
+            return MessageContent::Text(content_block.text.clone().unwrap_or_default());
+        }
     }
     MessageContent::Text(String::new())
 }
 
 /// Parse Anthropic response content and extract tool calls
-pub fn parse_response_content_and_tools(content_blocks: &[AnthropicContentBlock]) -> (MessageContent, Option<Vec<crate::types::ToolCall>>) {
+pub fn parse_response_content_and_tools(
+    content_blocks: &[AnthropicContentBlock],
+) -> (MessageContent, Option<Vec<crate::types::ToolCall>>) {
     let mut text_content = String::new();
     let mut tool_calls = Vec::new();
 
@@ -225,7 +229,9 @@ pub fn parse_response_content_and_tools(content_blocks: &[AnthropicContentBlock]
                 }
             }
             "tool_use" => {
-                if let (Some(id), Some(name), Some(input)) = (&content_block.id, &content_block.name, &content_block.input) {
+                if let (Some(id), Some(name), Some(input)) =
+                    (&content_block.id, &content_block.name, &content_block.input)
+                {
                     tool_calls.push(crate::types::ToolCall {
                         id: id.clone(),
                         r#type: "function".to_string(),
@@ -246,7 +252,11 @@ pub fn parse_response_content_and_tools(content_blocks: &[AnthropicContentBlock]
         MessageContent::Text(text_content)
     };
 
-    let tools = if tool_calls.is_empty() { None } else { Some(tool_calls) };
+    let tools = if tool_calls.is_empty() {
+        None
+    } else {
+        Some(tool_calls)
+    };
     (content, tools)
 }
 
@@ -309,7 +319,9 @@ pub fn map_anthropic_error(
 }
 
 /// Convert tools to Anthropic format
-pub fn convert_tools_to_anthropic_format(tools: &[crate::types::Tool]) -> Result<Vec<serde_json::Value>, LlmError> {
+pub fn convert_tools_to_anthropic_format(
+    tools: &[crate::types::Tool],
+) -> Result<Vec<serde_json::Value>, LlmError> {
     let mut anthropic_tools = Vec::new();
 
     for tool in tools {
@@ -380,20 +392,18 @@ mod tests {
 
     #[test]
     fn test_parse_response_content_and_tools_text_only() {
-        let content_blocks = vec![
-            AnthropicContentBlock {
-                r#type: "text".to_string(),
-                text: Some("Hello world".to_string()),
-                thinking: None,
-                signature: None,
-                id: None,
-                name: None,
-                input: None,
-                tool_use_id: None,
-                content: None,
-                is_error: None,
-            },
-        ];
+        let content_blocks = vec![AnthropicContentBlock {
+            r#type: "text".to_string(),
+            text: Some("Hello world".to_string()),
+            thinking: None,
+            signature: None,
+            id: None,
+            name: None,
+            input: None,
+            tool_use_id: None,
+            content: None,
+            is_error: None,
+        }];
 
         let (content, tool_calls) = parse_response_content_and_tools(&content_blocks);
 

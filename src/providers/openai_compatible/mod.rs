@@ -48,17 +48,17 @@
 //! }
 //! ```
 
+pub mod builder;
 pub mod config;
 pub mod providers;
-pub mod builder;
 
 // Re-export main types
+pub use builder::*;
 pub use config::*;
 pub use providers::*;
-pub use builder::*;
 
 // Re-export model constants for easy access
-pub use providers::models::{deepseek, openrouter, xai, groq};
+pub use providers::models::{deepseek, groq, openrouter, xai};
 
 use crate::traits::*;
 

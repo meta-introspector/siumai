@@ -1,7 +1,7 @@
 //! 💻 Code Assistant - AI-powered coding helper
 
 #![allow(clippy::double_ended_iterator_last)]
-//! 
+//!
 //! This example demonstrates how to build a comprehensive code assistant with:
 //! - Code explanation and documentation generation
 //! - Bug detection and fixing suggestions
@@ -9,21 +9,21 @@
 //! - Multi-language support
 //! - Interactive code review
 //! - Code optimization suggestions
-//! 
+//!
 //! Before running, set your API key:
 //! ```bash
 //! export OPENAI_API_KEY="your-key"
 //! export GROQ_API_KEY="your-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example code_assistant
 //! ```
 
 use siumai::prelude::*;
-use std::io::{self, Write};
 use std::fs;
+use std::io::{self, Write};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize the code assistant
     let assistant = CodeAssistant::new().await?;
-    
+
     println!("🎉 Code Assistant initialized! Available commands:");
     println!("  1. explain <file_path>     - Explain code in a file");
     println!("  2. review <file_path>      - Review code for issues");
@@ -120,7 +120,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 break;
             }
             _ => {
-                println!("❌ Unknown command: {}. Type 'help' for available commands.", parts[0]);
+                println!(
+                    "❌ Unknown command: {}. Type 'help' for available commands.",
+                    parts[0]
+                );
             }
         }
         println!();
@@ -158,10 +161,10 @@ impl CodeAssistant {
     /// Explain code in a file
     async fn explain_code(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         println!("🔍 Analyzing code in: {file_path}");
-        
+
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
-        
+
         let system_prompt = format!(
             "You are an expert {language} programmer and code educator. \
             Explain the provided code in a clear, educational manner. \
@@ -283,7 +286,10 @@ impl CodeAssistant {
     }
 
     /// Generate documentation for code
-    async fn generate_documentation(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    async fn generate_documentation(
+        &self,
+        file_path: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         println!("📚 Generating documentation for: {file_path}");
 
         let code = self.read_file(file_path)?;
@@ -418,8 +424,10 @@ impl CodeAssistant {
             Ok(content) => {
                 if content.len() > 10000 {
                     // Truncate very large files
-                    Ok(format!("{}...\n\n[File truncated - showing first 10000 characters]",
-                              &content[..10000]))
+                    Ok(format!(
+                        "{}...\n\n[File truncated - showing first 10000 characters]",
+                        &content[..10000]
+                    ))
                 } else {
                     Ok(content)
                 }

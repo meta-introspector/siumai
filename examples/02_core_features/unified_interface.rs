@@ -20,7 +20,6 @@
 use siumai::prelude::*;
 use siumai::traits::ChatCapability;
 
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔄 Unified Interface - Provider-agnostic AI interactions\n");
@@ -42,17 +41,17 @@ async fn demonstrate_provider_abstraction() {
 
     // Create different providers
     let providers = create_available_providers().await;
-    
+
     if providers.is_empty() {
         println!("   ⚠️  No providers available. Set API keys or start Ollama.");
         return;
     }
 
     let test_message = "Hello! Please introduce yourself in one sentence.";
-    
+
     for (name, client) in providers {
         println!("   Testing with {name}:");
-        
+
         let messages = vec![user!(test_message)];
         match client.chat(messages).await {
             Ok(response) => {
@@ -81,11 +80,11 @@ async fn demonstrate_dynamic_provider_selection() {
 
     for (task_type, prompt) in tasks {
         println!("   Task: {task_type} - \"{prompt}\"");
-        
+
         match select_best_provider_for_task(task_type).await {
             Ok((provider_name, client)) => {
                 println!("      Selected provider: {provider_name}");
-                
+
                 let messages = vec![user!(prompt)];
                 match client.chat(messages).await {
                     Ok(response) => {
@@ -117,7 +116,7 @@ async fn demonstrate_fallback_strategies() {
     println!("🛡️  Fallback Strategies:\n");
 
     let message = "Explain machine learning in simple terms";
-    
+
     match chat_with_fallback(message).await {
         Ok((provider_name, response)) => {
             println!("   Successfully used provider: {provider_name}");
@@ -143,21 +142,24 @@ async fn demonstrate_capability_detection() {
     println!("🔍 Capability Detection:\n");
 
     let providers = create_available_providers().await;
-    
+
     for (name, client) in providers {
         println!("   Provider: {name}");
-        
+
         // Test basic chat capability
         println!("      Chat: ✅ (all providers support this)");
-        
+
         // Test streaming capability (simplified check)
         let supports_streaming = test_streaming_capability(client.as_ref()).await;
-        println!("      Streaming: {}", if supports_streaming { "✅" } else { "❌" });
-        
+        println!(
+            "      Streaming: {}",
+            if supports_streaming { "✅" } else { "❌" }
+        );
+
         // Note: In a real implementation, you would check actual capabilities
         println!("      Vision: 🔍 (would need capability detection)");
         println!("      Tools: 🔍 (would need capability detection)");
-        
+
         println!();
     }
 }
@@ -167,10 +169,10 @@ async fn demonstrate_provider_independent_functions() {
     println!("🔧 Provider-Independent Functions:\n");
 
     let providers = create_available_providers().await;
-    
+
     if let Some((name, client)) = providers.into_iter().next() {
         println!("   Using provider: {name}");
-        
+
         // Use the same function with any provider
         match ask_question(client.as_ref(), "What is the meaning of life?").await {
             Ok(answer) => {
@@ -200,7 +202,10 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
             .build()
             .await
         {
-            providers.push(("OpenAI".to_string(), Box::new(client) as Box<dyn ChatCapability + Send + Sync>));
+            providers.push((
+                "OpenAI".to_string(),
+                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+            ));
         }
     }
 
@@ -213,7 +218,10 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
             .build()
             .await
         {
-            providers.push(("Anthropic".to_string(), Box::new(client) as Box<dyn ChatCapability + Send + Sync>));
+            providers.push((
+                "Anthropic".to_string(),
+                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+            ));
         }
     }
 
@@ -228,7 +236,10 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
         // Test if Ollama is actually available
         let test_messages = vec![user!("Hi")];
         if client.chat(test_messages).await.is_ok() {
-            providers.push(("Ollama".to_string(), Box::new(client) as Box<dyn ChatCapability + Send + Sync>));
+            providers.push((
+                "Ollama".to_string(),
+                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+            ));
         }
     }
 
@@ -236,11 +247,15 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
 }
 
 /// Select the best provider for a specific task
-async fn select_best_provider_for_task(task_type: &str) -> Result<(String, Box<dyn ChatCapability + Send + Sync>), LlmError> {
+async fn select_best_provider_for_task(
+    task_type: &str,
+) -> Result<(String, Box<dyn ChatCapability + Send + Sync>), LlmError> {
     let mut providers = create_available_providers().await;
-    
+
     if providers.is_empty() {
-        return Err(LlmError::InternalError("No providers available".to_string()));
+        return Err(LlmError::InternalError(
+            "No providers available".to_string(),
+        ));
     }
 
     // Simple task-based selection logic
@@ -258,7 +273,6 @@ async fn select_best_provider_for_task(task_type: &str) -> Result<(String, Box<d
             if let Some((name, client)) = providers.pop() {
                 return Ok((name, client));
             }
-
         }
         "creative_writing" => {
             // Prefer providers known for creativity
@@ -290,14 +304,16 @@ async fn select_best_provider_for_task(task_type: &str) -> Result<(String, Box<d
     }
 
     // Fallback to first available provider
-    providers.into_iter().next()
+    providers
+        .into_iter()
+        .next()
         .ok_or_else(|| LlmError::InternalError("No suitable provider found".to_string()))
 }
 
 /// Chat with fallback strategy
 async fn chat_with_fallback(message: &str) -> Result<(String, ChatResponse), LlmError> {
     let providers = create_available_providers().await;
-    
+
     for (name, client) in providers {
         let messages = vec![user!(message)];
         if let Ok(response) = client.chat(messages).await {
@@ -306,7 +322,7 @@ async fn chat_with_fallback(message: &str) -> Result<(String, ChatResponse), Llm
             // Continue to next provider
         }
     }
-    
+
     Err(LlmError::InternalError("All providers failed".to_string()))
 }
 

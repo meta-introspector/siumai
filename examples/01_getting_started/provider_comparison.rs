@@ -52,14 +52,15 @@ async fn compare_providers(prompt: &str) {
                 .temperature(0.7)
                 .build()
                 .await?;
-            
+
             let messages = vec![user!(prompt)];
             let response = client.chat(messages).await?;
             Ok(response)
         } else {
             Err(LlmError::AuthenticationError("No API key".to_string()))
         }
-    }).await;
+    })
+    .await;
 
     // Test Anthropic
     test_provider_performance("Anthropic", || async {
@@ -71,14 +72,15 @@ async fn compare_providers(prompt: &str) {
                 .temperature(0.7)
                 .build()
                 .await?;
-            
+
             let messages = vec![user!(prompt)];
             let response = client.chat(messages).await?;
             Ok(response)
         } else {
             Err(LlmError::AuthenticationError("No API key".to_string()))
         }
-    }).await;
+    })
+    .await;
 
     // Test Ollama (local)
     test_provider_performance("Ollama", || async {
@@ -89,11 +91,12 @@ async fn compare_providers(prompt: &str) {
             .temperature(0.7)
             .build()
             .await?;
-        
+
         let messages = vec![user!(prompt)];
         let response = client.chat(messages).await?;
         Ok(response)
-    }).await;
+    })
+    .await;
 }
 
 /// Test a single provider's performance
@@ -103,23 +106,25 @@ where
     Fut: std::future::Future<Output = Result<ChatResponse, LlmError>>,
 {
     println!("   🧪 Testing {provider_name}:");
-    
+
     let start_time = Instant::now();
-    
+
     match test_fn().await {
         Ok(response) => {
             let duration = start_time.elapsed();
-            
+
             if let Some(text) = response.content_text() {
                 println!("      ✅ Success");
                 println!("      ⏱️  Response time: {}ms", duration.as_millis());
                 println!("      📝 Response length: {} characters", text.len());
-                
+
                 if let Some(usage) = &response.usage {
-                    println!("      🔢 Tokens: {} total ({} prompt + {} completion)", 
-                        usage.total_tokens, usage.prompt_tokens, usage.completion_tokens);
+                    println!(
+                        "      🔢 Tokens: {} total ({} prompt + {} completion)",
+                        usage.total_tokens, usage.prompt_tokens, usage.completion_tokens
+                    );
                 }
-                
+
                 // Show first 100 characters of response
                 let preview = if text.len() > 100 {
                     format!("{}...", &text[..100])
@@ -139,7 +144,7 @@ where
             }
         }
     }
-    
+
     println!();
 }
 

@@ -1,19 +1,19 @@
 //! 🔄 `OpenAI` Compatible Models
-//! 
+//!
 //! This example demonstrates various OpenAI-compatible providers including:
 //! - `DeepSeek` integration and specialized models
 //! - Groq high-speed inference capabilities
 //! - Local model deployment options
 //! - Performance comparison across providers
 //! - Cost and speed optimization strategies
-//! 
+//!
 //! Before running, set your API keys:
 //! ```bash
 //! export DEEPSEEK_API_KEY="your-deepseek-key"
 //! export GROQ_API_KEY="your-groq-key"
 //! export OPENAI_API_KEY="your-openai-key"
 //! ```
-//! 
+//!
 //! Usage:
 //! ```bash
 //! cargo run --example openai_compatible_models_showcase
@@ -64,12 +64,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo `DeepSeek` specialized models
 async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Exploring DeepSeek specialized capabilities...");
-    
-    let api_key = std::env::var("DEEPSEEK_API_KEY")
-        .unwrap_or_else(|_| {
-            println!("   ⚠️  DEEPSEEK_API_KEY not set, using demo key");
-            "demo-key".to_string()
-        });
+
+    let api_key = std::env::var("DEEPSEEK_API_KEY").unwrap_or_else(|_| {
+        println!("   ⚠️  DEEPSEEK_API_KEY not set, using demo key");
+        "demo-key".to_string()
+    });
 
     // DeepSeek Coder model
     println!("   Testing DeepSeek Coder for programming tasks:");
@@ -85,8 +84,9 @@ async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
     let coding_task = vec![
         ChatMessage::user(
             "Write a Rust function that implements a binary search algorithm. \
-            Include error handling and comprehensive documentation."
-        ).build(),
+            Include error handling and comprehensive documentation.",
+        )
+        .build(),
     ];
 
     match coder_ai.chat(coding_task).await {
@@ -120,16 +120,21 @@ async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
         ChatMessage::user(
             "Analyze the trade-offs between microservices and monolithic \
             architecture for a startup with 10 developers building a \
-            e-commerce platform. Consider scalability, complexity, and team dynamics."
-        ).build(),
+            e-commerce platform. Consider scalability, complexity, and team dynamics.",
+        )
+        .build(),
     ];
 
     match reasoning_ai.chat(reasoning_task).await {
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🧠 DeepSeek Reasoning analysis:");
-                println!("      Analysis length: {} words", text.split_whitespace().count());
-                println!("      Covers: {}",
+                println!(
+                    "      Analysis length: {} words",
+                    text.split_whitespace().count()
+                );
+                println!(
+                    "      Covers: {}",
                     if text.contains("trade-off") || text.contains("consider") {
                         "Comprehensive trade-off analysis"
                     } else {
@@ -147,12 +152,11 @@ async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo Groq high-speed performance
 async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Testing Groq high-speed inference capabilities...");
-    
-    let api_key = std::env::var("GROQ_API_KEY")
-        .unwrap_or_else(|_| {
-            println!("   ⚠️  GROQ_API_KEY not set, using demo key");
-            "demo-key".to_string()
-        });
+
+    let api_key = std::env::var("GROQ_API_KEY").unwrap_or_else(|_| {
+        println!("   ⚠️  GROQ_API_KEY not set, using demo key");
+        "demo-key".to_string()
+    });
 
     // Note: Groq is not directly supported in this version, using OpenAI as substitute
     let groq_ai = Siumai::builder()
@@ -166,7 +170,7 @@ async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
 
     // Speed test with multiple requests
     println!("   Performing speed test with multiple requests:");
-    
+
     let test_prompts = [
         "Explain machine learning in one paragraph",
         "What are the benefits of cloud computing?",
@@ -179,20 +183,22 @@ async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
 
     for (i, prompt) in test_prompts.iter().enumerate() {
         let start_time = Instant::now();
-        
+
         let messages = vec![ChatMessage::user(*prompt).build()];
-        
+
         match groq_ai.chat(messages).await {
             Ok(response) => {
                 let elapsed = start_time.elapsed();
                 total_time += elapsed;
                 successful_requests += 1;
-                
+
                 if let Some(text) = response.text() {
-                    println!("   ⚡ Request {}: {}ms - {}", 
-                            i + 1, 
-                            elapsed.as_millis(),
-                            &text[..text.len().min(50)]);
+                    println!(
+                        "   ⚡ Request {}: {}ms - {}",
+                        i + 1,
+                        elapsed.as_millis(),
+                        &text[..text.len().min(50)]
+                    );
                 }
             }
             Err(e) => println!("   ❌ Request {} failed: {}", i + 1, e),
@@ -202,7 +208,11 @@ async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
     if successful_requests > 0 {
         let avg_time = total_time / successful_requests;
         println!("   📊 Performance Summary:");
-        println!("      Successful requests: {}/{}", successful_requests, test_prompts.len());
+        println!(
+            "      Successful requests: {}/{}",
+            successful_requests,
+            test_prompts.len()
+        );
         println!("      Average response time: {}ms", avg_time.as_millis());
         println!("      Total time: {}ms", total_time.as_millis());
     }
@@ -213,9 +223,9 @@ async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo performance comparison across providers
 async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Comparing performance across different providers...");
-    
+
     let test_prompt = "Explain the concept of recursion in programming with a simple example";
-    
+
     // Test different providers (Note: Using OpenAI for both since Groq is not directly supported)
     let providers = vec![
         ("OpenAI-Fast", "gpt-4o-mini", "OPENAI_API_KEY"),
@@ -224,15 +234,14 @@ async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>>
 
     for (name, model, env_key) in providers {
         println!("   Testing {name} performance:");
-        
-        let api_key = std::env::var(env_key)
-            .unwrap_or_else(|_| {
-                println!("     ⚠️  {env_key} not set, using demo key");
-                "demo-key".to_string()
-            });
+
+        let api_key = std::env::var(env_key).unwrap_or_else(|_| {
+            println!("     ⚠️  {env_key} not set, using demo key");
+            "demo-key".to_string()
+        });
 
         let start_time = Instant::now();
-        
+
         let ai = Siumai::builder()
             .openai()
             .api_key(&api_key)
@@ -243,16 +252,16 @@ async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>>
             .await?;
 
         let messages = vec![ChatMessage::user(test_prompt).build()];
-        
+
         match ai.chat(messages).await {
             Ok(response) => {
                 let elapsed = start_time.elapsed();
-                
+
                 if let Some(text) = response.text() {
                     println!("     ⏱️  Response time: {}ms", elapsed.as_millis());
                     println!("     📝 Response length: {} characters", text.len());
                     println!("     💬 Preview: {}...", &text[..text.len().min(60)]);
-                    
+
                     if let Some(usage) = &response.usage {
                         println!("     🔢 Tokens: {}", usage.total_tokens);
                     }
@@ -269,21 +278,30 @@ async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>>
 /// Demo cost optimization strategies
 async fn demo_cost_optimization() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Demonstrating cost optimization strategies...");
-    
+
     // Strategy 1: Model selection based on task complexity
     println!("   Strategy 1: Model selection for different task complexities");
-    
+
     let tasks = vec![
         ("Simple", "What is 2 + 2?", "llama-3.1-8b-instant"),
-        ("Medium", "Explain the benefits of version control", "llama-3.1-70b-versatile"),
-        ("Complex", "Design a scalable microservices architecture", "llama-3.1-70b-versatile"),
+        (
+            "Medium",
+            "Explain the benefits of version control",
+            "llama-3.1-70b-versatile",
+        ),
+        (
+            "Complex",
+            "Design a scalable microservices architecture",
+            "llama-3.1-70b-versatile",
+        ),
     ];
 
     for (complexity, task, recommended_model) in tasks {
         println!("   {complexity} task: {recommended_model}");
         println!("     Task: {task}");
         println!("     Recommended: {recommended_model}");
-        println!("     Rationale: {}",
+        println!(
+            "     Rationale: {}",
             match complexity {
                 "Simple" => "Fast model for quick answers",
                 "Medium" => "Balanced model for explanations",
@@ -316,7 +334,7 @@ async fn demo_cost_optimization() -> Result<(), Box<dyn std::error::Error>> {
 /// Demo use case recommendations
 async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Providing use case recommendations for each provider...");
-    
+
     let recommendations = vec![
         (
             "Groq",
@@ -325,7 +343,7 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
                 "High-throughput batch processing",
                 "Interactive demos and prototypes",
                 "Cost-sensitive production workloads",
-            ]
+            ],
         ),
         (
             "DeepSeek",
@@ -334,7 +352,7 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
                 "Technical analysis and reasoning",
                 "Research and development tasks",
                 "Specialized domain applications",
-            ]
+            ],
         ),
         (
             "OpenAI",
@@ -343,7 +361,7 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
                 "Complex reasoning tasks",
                 "Production applications requiring reliability",
                 "Advanced multimodal applications",
-            ]
+            ],
         ),
         (
             "Local Models",
@@ -352,7 +370,7 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
                 "Offline or air-gapped environments",
                 "Custom fine-tuned models",
                 "High-volume, cost-sensitive workloads",
-            ]
+            ],
         ),
     ];
 

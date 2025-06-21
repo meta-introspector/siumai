@@ -5,7 +5,7 @@
 use crate::error::LlmError;
 use crate::params::mapper::{ParameterConstraints, ParameterMapper};
 use crate::types::{CommonParams, ProviderParams, ProviderType};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
 /// Ollama parameter mapper
@@ -110,7 +110,10 @@ impl ParameterMapper for OllamaParameterMapper {
 
     fn validate_params(&self, params: &Value) -> Result<(), LlmError> {
         // Validate temperature
-        if let Some(temp) = params.get("temperature").and_then(serde_json::Value::as_f64) {
+        if let Some(temp) = params
+            .get("temperature")
+            .and_then(serde_json::Value::as_f64)
+        {
             if !(0.0..=2.0).contains(&temp) {
                 return Err(LlmError::InvalidParameter(
                     "Temperature must be between 0.0 and 2.0".to_string(),
@@ -128,7 +131,10 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate num_predict (max_tokens)
-        if let Some(num_predict) = params.get("num_predict").and_then(serde_json::Value::as_u64) {
+        if let Some(num_predict) = params
+            .get("num_predict")
+            .and_then(serde_json::Value::as_u64)
+        {
             if num_predict == 0 {
                 return Err(LlmError::InvalidParameter(
                     "num_predict must be greater than 0".to_string(),

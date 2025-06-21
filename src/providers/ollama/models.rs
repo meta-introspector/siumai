@@ -41,11 +41,11 @@ impl OllamaModelsCapability {
             name: Some(model.name.clone()),
             description: Some(format!("Ollama model: {}", model.details.family)),
             capabilities: vec!["chat".to_string(), "completion".to_string()],
-            context_window: None, // Not provided by Ollama API
+            context_window: None,    // Not provided by Ollama API
             max_output_tokens: None, // Not provided by Ollama API
-            created: Some(0), // Ollama doesn't provide creation timestamp
+            created: Some(0),        // Ollama doesn't provide creation timestamp
             owned_by: "ollama".to_string(),
-            input_cost_per_token: None, // Ollama is free/local
+            input_cost_per_token: None,  // Ollama is free/local
             output_cost_per_token: None, // Ollama is free/local
         }
     }
@@ -56,7 +56,7 @@ impl OllamaModelsCapability {
 
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/pull", self.base_url);
-        
+
         let body = serde_json::json!({
             "model": model_name,
             "stream": false
@@ -82,12 +82,15 @@ impl OllamaModelsCapability {
     }
 
     /// Pull a model with streaming progress
-    pub async fn pull_model_stream(&self, model_name: String) -> Result<impl futures_util::Stream<Item = Result<PullProgress, LlmError>>, LlmError> {
+    pub async fn pull_model_stream(
+        &self,
+        model_name: String,
+    ) -> Result<impl futures_util::Stream<Item = Result<PullProgress, LlmError>>, LlmError> {
         validate_model_name(&model_name)?;
 
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/pull", self.base_url);
-        
+
         let body = serde_json::json!({
             "model": model_name,
             "stream": true
@@ -109,13 +112,15 @@ impl OllamaModelsCapability {
             )));
         }
 
-        let stream = response.bytes_stream().map(|chunk_result| {
-            match chunk_result {
+        let stream = response
+            .bytes_stream()
+            .map(|chunk_result| match chunk_result {
                 Ok(chunk) => {
                     let chunk_str = String::from_utf8_lossy(&chunk);
                     for line in chunk_str.lines() {
                         if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                            if let Ok(progress) = serde_json::from_value::<PullProgress>(json_value) {
+                            if let Ok(progress) = serde_json::from_value::<PullProgress>(json_value)
+                            {
                                 return Ok(progress);
                             }
                         }
@@ -128,8 +133,7 @@ impl OllamaModelsCapability {
                     })
                 }
                 Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
-            }
-        });
+            });
 
         Ok(stream)
     }
@@ -140,7 +144,7 @@ impl OllamaModelsCapability {
 
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/delete", self.base_url);
-        
+
         let body = serde_json::json!({
             "model": model_name
         });
@@ -171,7 +175,7 @@ impl OllamaModelsCapability {
 
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/copy", self.base_url);
-        
+
         let body = serde_json::json!({
             "source": source,
             "destination": destination
@@ -202,7 +206,7 @@ impl OllamaModelsCapability {
 
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/show", self.base_url);
-        
+
         let body = serde_json::json!({
             "model": model_name
         });
@@ -224,12 +228,27 @@ impl OllamaModelsCapability {
         }
 
         let model_info: serde_json::Value = response.json().await?;
-        
+
         Ok(ModelDetails {
-            modelfile: model_info.get("modelfile").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            parameters: model_info.get("parameters").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            template: model_info.get("template").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-            details: model_info.get("details").cloned().unwrap_or(serde_json::Value::Null),
+            modelfile: model_info
+                .get("modelfile")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            parameters: model_info
+                .get("parameters")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            template: model_info
+                .get("template")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string(),
+            details: model_info
+                .get("details")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null),
         })
     }
 
@@ -238,12 +257,7 @@ impl OllamaModelsCapability {
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/ps", self.base_url);
 
-        let response = self
-            .http_client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url).headers(headers).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -254,17 +268,19 @@ impl OllamaModelsCapability {
         }
 
         let running_response: OllamaRunningModelsResponse = response.json().await?;
-        
-        let running_models = running_response.models.into_iter().map(|model| {
-            RunningModelInfo {
+
+        let running_models = running_response
+            .models
+            .into_iter()
+            .map(|model| RunningModelInfo {
                 name: model.name,
                 model: model.model,
                 size: model.size,
                 digest: model.digest,
                 expires_at: model.expires_at,
                 size_vram: model.size_vram,
-            }
-        }).collect();
+            })
+            .collect();
 
         Ok(running_models)
     }
@@ -276,12 +292,7 @@ impl ModelListingCapability for OllamaModelsCapability {
         let headers = build_headers(&self.http_config.headers)?;
         let url = format!("{}/api/tags", self.base_url);
 
-        let response = self
-            .http_client
-            .get(&url)
-            .headers(headers)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url).headers(headers).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -293,7 +304,9 @@ impl ModelListingCapability for OllamaModelsCapability {
 
         let models_response: OllamaModelsResponse = response.json().await?;
 
-        let models = models_response.models.into_iter()
+        let models = models_response
+            .models
+            .into_iter()
             .map(|model| self.convert_model_info(&model))
             .collect();
 

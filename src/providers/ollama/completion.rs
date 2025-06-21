@@ -85,7 +85,11 @@ impl OllamaCompletionCapability {
             images: None,
             stream: Some(stream),
             format,
-            options: if options.is_empty() { None } else { Some(options) },
+            options: if options.is_empty() {
+                None
+            } else {
+                Some(options)
+            },
             system: None,
             template: None,
             raw: self.ollama_params.raw,
@@ -155,7 +159,9 @@ impl OllamaCompletionCapability {
                     let chunk_str = String::from_utf8_lossy(&chunk);
                     for line in chunk_str.lines() {
                         if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                            if let Ok(ollama_response) = serde_json::from_value::<OllamaGenerateResponse>(json_value) {
+                            if let Ok(ollama_response) =
+                                serde_json::from_value::<OllamaGenerateResponse>(json_value)
+                            {
                                 // Parse response directly without using self
                                 let content = ollama_response.response;
 
@@ -179,7 +185,11 @@ impl OllamaCompletionCapability {
     }
 
     /// Generate with custom model
-    pub async fn generate_with_model(&self, prompt: String, model: String) -> Result<String, LlmError> {
+    pub async fn generate_with_model(
+        &self,
+        prompt: String,
+        model: String,
+    ) -> Result<String, LlmError> {
         let headers = build_headers(&self.http_config.headers)?;
         let body = self.build_generate_request_body(&prompt, Some(&model), false)?;
         let url = format!("{}/api/generate", self.base_url);
@@ -250,7 +260,9 @@ mod tests {
             OllamaParams::default(),
         );
 
-        let body = capability.build_generate_request_body("Hello world", Some("llama3.2"), false).unwrap();
+        let body = capability
+            .build_generate_request_body("Hello world", Some("llama3.2"), false)
+            .unwrap();
         assert_eq!(body.model, "llama3.2");
         assert_eq!(body.prompt, "Hello world");
         assert_eq!(body.stream, Some(false));

@@ -222,14 +222,8 @@ pub trait ChatExtensions: ChatCapability {
     ///
     /// # Returns
     /// Translated text
-    async fn translate(
-        &self,
-        text: String,
-        target_language: String,
-    ) -> Result<String, LlmError> {
-        let prompt = format!(
-            "Translate the following text to {target_language}: {text}"
-        );
+    async fn translate(&self, text: String, target_language: String) -> Result<String, LlmError> {
+        let prompt = format!("Translate the following text to {target_language}: {text}");
         self.ask(prompt).await
     }
 
@@ -241,11 +235,7 @@ pub trait ChatExtensions: ChatCapability {
     ///
     /// # Returns
     /// Simple explanation
-    async fn explain(
-        &self,
-        concept: String,
-        audience: Option<String>,
-    ) -> Result<String, LlmError> {
+    async fn explain(&self, concept: String, audience: Option<String>) -> Result<String, LlmError> {
         let audience_str = audience
             .map(|a| format!(" to {a}"))
             .unwrap_or_else(|| " in simple terms".to_string());
@@ -262,11 +252,7 @@ pub trait ChatExtensions: ChatCapability {
     ///
     /// # Returns
     /// Generated content
-    async fn generate(
-        &self,
-        content_type: String,
-        prompt: String,
-    ) -> Result<String, LlmError> {
+    async fn generate(&self, content_type: String, prompt: String) -> Result<String, LlmError> {
         let system_prompt = format!(
             "You are a creative writer. Generate a {content_type} based on the user's prompt."
         );
@@ -920,8 +906,6 @@ pub struct ProviderCapabilities {
     pub file_management: bool,
     pub custom_features: HashMap<String, bool>,
 }
-
-
 
 impl ProviderCapabilities {
     /// Creates new capability information.

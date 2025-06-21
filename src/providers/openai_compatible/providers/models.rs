@@ -71,10 +71,7 @@ pub mod xai {
 
     /// Get all xAI models
     pub fn all_models() -> Vec<String> {
-        vec![
-            GROK_BETA.to_string(),
-            GROK_VISION_BETA.to_string(),
-        ]
+        vec![GROK_BETA.to_string(), GROK_VISION_BETA.to_string()]
     }
 }
 
