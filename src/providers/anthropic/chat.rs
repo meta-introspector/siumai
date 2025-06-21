@@ -256,9 +256,7 @@ impl ChatCapability for AnthropicChatCapability {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(LlmError::HttpError(format!(
-                "HTTP {status}: {error_text}"
-            )));
+            return Err(LlmError::HttpError(format!("HTTP {status}: {error_text}")));
         }
 
         // Create stream from response with UTF-8 decoder
