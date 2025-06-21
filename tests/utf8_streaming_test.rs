@@ -16,10 +16,10 @@ async fn test_utf8_truncation_with_chinese_characters() {
         include_thinking: false,
         chunk_size: 2, // Very small chunks to force UTF-8 truncation
     };
-    
+
     let provider = TestProvider::new(config);
     let messages = vec![ChatMessage::user("测试中文字符的UTF-8截断处理").build()];
-    
+
     let stream = provider.chat_stream(messages, None).await.unwrap();
     let events: Vec<Result<ChatStreamEvent, _>> = stream.collect().await;
 
@@ -31,12 +31,12 @@ async fn test_utf8_truncation_with_chinese_characters() {
 
     // Verify we got events without errors
     assert!(!events.is_empty(), "Should have received some events");
-    
+
     // Check that all events are successful
     for event in &events {
         assert!(event.is_ok(), "Event should be successful: {:?}", event);
     }
-    
+
     // Collect all content deltas
     let mut content = String::new();
     for event in events {
@@ -44,14 +44,20 @@ async fn test_utf8_truncation_with_chinese_characters() {
             content.push_str(&delta);
         }
     }
-    
+
     // Verify that Chinese characters are correctly decoded
     assert!(content.contains("你好"), "Should contain Chinese greeting");
     assert!(content.contains("UTF-8"), "Should contain UTF-8 reference");
-    assert!(content.contains("中文字符"), "Should contain Chinese characters");
-    
+    assert!(
+        content.contains("中文字符"),
+        "Should contain Chinese characters"
+    );
+
     // Verify no replacement characters (�) indicating corruption
-    assert!(!content.contains('�'), "Should not contain replacement characters");
+    assert!(
+        !content.contains('�'),
+        "Should not contain replacement characters"
+    );
 }
 
 #[tokio::test]
@@ -61,7 +67,7 @@ async fn test_emoji_handling_in_truncated_stream() {
         include_thinking: false,
         chunk_size: 3, // Small chunks that may split emoji
     };
-    
+
     let provider = TestProvider::new(config);
     let messages = vec![ChatMessage::user("测试emoji处理 🌍🚀✨").build()];
 
@@ -82,7 +88,10 @@ async fn test_emoji_handling_in_truncated_stream() {
     assert!(content.contains("✨"), "Should contain sparkles emoji");
 
     // Verify no corruption
-    assert!(!content.contains('�'), "Should not contain replacement characters");
+    assert!(
+        !content.contains('�'),
+        "Should not contain replacement characters"
+    );
 }
 
 #[tokio::test]
@@ -98,11 +107,11 @@ async fn test_thinking_content_with_utf8_truncation() {
 
     let stream = provider.chat_stream(messages, None).await.unwrap();
     let events: Vec<Result<ChatStreamEvent, _>> = stream.collect().await;
-    
+
     // Separate reasoning and content events
     let mut reasoning_content = String::new();
     let mut regular_content = String::new();
-    
+
     for event in events {
         match event {
             Ok(ChatStreamEvent::ReasoningDelta { delta }) => {
@@ -115,18 +124,36 @@ async fn test_thinking_content_with_utf8_truncation() {
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
     }
-    
+
     // Verify thinking content was extracted
-    assert!(!reasoning_content.is_empty(), "Should have reasoning content");
-    assert!(reasoning_content.contains("思考"), "Reasoning should contain thinking");
-    
+    assert!(
+        !reasoning_content.is_empty(),
+        "Should have reasoning content"
+    );
+    assert!(
+        reasoning_content.contains("思考"),
+        "Reasoning should contain thinking"
+    );
+
     // Verify regular content doesn't contain thinking tags
-    assert!(!regular_content.contains("<think>"), "Regular content should not contain thinking tags");
-    assert!(!regular_content.contains("</think>"), "Regular content should not contain thinking tags");
-    
+    assert!(
+        !regular_content.contains("<think>"),
+        "Regular content should not contain thinking tags"
+    );
+    assert!(
+        !regular_content.contains("</think>"),
+        "Regular content should not contain thinking tags"
+    );
+
     // Verify Chinese characters in both contents
-    assert!(!reasoning_content.contains('�'), "Reasoning should not have corruption");
-    assert!(!regular_content.contains('�'), "Regular content should not have corruption");
+    assert!(
+        !reasoning_content.contains('�'),
+        "Reasoning should not have corruption"
+    );
+    assert!(
+        !regular_content.contains('�'),
+        "Regular content should not have corruption"
+    );
 }
 
 #[tokio::test]
@@ -136,7 +163,7 @@ async fn test_mixed_content_with_extreme_fragmentation() {
         include_thinking: true,
         chunk_size: 1, // Single byte chunks - worst case scenario
     };
-    
+
     let provider = TestProvider::new(config);
     let messages = vec![ChatMessage::user("极端分片测试：中文🤔emoji混合内容").build()];
 
@@ -148,7 +175,10 @@ async fn test_mixed_content_with_extreme_fragmentation() {
 
     // Verify all events are successful
     for event in &events {
-        assert!(event.is_ok(), "All events should be successful with extreme fragmentation");
+        assert!(
+            event.is_ok(),
+            "All events should be successful with extreme fragmentation"
+        );
     }
 
     // Collect all content
@@ -166,7 +196,10 @@ async fn test_mixed_content_with_extreme_fragmentation() {
     }
 
     // Verify content integrity despite extreme fragmentation
-    assert!(!all_content.contains('�'), "Should handle extreme fragmentation without corruption");
+    assert!(
+        !all_content.contains('�'),
+        "Should handle extreme fragmentation without corruption"
+    );
     assert!(all_content.len() > 0, "Should have some content");
 }
 
@@ -180,7 +213,7 @@ async fn test_thinking_tag_boundary_splitting() {
 
     let provider = TestProvider::new(config);
     let messages = vec![ChatMessage::user("测试思考标签边界分割").build()];
-    
+
     let stream = provider.chat_stream(messages, None).await.unwrap();
     let events: Vec<Result<ChatStreamEvent, _>> = stream.collect().await;
 
@@ -197,12 +230,21 @@ async fn test_thinking_tag_boundary_splitting() {
                 has_content = true;
             }
             Ok(_) => {}
-            Err(e) => panic!("Should not have errors with tag boundary splitting: {:?}", e),
+            Err(e) => panic!(
+                "Should not have errors with tag boundary splitting: {:?}",
+                e
+            ),
         }
     }
 
-    assert!(has_reasoning, "Should extract reasoning content even with tag splitting");
-    assert!(has_content, "Should extract regular content even with tag splitting");
+    assert!(
+        has_reasoning,
+        "Should extract reasoning content even with tag splitting"
+    );
+    assert!(
+        has_content,
+        "Should extract regular content even with tag splitting"
+    );
 }
 
 #[tokio::test]
@@ -227,16 +269,19 @@ async fn test_comparison_with_and_without_truncation() {
     let messages = vec![ChatMessage::user("对比测试：UTF-8截断vs完整传输").build()];
 
     // Get results from both providers
-    let stream_with = provider_with.chat_stream(messages.clone(), None).await.unwrap();
+    let stream_with = provider_with
+        .chat_stream(messages.clone(), None)
+        .await
+        .unwrap();
     let events_with: Vec<Result<ChatStreamEvent, _>> = stream_with.collect().await;
 
     let stream_without = provider_without.chat_stream(messages, None).await.unwrap();
     let events_without: Vec<Result<ChatStreamEvent, _>> = stream_without.collect().await;
-    
+
     // Both should succeed
     assert!(!events_with.is_empty());
     assert!(!events_without.is_empty());
-    
+
     // Extract content from both
     let extract_content = |events: Vec<Result<ChatStreamEvent, siumai::error::LlmError>>| {
         let mut content = String::new();
@@ -247,15 +292,27 @@ async fn test_comparison_with_and_without_truncation() {
         }
         content
     };
-    
+
     let content_with = extract_content(events_with);
     let content_without = extract_content(events_without);
-    
+
     // Both should produce valid content without corruption
-    assert!(!content_with.contains('�'), "Truncated version should not have corruption");
-    assert!(!content_without.contains('�'), "Non-truncated version should not have corruption");
-    
+    assert!(
+        !content_with.contains('�'),
+        "Truncated version should not have corruption"
+    );
+    assert!(
+        !content_without.contains('�'),
+        "Non-truncated version should not have corruption"
+    );
+
     // Both should contain expected Chinese content
-    assert!(content_with.contains("UTF-8"), "Truncated version should contain UTF-8");
-    assert!(content_without.contains("UTF-8"), "Non-truncated version should contain UTF-8");
+    assert!(
+        content_with.contains("UTF-8"),
+        "Truncated version should contain UTF-8"
+    );
+    assert!(
+        content_without.contains("UTF-8"),
+        "Non-truncated version should contain UTF-8"
+    );
 }

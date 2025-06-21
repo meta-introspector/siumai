@@ -291,7 +291,8 @@ impl ChatCapability for OllamaChatCapability {
                 }
             }
             None
-        }).filter_map(|result| async move { result });
+        })
+        .filter_map(|result| async move { result });
 
         let mapped_stream = decoded_stream.chain(flush_stream);
 

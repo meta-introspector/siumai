@@ -4,7 +4,7 @@
 //! including UTF-8 byte truncation and thinking content processing.
 
 use async_trait::async_trait;
-use futures::{stream, StreamExt};
+use futures::{StreamExt, stream};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -51,24 +51,26 @@ impl TestProvider {
     /// Create a test response with mixed content
     fn create_test_response(&self) -> String {
         let mut response = String::new();
-        
+
         if self.config.include_thinking {
             response.push_str("<think>\n这是一个复杂的问题，需要仔细思考。让我分析一下：\n1. 用户询问了关于UTF-8编码的问题\n2. 我需要提供准确的技术信息\n3. 同时要考虑中文字符的处理\n🤔 这涉及到字节边界的问题...\n</think>\n\n");
         }
-        
+
         response.push_str("你好！关于UTF-8编码的问题，我来详细解释一下：\n\n");
         response.push_str("UTF-8是一种可变长度的字符编码，中文字符通常占用3个字节。");
         response.push_str("例如：'中'字的UTF-8编码是 0xE4 0xB8 0xAD。\n\n");
         response.push_str("在网络传输中，如果数据包在字符边界被截断，就可能出现乱码。");
         response.push_str("这就是为什么需要UTF-8流式解码器的原因。🌍✨\n\n");
-        
+
         if self.config.include_thinking {
-            response.push_str("<think>\n用户应该明白了基本概念，我再补充一些实际应用的例子。\n</think>\n\n");
+            response.push_str(
+                "<think>\n用户应该明白了基本概念，我再补充一些实际应用的例子。\n</think>\n\n",
+            );
         }
-        
+
         response.push_str("实际应用中，我们需要缓冲不完整的字节序列，直到收到完整的字符。");
         response.push_str("这样就能确保正确解码多字节字符了！🚀");
-        
+
         response
     }
 
@@ -76,7 +78,8 @@ impl TestProvider {
     fn create_sse_chunks(&self, content: &str) -> Vec<Vec<u8>> {
         if self.config.simulate_utf8_truncation {
             // Create a single SSE chunk with the content, then split the raw bytes
-            let sse_chunk = format!("data: {}\n\n",
+            let sse_chunk = format!(
+                "data: {}\n\n",
                 json!({
                     "id": "test-123",
                     "object": "chat.completion.chunk",
@@ -108,7 +111,8 @@ impl TestProvider {
             chunks
         } else {
             // Send complete content in one chunk
-            let sse_chunk = format!("data: {}\n\n",
+            let sse_chunk = format!(
+                "data: {}\n\n",
                 json!({
                     "id": "test-123",
                     "object": "chat.completion.chunk",
@@ -163,7 +167,7 @@ impl ChatCapability for TestProvider {
         _tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
         let content = self.create_test_response();
-        
+
         Ok(ChatResponse {
             id: Some("test-123".to_string()),
             content: MessageContent::Text(content),
@@ -193,21 +197,19 @@ impl ChatCapability for TestProvider {
     ) -> Result<ChatStream, LlmError> {
         let content = self.create_test_response();
         let chunks = self.create_sse_chunks(&content);
-        
+
         // Create a UTF-8 decoder and SSE buffer for this stream
         let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
-        let sse_buffer = Arc::new(Mutex::new(String::new()));
+        let _sse_buffer = Arc::new(Mutex::new(String::new()));
         let decoder_for_flush = decoder.clone();
-        let sse_buffer_for_flush = sse_buffer.clone();
-        
+
         // Create stream from chunks
-        let chunk_stream = stream::iter(chunks)
-            .then(|chunk| async move {
-                // Simulate network delay
-                tokio::time::sleep(Duration::from_millis(10)).await;
-                Ok::<Vec<u8>, LlmError>(chunk)
-            });
-        
+        let chunk_stream = stream::iter(chunks).then(|chunk| async move {
+            // Simulate network delay
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            Ok::<Vec<u8>, LlmError>(chunk)
+        });
+
         // Clone provider for use in async closures
         let provider_clone = self.clone();
 
@@ -238,9 +240,8 @@ impl ChatCapability for TestProvider {
                                         }
                                     }
                                     // Filter out thinking tags for regular content
-                                    let filtered = content
-                                        .replace("<think>", "")
-                                        .replace("</think>", "");
+                                    let filtered =
+                                        content.replace("<think>", "").replace("</think>", "");
                                     if !filtered.trim().is_empty() {
                                         return Some(Ok(ChatStreamEvent::ContentDelta {
                                             delta: filtered,
@@ -261,14 +262,14 @@ impl ChatCapability for TestProvider {
                 }
             }
         });
-        
+
         // Add flush operation
         let flush_stream = stream::once(async move {
             let remaining = {
                 let mut decoder = decoder_for_flush.lock().unwrap();
                 decoder.flush()
             };
-            
+
             if !remaining.is_empty() {
                 Some(Ok(ChatStreamEvent::ContentDelta {
                     delta: remaining,
@@ -277,8 +278,9 @@ impl ChatCapability for TestProvider {
             } else {
                 None
             }
-        }).filter_map(|result| async move { result });
-        
+        })
+        .filter_map(|result| async move { result });
+
         let final_stream = decoded_stream.chain(flush_stream);
         Ok(Box::pin(final_stream))
     }
@@ -296,20 +298,20 @@ mod tests {
             include_thinking: true,
             chunk_size: 2, // Very small chunks to force truncation
         };
-        
+
         let provider = TestProvider::new(config);
         let messages = vec![ChatMessage::user("测试UTF-8截断处理").build()];
-        
+
         let stream = provider.chat_stream(messages, None).await.unwrap();
         let events: Vec<_> = stream.collect().await;
-        
+
         // Should have successfully processed all events without corruption
         assert!(!events.is_empty());
-        
+
         // Check that we got some content
-        let has_content = events.iter().any(|event| {
-            matches!(event, Ok(ChatStreamEvent::ContentDelta { .. }))
-        });
+        let has_content = events
+            .iter()
+            .any(|event| matches!(event, Ok(ChatStreamEvent::ContentDelta { .. })));
         assert!(has_content);
     }
 
@@ -320,17 +322,17 @@ mod tests {
             include_thinking: true,
             chunk_size: 100,
         };
-        
+
         let provider = TestProvider::new(config);
         let messages = vec![ChatMessage::user("测试思考内容提取").build()];
-        
+
         let stream = provider.chat_stream(messages, None).await.unwrap();
         let events: Vec<_> = stream.collect().await;
-        
+
         // Should have reasoning deltas for thinking content
-        let has_reasoning = events.iter().any(|event| {
-            matches!(event, Ok(ChatStreamEvent::ReasoningDelta { .. }))
-        });
+        let has_reasoning = events
+            .iter()
+            .any(|event| matches!(event, Ok(ChatStreamEvent::ReasoningDelta { .. })));
         assert!(has_reasoning);
     }
 }

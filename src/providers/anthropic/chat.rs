@@ -239,7 +239,7 @@ impl ChatCapability for AnthropicChatCapability {
 
         let response = self
             .http_client
-            .post(&format!("{}/v1/messages", self.base_url))
+            .post(format!("{}/v1/messages", self.base_url))
             .headers(headers)
             .json(&request_body)
             .send()
@@ -254,8 +254,7 @@ impl ChatCapability for AnthropicChatCapability {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::HttpError(format!(
                 "HTTP {}: {}",
-                status,
-                error_text
+                status, error_text
             )));
         }
 
@@ -299,7 +298,8 @@ impl ChatCapability for AnthropicChatCapability {
             } else {
                 None
             }
-        }).filter_map(|result| async move { result });
+        })
+        .filter_map(|result| async move { result });
 
         let final_stream = decoded_stream.chain(flush_stream);
         Ok(Box::pin(final_stream))
@@ -342,7 +342,9 @@ impl AnthropicChatCapability {
     }
 
     /// Handle different types of Anthropic stream events
-    fn handle_stream_event(event: AnthropicStreamEvent) -> Option<Result<ChatStreamEvent, LlmError>> {
+    fn handle_stream_event(
+        event: AnthropicStreamEvent,
+    ) -> Option<Result<ChatStreamEvent, LlmError>> {
         match event.r#type.as_str() {
             "message_start" => {
                 // Message started, no content yet
@@ -364,9 +366,7 @@ impl AnthropicChatCapability {
                                 }))
                             }
                             AnthropicDelta::ThinkingDelta { thinking } => {
-                                Some(Ok(ChatStreamEvent::ReasoningDelta {
-                                    delta: thinking,
-                                }))
+                                Some(Ok(ChatStreamEvent::ReasoningDelta { delta: thinking }))
                             }
                             AnthropicDelta::InputJsonDelta { partial_json } => {
                                 // Handle tool input delta
@@ -377,9 +377,7 @@ impl AnthropicChatCapability {
                             }
                             AnthropicDelta::SignatureDelta { signature } => {
                                 // Handle signature delta (for thinking mode)
-                                Some(Ok(ChatStreamEvent::ReasoningDelta {
-                                    delta: signature,
-                                }))
+                                Some(Ok(ChatStreamEvent::ReasoningDelta { delta: signature }))
                             }
                         }
                     }
@@ -406,7 +404,9 @@ impl AnthropicChatCapability {
             }
             "error" => {
                 // Error event
-                let error_msg = event.data.get("error")
+                let error_msg = event
+                    .data
+                    .get("error")
                     .and_then(|e| e.get("message"))
                     .and_then(|m| m.as_str())
                     .unwrap_or("Unknown streaming error");
@@ -418,8 +418,6 @@ impl AnthropicChatCapability {
             }
         }
     }
-
-
 }
 
 /// Legacy implementation for backward compatibility

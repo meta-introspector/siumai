@@ -4,9 +4,7 @@
 //! including proper handling of the 'thought' boolean flag according to
 //! Google API documentation.
 
-use siumai::providers::gemini::types::{
-    Content, Part, ThinkingConfig,
-};
+use siumai::providers::gemini::types::{Content, Part, ThinkingConfig};
 use siumai::stream::ChatStreamEvent;
 
 #[cfg(test)]
@@ -62,7 +60,10 @@ mod tests {
             let event = if should_be_thinking {
                 ChatStreamEvent::ThinkingDelta { delta: text }
             } else {
-                ChatStreamEvent::ContentDelta { delta: text, index: None }
+                ChatStreamEvent::ContentDelta {
+                    delta: text,
+                    index: None,
+                }
             };
 
             if let ChatStreamEvent::ThinkingDelta { delta } = event {
@@ -80,7 +81,10 @@ mod tests {
             let event = if should_be_thinking {
                 ChatStreamEvent::ThinkingDelta { delta: text }
             } else {
-                ChatStreamEvent::ContentDelta { delta: text, index: None }
+                ChatStreamEvent::ContentDelta {
+                    delta: text,
+                    index: None,
+                }
             };
 
             if let ChatStreamEvent::ContentDelta { delta, .. } = event {
@@ -98,7 +102,10 @@ mod tests {
             let event = if should_be_thinking {
                 ChatStreamEvent::ThinkingDelta { delta: text }
             } else {
-                ChatStreamEvent::ContentDelta { delta: text, index: None }
+                ChatStreamEvent::ContentDelta {
+                    delta: text,
+                    index: None,
+                }
             };
 
             if let ChatStreamEvent::ContentDelta { delta, .. } = event {

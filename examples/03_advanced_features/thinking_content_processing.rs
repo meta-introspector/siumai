@@ -112,23 +112,35 @@ Rust是一种系统编程语言，具有以下特点：
 
     let test_cases = vec![
         ("No thinking tags", "Just regular content without any tags"),
-        ("Empty thinking", "<think></think>Content after empty thinking"),
-        ("Whitespace thinking", "<think>   </think>Content after whitespace"),
-        ("Multiple thinking blocks", "<think>First</think>Middle<think>Second</think>End"),
-        ("Incomplete thinking", "<think>Incomplete thinking without closing tag"),
+        (
+            "Empty thinking",
+            "<think></think>Content after empty thinking",
+        ),
+        (
+            "Whitespace thinking",
+            "<think>   </think>Content after whitespace",
+        ),
+        (
+            "Multiple thinking blocks",
+            "<think>First</think>Middle<think>Second</think>End",
+        ),
+        (
+            "Incomplete thinking",
+            "<think>Incomplete thinking without closing tag",
+        ),
     ];
 
     for (description, content) in test_cases {
         println!("\nTest case: {}", description);
         println!("Content: {}", content);
         println!("Has thinking: {}", contains_thinking_tags(content));
-        
+
         if let Some(thinking) = extract_thinking_content(content) {
             println!("Extracted: {}", thinking);
         } else {
             println!("Extracted: None");
         }
-        
+
         let filtered = filter_thinking_content(content);
         println!("Filtered: {}", filtered);
         println!("{}", "-".repeat(40));

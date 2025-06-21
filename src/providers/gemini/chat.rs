@@ -485,7 +485,8 @@ impl ChatCapability for GeminiChatCapability {
                 }
             }
             None
-        }).filter_map(|result| async move { result });
+        })
+        .filter_map(|result| async move { result });
 
         let stream = decoded_stream.chain(flush_stream);
 

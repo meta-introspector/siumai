@@ -289,7 +289,8 @@ impl OpenAiStreaming {
             } else {
                 None
             }
-        }).filter_map(|result| async move { result });
+        })
+        .filter_map(|result| async move { result });
 
         Ok(decoded_stream.chain(flush_stream))
     }

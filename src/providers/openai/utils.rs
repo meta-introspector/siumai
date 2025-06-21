@@ -5,8 +5,8 @@
 use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use regex::Regex;
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 
 /// Build HTTP headers for `OpenAI` API requests
 pub fn build_headers(

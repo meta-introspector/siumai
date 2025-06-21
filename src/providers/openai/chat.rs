@@ -107,7 +107,7 @@ impl OpenAiChatCapability {
                     } else {
                         MessageContent::Text(text)
                     }
-                },
+                }
                 serde_json::Value::Array(parts) => {
                     let mut content_parts = Vec::new();
                     for part in parts {
