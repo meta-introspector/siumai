@@ -2,15 +2,12 @@
 //!
 //! Implements text completion using the /api/generate endpoint.
 
-use futures_util::StreamExt;
-use std::sync::{Arc, Mutex};
-
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::types::*;
-use crate::utils::Utf8StreamDecoder;
 
 use super::config::OllamaParams;
+use super::streaming::OllamaStreaming;
 use super::types::*;
 use super::utils::*;
 
@@ -20,21 +17,24 @@ pub struct OllamaCompletionCapability {
     pub http_client: reqwest::Client,
     pub http_config: HttpConfig,
     pub ollama_params: OllamaParams,
+    streaming: OllamaStreaming,
 }
 
 impl OllamaCompletionCapability {
     /// Creates a new Ollama completion capability
-    pub const fn new(
+    pub fn new(
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
         ollama_params: OllamaParams,
     ) -> Self {
+        let streaming = OllamaStreaming::new(http_client.clone());
         Self {
             base_url,
             http_client,
             http_config,
             ollama_params,
+            streaming,
         }
     }
 
@@ -137,89 +137,10 @@ impl OllamaCompletionCapability {
         let body = self.build_generate_request_body(&prompt, None, true)?;
         let url = format!("{}/api/generate", self.base_url);
 
-        let response = self
-            .http_client
-            .post(&url)
-            .headers(headers)
-            .json(&body)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(LlmError::HttpError(format!(
-                "Generate stream request failed: {status} - {error_text}"
-            )));
-        }
-
-        // Create stream from response with UTF-8 decoder
-        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-
-        let stream = response.bytes_stream();
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
-
-                        if !decoded_chunk.is_empty() {
-                            for line in decoded_chunk.lines() {
-                                if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                                    if let Ok(ollama_response) =
-                                        serde_json::from_value::<OllamaGenerateResponse>(json_value)
-                                    {
-                                        let content = ollama_response.response;
-                                        return Some(Ok(ChatStreamEvent::ContentDelta {
-                                            delta: content,
-                                            index: Some(0),
-                                        }));
-                                    }
-                                }
-                            }
-                        }
-                        None
-                    }
-                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
-                }
-            }
-        });
-
-        // Add flush operation
-        let flush_stream = futures_util::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                for line in remaining.lines() {
-                    if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                        if let Ok(ollama_response) =
-                            serde_json::from_value::<OllamaGenerateResponse>(json_value)
-                        {
-                            let content = ollama_response.response;
-                            return Some(Ok(ChatStreamEvent::ContentDelta {
-                                delta: content,
-                                index: Some(0),
-                            }));
-                        }
-                    }
-                }
-            }
-            None
-        })
-        .filter_map(|result| async move { result });
-
-        let mapped_stream = decoded_stream.chain(flush_stream);
-
-        Ok(Box::pin(mapped_stream))
+        // Use the dedicated streaming capability
+        self.streaming
+            .create_completion_stream(url, headers, body)
+            .await
     }
 
     /// Generate with custom model

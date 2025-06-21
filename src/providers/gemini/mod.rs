@@ -9,6 +9,7 @@
 //! - `models.rs` - Model listing capability implementation
 //! - `files.rs` - File management capability implementation
 //! - `code_execution.rs` - Code execution feature implementation
+//! - `streaming.rs` - Streaming functionality with JSON buffering
 //!
 //! # Example Usage
 //! ```rust,no_run
@@ -36,6 +37,7 @@ pub mod chat;
 pub mod client;
 pub mod files;
 pub mod models;
+pub mod streaming;
 pub mod types;
 
 // Feature modules

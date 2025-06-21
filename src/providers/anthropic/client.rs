@@ -67,6 +67,16 @@ impl AnthropicClient {
         &self.specific_params
     }
 
+    /// Get common parameters (for testing and debugging)
+    pub const fn common_params(&self) -> &CommonParams {
+        &self.common_params
+    }
+
+    /// Get chat capability (for testing and debugging)
+    pub const fn chat_capability(&self) -> &AnthropicChatCapability {
+        &self.chat_capability
+    }
+
     /// Update Anthropic-specific parameters
     pub fn with_specific_params(mut self, params: AnthropicSpecificParams) -> Self {
         self.specific_params = params;
@@ -124,15 +134,48 @@ impl ChatCapability for AnthropicClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        // Create a new chat capability with current specific params
-        let chat_capability = AnthropicChatCapability::new(
-            self.chat_capability.api_key.clone(),
-            self.chat_capability.base_url.clone(),
-            self.chat_capability.http_client.clone(),
-            self.chat_capability.http_config.clone(),
-            self.specific_params.clone(),
-        );
-        chat_capability.chat_with_tools(messages, tools).await
+        // Create a ChatRequest with client's configuration
+        let request = ChatRequest {
+            messages,
+            tools,
+            common_params: self.common_params.clone(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: false,
+        };
+
+        let headers = super::utils::build_headers(
+            &self.chat_capability.api_key,
+            &self.chat_capability.http_config.headers,
+        )?;
+        let body = self
+            .chat_capability
+            .build_chat_request_body(&request, Some(&self.specific_params))?;
+        let url = format!("{}/v1/messages", self.chat_capability.base_url);
+
+        let response = self
+            .chat_capability
+            .http_client
+            .post(&url)
+            .headers(headers)
+            .json(&body)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+
+            return Err(LlmError::ApiError {
+                code: status.as_u16(),
+                message: format!("Anthropic API error: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            });
+        }
+
+        let anthropic_response: super::types::AnthropicChatResponse = response.json().await?;
+        self.chat_capability.parse_chat_response(anthropic_response)
     }
 
     async fn chat_stream(
@@ -140,7 +183,105 @@ impl ChatCapability for AnthropicClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        self.chat_capability.chat_stream(messages, tools).await
+        // Create a new chat capability with current configuration for streaming
+        let chat_capability = super::chat::AnthropicChatCapability::new(
+            self.chat_capability.api_key.clone(),
+            self.chat_capability.base_url.clone(),
+            self.chat_capability.http_client.clone(),
+            self.chat_capability.http_config.clone(),
+            self.specific_params.clone(),
+        );
+
+        // Create a ChatRequest with client's configuration for streaming
+        let request = ChatRequest {
+            messages,
+            tools,
+            common_params: self.common_params.clone(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: true,
+        };
+
+        let headers = super::utils::build_headers(
+            &chat_capability.api_key,
+            &chat_capability.http_config.headers,
+        )?;
+        let request_body =
+            chat_capability.build_chat_request_body(&request, Some(&self.specific_params))?;
+
+        let response = chat_capability
+            .http_client
+            .post(format!("{}/v1/messages", chat_capability.base_url))
+            .headers(headers)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::ApiError {
+                code: status.as_u16(),
+                message: format!("Anthropic API error {status}: {error_text}"),
+                details: None,
+            });
+        }
+
+        // Create stream from response with UTF-8 decoder
+        use crate::utils::Utf8StreamDecoder;
+        use futures_util::StreamExt;
+        use std::sync::{Arc, Mutex};
+
+        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder_for_flush = decoder.clone();
+
+        let stream = response.bytes_stream();
+        let decoded_stream = stream.filter_map(move |chunk_result| {
+            let decoder = decoder.clone();
+            async move {
+                match chunk_result {
+                    Ok(chunk) => {
+                        // Use UTF-8 decoder to handle incomplete sequences
+                        let decoded_chunk = {
+                            let mut decoder = decoder.lock().unwrap();
+                            decoder.decode(&chunk)
+                        };
+
+                        if !decoded_chunk.is_empty() {
+                            if let Some(event) =
+                                super::chat::AnthropicChatCapability::parse_sse_event(
+                                    &decoded_chunk,
+                                )
+                            {
+                                return Some(event);
+                            }
+                        }
+                        None
+                    }
+                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
+                }
+            }
+        });
+
+        // Add flush operation
+        let flush_stream = futures_util::stream::once(async move {
+            let remaining = {
+                let mut decoder = decoder_for_flush.lock().unwrap();
+                decoder.flush()
+            };
+
+            if !remaining.is_empty() {
+                super::chat::AnthropicChatCapability::parse_sse_event(&remaining)
+            } else {
+                None
+            }
+        })
+        .filter_map(|result| async move { result });
+
+        let final_stream = decoded_stream.chain(flush_stream);
+        Ok(Box::pin(final_stream))
     }
 }
 

@@ -47,7 +47,7 @@ impl OpenAiChatCapability {
     }
 
     /// Build the chat request body
-    fn build_chat_request_body(
+    pub fn build_chat_request_body(
         &self,
         request: &ChatRequest,
     ) -> Result<serde_json::Value, LlmError> {
@@ -275,11 +275,54 @@ impl ChatCapability for OpenAiChatCapability {
 impl OpenAiChatCapability {
     /// Chat with a `ChatRequest` (legacy method)
     pub async fn chat(&self, request: ChatRequest) -> Result<ChatResponse, LlmError> {
-        self.chat_with_tools(request.messages, request.tools).await
+        let headers = build_headers(
+            &self.api_key,
+            self.organization.as_deref(),
+            self.project.as_deref(),
+            &self.http_config.headers,
+        )?;
+
+        let body = self.build_chat_request_body(&request)?;
+        let url = format!("{}/chat/completions", self.base_url);
+
+        let response = self
+            .http_client
+            .post(&url)
+            .headers(headers)
+            .json(&body)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+
+            return Err(LlmError::ApiError {
+                code: status.as_u16(),
+                message: format!("OpenAI API error: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            });
+        }
+
+        let openai_response: OpenAiChatResponse = response.json().await?;
+        self.parse_chat_response(openai_response)
     }
 
     /// Chat stream with a `ChatRequest` (legacy method)
     pub async fn chat_stream_request(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
-        ChatCapability::chat_stream(self, request.messages, request.tools).await
+        // Create streaming client with the request's configuration
+        let config = super::config::OpenAiConfig {
+            api_key: self.api_key.clone(),
+            base_url: self.base_url.clone(),
+            organization: self.organization.clone(),
+            project: self.project.clone(),
+            common_params: request.common_params.clone(),
+            openai_params: OpenAiParams::default(),
+            http_config: self.http_config.clone(),
+            web_search_config: crate::types::WebSearchConfig::default(),
+        };
+
+        let streaming = super::streaming::OpenAiStreaming::new(config, self.http_client.clone());
+        streaming.create_chat_stream(request).await
     }
 }

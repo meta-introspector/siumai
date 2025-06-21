@@ -4,7 +4,8 @@
 
 use futures::{Stream, StreamExt};
 use serde::Deserialize;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex as StdMutex};
+use tokio::sync::Mutex;
 
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
@@ -129,14 +130,17 @@ pub struct OpenAiStreaming {
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
+    /// SSE line buffer for handling incomplete lines
+    sse_buffer: Arc<Mutex<String>>,
 }
 
 impl OpenAiStreaming {
     /// Create a new `OpenAI` streaming client
-    pub const fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
+    pub fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         Self {
             config,
             http_client,
+            sse_buffer: Arc::new(Mutex::new(String::new())),
         }
     }
 
@@ -249,7 +253,7 @@ impl OpenAiStreaming {
             .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
 
         // Create a UTF-8 decoder for this stream
-        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder = Arc::new(StdMutex::new(Utf8StreamDecoder::new()));
         let decoder_for_flush = decoder.clone();
         let streaming_for_flush = self.clone();
 
@@ -267,7 +271,7 @@ impl OpenAiStreaming {
                         };
 
                         if !decoded_chunk.is_empty() {
-                            streaming.parse_sse_chunk(&decoded_chunk).await
+                            streaming.parse_sse_chunk_buffered(&decoded_chunk).await
                         } else {
                             None
                         }
@@ -285,9 +289,12 @@ impl OpenAiStreaming {
             };
 
             if !remaining.is_empty() {
-                streaming_for_flush.parse_sse_chunk(&remaining).await
+                streaming_for_flush
+                    .parse_sse_chunk_buffered(&remaining)
+                    .await
             } else {
-                None
+                // Also flush any remaining SSE buffer content
+                streaming_for_flush.flush_sse_buffer().await
             }
         })
         .filter_map(|result| async move { result });
@@ -295,7 +302,62 @@ impl OpenAiStreaming {
         Ok(decoded_stream.chain(flush_stream))
     }
 
-    /// Parse a Server-Sent Events chunk
+    /// Parse a Server-Sent Events chunk with buffering for incomplete lines
+    async fn parse_sse_chunk_buffered(
+        &self,
+        chunk: &str,
+    ) -> Option<Result<ChatStreamEvent, LlmError>> {
+        // Add chunk to buffer
+        {
+            let mut buffer = self.sse_buffer.lock().await;
+            buffer.push_str(chunk);
+        }
+
+        // Process complete lines from buffer
+        self.process_buffered_lines().await
+    }
+
+    /// Process complete lines from the SSE buffer
+    async fn process_buffered_lines(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
+        let mut buffer = self.sse_buffer.lock().await;
+
+        // Find the last complete line (ending with \n)
+        if let Some(last_newline_pos) = buffer.rfind('\n') {
+            // Extract complete lines
+            let complete_lines = buffer[..=last_newline_pos].to_string();
+            // Keep incomplete line in buffer
+            let remaining = buffer[last_newline_pos + 1..].to_string();
+            *buffer = remaining;
+
+            // Release the lock before processing
+            drop(buffer);
+
+            // Process the complete lines
+            return self.parse_sse_chunk(&complete_lines).await;
+        }
+
+        // No complete lines yet
+        None
+    }
+
+    /// Flush any remaining content in the SSE buffer
+    async fn flush_sse_buffer(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
+        let remaining = {
+            let mut buffer = self.sse_buffer.lock().await;
+            let content = buffer.clone();
+            buffer.clear();
+            content
+        };
+
+        if !remaining.is_empty() {
+            // Try to parse remaining content as if it were complete
+            self.parse_sse_chunk(&remaining).await
+        } else {
+            None
+        }
+    }
+
+    /// Parse a Server-Sent Events chunk (original method for complete lines)
     async fn parse_sse_chunk(&self, chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
         for line in chunk.lines() {
             let line = line.trim();

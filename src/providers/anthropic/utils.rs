@@ -36,9 +36,6 @@ pub fn build_headers(
         if let Some(beta_value) = custom_headers.get("anthropic-beta") {
             beta_features.push(beta_value.clone());
         }
-    } else {
-        // Default beta features for extended thinking
-        beta_features.push("thinking-2024-12-19".to_string());
     }
 
     if !beta_features.is_empty() {

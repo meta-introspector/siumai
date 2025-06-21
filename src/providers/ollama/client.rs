@@ -18,6 +18,7 @@ use super::config::{OllamaConfig, OllamaParams};
 use super::embeddings::OllamaEmbeddingCapability;
 use super::get_default_models;
 use super::models::OllamaModelsCapability;
+use super::streaming::OllamaStreaming;
 
 /// Ollama Client
 #[allow(dead_code)]
@@ -30,6 +31,8 @@ pub struct OllamaClient {
     embedding_capability: OllamaEmbeddingCapability,
     /// Models capability implementation
     models_capability: OllamaModelsCapability,
+    /// Streaming capability implementation
+    streaming_capability: OllamaStreaming,
     /// Common parameters
     common_params: CommonParams,
     /// Ollama-specific parameters
@@ -70,11 +73,14 @@ impl OllamaClient {
             config.http_config.clone(),
         );
 
+        let streaming_capability = OllamaStreaming::new(http_client.clone());
+
         Self {
             chat_capability,
             completion_capability,
             embedding_capability,
             models_capability,
+            streaming_capability,
             common_params: config.common_params,
             ollama_params: config.ollama_params,
             http_client,
@@ -101,6 +107,11 @@ impl OllamaClient {
     /// Get Ollama-specific parameters
     pub const fn ollama_params(&self) -> &OllamaParams {
         &self.ollama_params
+    }
+
+    /// Get chat capability (for testing and debugging)
+    pub const fn chat_capability(&self) -> &super::chat::OllamaChatCapability {
+        &self.chat_capability
     }
 
     /// Update common parameters
@@ -225,7 +236,7 @@ impl ChatCapability for OllamaClient {
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
         // Create a ChatRequest with proper common_params
-        let mut request = ChatRequest {
+        let request = ChatRequest {
             messages,
             tools,
             common_params: self.common_params.clone(),
@@ -234,7 +245,6 @@ impl ChatCapability for OllamaClient {
             web_search: None,
             stream: true,
         };
-        request.stream = true;
 
         let headers = crate::providers::ollama::utils::build_headers(
             &self.chat_capability.http_config.headers,
@@ -242,55 +252,10 @@ impl ChatCapability for OllamaClient {
         let body = self.chat_capability.build_chat_request_body(&request)?;
         let url = format!("{}/api/chat", self.base_url);
 
-        let response = self
-            .http_client
-            .post(&url)
-            .headers(headers)
-            .json(&body)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(crate::error::LlmError::HttpError(format!(
-                "Chat request failed: {status} - {error_text}"
-            )));
-        }
-
-        // Create stream from response
-        use futures_util::StreamExt;
-        let stream = response.bytes_stream();
-        let mapped_stream = stream.map(|chunk_result| match chunk_result {
-            Ok(chunk) => {
-                let chunk_str = String::from_utf8_lossy(&chunk);
-                for line in chunk_str.lines() {
-                    if let Ok(Some(json_value)) =
-                        crate::providers::ollama::utils::parse_streaming_line(line)
-                    {
-                        if let Ok(ollama_response) = serde_json::from_value::<
-                            crate::providers::ollama::types::OllamaChatResponse,
-                        >(json_value)
-                        {
-                            let content_delta = ollama_response.message.content.clone();
-                            return Ok(crate::types::ChatStreamEvent::ContentDelta {
-                                delta: content_delta,
-                                index: Some(0),
-                            });
-                        }
-                    }
-                }
-                Ok(crate::types::ChatStreamEvent::ContentDelta {
-                    delta: String::new(),
-                    index: Some(0),
-                })
-            }
-            Err(e) => Err(crate::error::LlmError::StreamError(format!(
-                "Stream error: {e}"
-            ))),
-        });
-
-        Ok(Box::pin(mapped_stream))
+        // Use the dedicated streaming capability
+        self.streaming_capability
+            .create_chat_stream(url, headers, body)
+            .await
     }
 }
 

@@ -107,6 +107,16 @@ impl OpenAiClient {
         &self.specific_params
     }
 
+    /// Get common parameters (for testing and debugging)
+    pub const fn common_params(&self) -> &CommonParams {
+        &self.common_params
+    }
+
+    /// Get chat capability (for testing and debugging)
+    pub const fn chat_capability(&self) -> &OpenAiChatCapability {
+        &self.chat_capability
+    }
+
     /// Update OpenAI-specific parameters
     pub fn with_specific_params(mut self, params: OpenAiSpecificParams) -> Self {
         self.specific_params = params;
@@ -171,11 +181,15 @@ impl ChatCapability for OpenAiClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        // Create a ChatRequest from messages and tools
+        // Create a ChatRequest from messages and tools, using client's configuration
         let request = ChatRequest {
             messages,
             tools,
-            ..Default::default()
+            common_params: self.common_params.clone(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: false,
         };
         self.chat_capability.chat(request).await
     }
@@ -186,7 +200,31 @@ impl ChatCapability for OpenAiClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        self.chat_capability.chat_stream(messages, tools).await
+        // Create a ChatRequest with client's configuration for streaming
+        let request = ChatRequest {
+            messages,
+            tools,
+            common_params: self.common_params.clone(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: true,
+        };
+
+        // Create streaming client with proper configuration
+        let config = super::config::OpenAiConfig {
+            api_key: self.chat_capability.api_key.clone(),
+            base_url: self.chat_capability.base_url.clone(),
+            organization: self.chat_capability.organization.clone(),
+            project: self.chat_capability.project.clone(),
+            common_params: self.common_params.clone(),
+            openai_params: self.openai_params.clone(),
+            http_config: self.chat_capability.http_config.clone(),
+            web_search_config: crate::types::WebSearchConfig::default(),
+        };
+
+        let streaming = super::streaming::OpenAiStreaming::new(config, self.http_client.clone());
+        streaming.create_chat_stream(request).await
     }
 }
 
@@ -295,5 +333,49 @@ mod tests {
 
         assert_eq!(LlmProvider::provider_name(&client), "openai");
         assert!(!LlmProvider::supported_models(&client).is_empty());
+    }
+
+    #[test]
+    fn test_openai_client_uses_builder_model() {
+        let config = OpenAiConfig::new("test-key").with_model("gpt-4");
+        let client = OpenAiClient::new(config, reqwest::Client::new());
+
+        // Verify that the client stores the model from the builder
+        assert_eq!(client.common_params.model, "gpt-4");
+    }
+
+    #[tokio::test]
+    async fn test_openai_chat_request_uses_client_model() {
+        use crate::types::{ChatMessage, MessageContent, MessageMetadata, MessageRole};
+
+        let config = OpenAiConfig::new("test-key").with_model("gpt-4-test");
+        let client = OpenAiClient::new(config, reqwest::Client::new());
+
+        // Create a test message
+        let message = ChatMessage {
+            role: MessageRole::User,
+            content: MessageContent::Text("Hello".to_string()),
+            metadata: MessageMetadata::default(),
+            tool_calls: None,
+            tool_call_id: None,
+        };
+
+        // Create a ChatRequest to test the legacy chat method
+        let request = ChatRequest {
+            messages: vec![message],
+            tools: None,
+            common_params: client.common_params.clone(),
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: false,
+        };
+
+        // Test that the request body includes the correct model
+        let body = client
+            .chat_capability
+            .build_chat_request_body(&request)
+            .unwrap();
+        assert_eq!(body["model"], "gpt-4-test");
     }
 }

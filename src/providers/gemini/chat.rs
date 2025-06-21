@@ -5,7 +5,6 @@
 use async_trait::async_trait;
 use reqwest::Client as HttpClient;
 use serde_json::json;
-use std::sync::{Arc, Mutex};
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
@@ -14,8 +13,8 @@ use crate::types::{
     ChatMessage, ChatResponse, FinishReason, MessageContent, ResponseMetadata, Tool, ToolCall,
     Usage,
 };
-use crate::utils::Utf8StreamDecoder;
 
+use super::streaming::GeminiStreaming;
 use super::types::{
     Content, FunctionCall, FunctionDeclaration, GeminiConfig, GeminiTool, GenerateContentRequest,
     GenerateContentResponse, Part,
@@ -26,14 +25,17 @@ use super::types::{
 pub struct GeminiChatCapability {
     config: GeminiConfig,
     http_client: HttpClient,
+    streaming: GeminiStreaming,
 }
 
 impl GeminiChatCapability {
     /// Create a new Gemini chat capability
-    pub const fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
+    pub fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
+        let streaming = GeminiStreaming::new(http_client.clone());
         Self {
             config,
             http_client,
+            streaming,
         }
     }
 
@@ -136,7 +138,7 @@ impl GeminiChatCapability {
     }
 
     /// Build the request body for Gemini API
-    fn build_request_body(
+    pub fn build_request_body(
         &self,
         messages: &[ChatMessage],
         tools: Option<&[Tool]>,
@@ -356,9 +358,6 @@ impl ChatCapability for GeminiChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        use crate::stream::ChatStreamEvent;
-        use futures::stream::StreamExt;
-
         let request = self.build_request_body(&messages, tools.as_deref())?;
 
         let url = format!(
@@ -366,130 +365,9 @@ impl ChatCapability for GeminiChatCapability {
             self.config.base_url, self.config.model
         );
 
-        let response = self
-            .http_client
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .header("x-goog-api-key", &self.config.api_key)
-            .json(&request)
-            .send()
+        // Use the dedicated streaming capability
+        self.streaming
+            .create_chat_stream(url, self.config.api_key.clone(), request)
             .await
-            .map_err(|e| LlmError::HttpError(e.to_string()))?;
-
-        if !response.status().is_success() {
-            let status_code = response.status().as_u16();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(LlmError::api_error(
-                status_code,
-                format!("Gemini streaming API error: {status_code} - {error_text}"),
-            ));
-        }
-
-        // Parse JSON stream (Gemini uses JSON lines, not SSE)
-        // Create a UTF-8 decoder for this stream
-        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-
-        let decoded_stream = response
-            .bytes_stream()
-            .map(|result| result.map_err(|e| LlmError::HttpError(e.to_string())))
-            .filter_map(move |chunk_result| {
-                let decoder = decoder.clone();
-                async move {
-                    match chunk_result {
-                        Ok(chunk) => {
-                            // Use UTF-8 decoder to handle incomplete sequences
-                            let text = {
-                                let mut decoder = decoder.lock().unwrap();
-                                decoder.decode(&chunk)
-                            };
-
-                            // Skip empty decoded text
-                            if text.trim().is_empty() {
-                                return None;
-                            }
-
-                            // Parse JSON response
-                            match serde_json::from_str::<GenerateContentResponse>(&text) {
-                                Ok(response) => {
-                                    if let Some(candidate) = response.candidates.first() {
-                                        if let Some(content) = &candidate.content {
-                                            for part in &content.parts {
-                                                if let Part::Text { text, thought } = part {
-                                                    // Handle both regular text and thought summaries
-                                                    let event = if thought.unwrap_or(false) {
-                                                        ChatStreamEvent::ThinkingDelta {
-                                                            delta: text.clone(),
-                                                        }
-                                                    } else {
-                                                        ChatStreamEvent::ContentDelta {
-                                                            delta: text.clone(),
-                                                            index: None,
-                                                        }
-                                                    };
-                                                    return Some(Ok(event));
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Some(Ok(ChatStreamEvent::ContentDelta {
-                                        delta: String::new(),
-                                        index: None,
-                                    }))
-                                }
-                                Err(_) => {
-                                    // Skip malformed JSON
-                                    None
-                                }
-                            }
-                        }
-                        Err(e) => Some(Err(e)),
-                    }
-                }
-            });
-
-        // Add a final flush operation
-        let flush_stream = futures::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.trim().is_empty() {
-                // Try to parse any remaining JSON
-                match serde_json::from_str::<GenerateContentResponse>(&remaining) {
-                    Ok(response) => {
-                        if let Some(candidate) = response.candidates.first() {
-                            if let Some(content) = &candidate.content {
-                                for part in &content.parts {
-                                    if let Part::Text { text, thought } = part {
-                                        let event = if thought.unwrap_or(false) {
-                                            ChatStreamEvent::ThinkingDelta {
-                                                delta: text.clone(),
-                                            }
-                                        } else {
-                                            ChatStreamEvent::ContentDelta {
-                                                delta: text.clone(),
-                                                index: None,
-                                            }
-                                        };
-                                        return Some(Ok(event));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Err(_) => {
-                        // Skip malformed JSON
-                    }
-                }
-            }
-            None
-        })
-        .filter_map(|result| async move { result });
-
-        let stream = decoded_stream.chain(flush_stream);
-
-        Ok(Box::pin(stream))
     }
 }

@@ -176,6 +176,16 @@ impl GeminiClient {
     pub const fn safety_settings(&self) -> Option<&Vec<SafetySetting>> {
         self.config.safety_settings.as_ref()
     }
+
+    /// Get the configuration (for testing and debugging)
+    pub const fn config(&self) -> &GeminiConfig {
+        &self.config
+    }
+
+    /// Get chat capability (for testing and debugging)
+    pub const fn chat_capability(&self) -> &GeminiChatCapability {
+        &self.chat_capability
+    }
 }
 
 #[async_trait]

@@ -1,7 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
 ## [0.3.0] - 2025-06-21
 
 ### Added
@@ -12,6 +10,12 @@
 - LRU response cache with configurable capacity
 - `as_any()` method for type-safe client casting
 
+### Fixed
+
+- Streaming output JSON parsing errors caused by network packet truncation
+- UTF-8 character handling in streaming responses across all providers
+- Inconsistent streaming architecture between providers
+
 ### Changed
 
 - **BREAKING**: Capability access returns proxies directly (no `Result<Proxy, Error>`)
@@ -19,6 +23,9 @@
 - Split `ChatCapability` into core functionality and extensions
 - Improved error handling with better retry logic and HTTP status handling
 - Optimized parameter validation and string processing performance
+- Refactored streaming implementations with dedicated modules for better maintainability
+- Added line/JSON buffering mechanisms to handle incomplete data chunks
+- Unified streaming architecture across OpenAI, Anthropic, Ollama, and Gemini providers
 
 ### Removed
 

@@ -13,6 +13,7 @@
 //! - `models.rs` - Model management capability implementation
 //! - `types.rs` - Ollama-specific type definitions
 //! - `utils.rs` - Utility functions and helpers
+//! - `streaming.rs` - Streaming functionality with line buffering
 //!
 //! # Example Usage
 //! ```rust,no_run
@@ -49,6 +50,7 @@ pub mod chat;
 pub mod completion;
 pub mod embeddings;
 pub mod models;
+pub mod streaming;
 
 // Re-export main types
 pub use client::OllamaClient;

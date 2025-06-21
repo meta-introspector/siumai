@@ -6,7 +6,6 @@
 //! Before running, set your API key:
 //! ```bash
 //! export OPENAI_API_KEY="your-openai-key"
-//! export GROQ_API_KEY="your-groq-key"
 //! ```
 //!
 //! Usage:
@@ -22,12 +21,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("===========================================\n");
 
     // Get API key
-    let api_key = std::env::var("GROQ_API_KEY")
-        .or_else(|_| std::env::var("OPENAI_API_KEY"))
-        .unwrap_or_else(|_| {
-            println!("⚠️  No API key found, using demo key");
-            "demo-key".to_string()
-        });
+    let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| {
+        println!("⚠️  No API key found, using demo key");
+        "demo-key".to_string()
+    });
 
     // Example 1: Simple Chat
     println!("💬 Example 1: Simple Chat");

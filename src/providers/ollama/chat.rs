@@ -3,14 +3,11 @@
 //! Implements the `ChatCapability` trait for Ollama using the /api/chat endpoint.
 
 use async_trait::async_trait;
-use futures_util::StreamExt;
-use std::sync::{Arc, Mutex};
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::traits::ChatCapability;
 use crate::types::*;
-use crate::utils::Utf8StreamDecoder;
 
 use super::config::OllamaParams;
 use super::types::*;
@@ -177,126 +174,26 @@ impl OllamaChatCapability {
 impl ChatCapability for OllamaChatCapability {
     async fn chat_with_tools(
         &self,
-        messages: Vec<ChatMessage>,
-        tools: Option<Vec<Tool>>,
+        _messages: Vec<ChatMessage>,
+        _tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        let request = ChatRequest {
-            messages,
-            tools,
-            common_params: Default::default(),
-            provider_params: None,
-            http_config: None,
-            web_search: None,
-            stream: false,
-        };
-        self.chat(request).await
+        // This method should not be called directly on OllamaChatCapability
+        // It should be called through OllamaClient which provides the correct configuration
+        return Err(LlmError::ConfigurationError(
+            "OllamaChatCapability should be used through OllamaClient".to_string(),
+        ));
     }
 
     async fn chat_stream(
         &self,
-        messages: Vec<ChatMessage>,
-        tools: Option<Vec<Tool>>,
+        _messages: Vec<ChatMessage>,
+        _tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // Note: This method should not be called directly.
-        // Use OllamaClient::chat_stream instead which provides proper common_params.
-        let mut request = ChatRequest {
-            messages,
-            tools,
-            common_params: Default::default(),
-            provider_params: None,
-            http_config: None,
-            web_search: None,
-            stream: true,
-        };
-        request.stream = true;
-
-        let headers = build_headers(&self.http_config.headers)?;
-        let body = self.build_chat_request_body(&request)?;
-        let url = format!("{}/api/chat", self.base_url);
-
-        let response = self
-            .http_client
-            .post(&url)
-            .headers(headers)
-            .json(&body)
-            .send()
-            .await?;
-
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(LlmError::HttpError(format!(
-                "Chat request failed: {status} - {error_text}"
-            )));
-        }
-
-        // Create stream from response with UTF-8 decoder
-        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-
-        let stream = response.bytes_stream();
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
-
-                        if !decoded_chunk.is_empty() {
-                            for line in decoded_chunk.lines() {
-                                if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                                    if let Ok(ollama_response) =
-                                        serde_json::from_value::<OllamaChatResponse>(json_value)
-                                    {
-                                        let content_delta = ollama_response.message.content.clone();
-                                        return Some(Ok(ChatStreamEvent::ContentDelta {
-                                            delta: content_delta,
-                                            index: Some(0),
-                                        }));
-                                    }
-                                }
-                            }
-                        }
-                        None
-                    }
-                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
-                }
-            }
-        });
-
-        // Add flush operation
-        let flush_stream = futures_util::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                for line in remaining.lines() {
-                    if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                        if let Ok(ollama_response) =
-                            serde_json::from_value::<OllamaChatResponse>(json_value)
-                        {
-                            let content_delta = ollama_response.message.content.clone();
-                            return Some(Ok(ChatStreamEvent::ContentDelta {
-                                delta: content_delta,
-                                index: Some(0),
-                            }));
-                        }
-                    }
-                }
-            }
-            None
-        })
-        .filter_map(|result| async move { result });
-
-        let mapped_stream = decoded_stream.chain(flush_stream);
-
-        Ok(Box::pin(mapped_stream))
+        // This method should not be called directly on OllamaChatCapability
+        // It should be called through OllamaClient which provides the correct configuration
+        Err(LlmError::ConfigurationError(
+            "OllamaChatCapability should be used through OllamaClient".to_string(),
+        ))
     }
 }
 

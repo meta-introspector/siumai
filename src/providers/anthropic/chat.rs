@@ -5,7 +5,8 @@
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex as StdMutex};
+use tokio::sync::Mutex;
 
 use crate::error::LlmError;
 use crate::params::{AnthropicParameterMapper, ParameterMapper};
@@ -25,11 +26,13 @@ pub struct AnthropicChatCapability {
     pub http_config: HttpConfig,
     pub parameter_mapper: AnthropicParameterMapper,
     anthropic_params: AnthropicSpecificParams,
+    /// SSE line buffer for handling incomplete lines
+    sse_buffer: Arc<Mutex<String>>,
 }
 
 impl AnthropicChatCapability {
     /// Create a new Anthropic chat capability instance
-    pub const fn new(
+    pub fn new(
         api_key: String,
         base_url: String,
         http_client: reqwest::Client,
@@ -43,11 +46,12 @@ impl AnthropicChatCapability {
             http_config,
             parameter_mapper: AnthropicParameterMapper,
             anthropic_params,
+            sse_buffer: Arc::new(Mutex::new(String::new())),
         }
     }
 
     /// Build the chat request body
-    fn build_chat_request_body(
+    pub fn build_chat_request_body(
         &self,
         request: &ChatRequest,
         anthropic_params: Option<&super::types::AnthropicSpecificParams>,
@@ -104,7 +108,7 @@ impl AnthropicChatCapability {
     }
 
     /// Parse the Anthropic response
-    fn parse_chat_response(
+    pub fn parse_chat_response(
         &self,
         response: AnthropicChatResponse,
     ) -> Result<ChatResponse, LlmError> {
@@ -259,12 +263,17 @@ impl ChatCapability for AnthropicChatCapability {
         }
 
         // Create stream from response with UTF-8 decoder
-        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
+        let decoder = Arc::new(StdMutex::new(Utf8StreamDecoder::new()));
         let decoder_for_flush = decoder.clone();
+
+        // Clone the SSE buffer for use in the stream
+        let sse_buffer = self.sse_buffer.clone();
+        let sse_buffer_for_flush = sse_buffer.clone();
 
         let stream = response.bytes_stream();
         let decoded_stream = stream.filter_map(move |chunk_result| {
             let decoder = decoder.clone();
+            let sse_buffer = sse_buffer.clone();
             async move {
                 match chunk_result {
                     Ok(chunk) => {
@@ -275,7 +284,10 @@ impl ChatCapability for AnthropicChatCapability {
                         };
 
                         if !decoded_chunk.is_empty() {
-                            if let Some(event) = Self::parse_sse_event(&decoded_chunk) {
+                            // Use SSE buffer for line buffering
+                            if let Some(event) =
+                                Self::parse_sse_event_buffered(&decoded_chunk, sse_buffer).await
+                            {
                                 return Some(event);
                             }
                         }
@@ -294,9 +306,10 @@ impl ChatCapability for AnthropicChatCapability {
             };
 
             if !remaining.is_empty() {
-                Self::parse_sse_event(&remaining)
+                Self::parse_sse_event_buffered(&remaining, sse_buffer_for_flush.clone()).await
             } else {
-                None
+                // Also flush any remaining SSE buffer content
+                Self::flush_sse_buffer(sse_buffer_for_flush).await
             }
         })
         .filter_map(|result| async move { result });
@@ -307,8 +320,67 @@ impl ChatCapability for AnthropicChatCapability {
 }
 
 impl AnthropicChatCapability {
-    /// Parse SSE event from Anthropic streaming response
-    fn parse_sse_event(chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
+    /// Parse SSE event with buffering for incomplete lines
+    pub async fn parse_sse_event_buffered(
+        chunk: &str,
+        sse_buffer: Arc<Mutex<String>>,
+    ) -> Option<Result<ChatStreamEvent, LlmError>> {
+        // Add chunk to buffer
+        {
+            let mut buffer = sse_buffer.lock().await;
+            buffer.push_str(chunk);
+        }
+
+        // Process complete lines from buffer
+        Self::process_buffered_lines(sse_buffer).await
+    }
+
+    /// Process complete lines from the SSE buffer
+    async fn process_buffered_lines(
+        sse_buffer: Arc<Mutex<String>>,
+    ) -> Option<Result<ChatStreamEvent, LlmError>> {
+        let mut buffer = sse_buffer.lock().await;
+
+        // Find the last complete line (ending with \n)
+        if let Some(last_newline_pos) = buffer.rfind('\n') {
+            // Extract complete lines
+            let complete_lines = buffer[..=last_newline_pos].to_string();
+            // Keep incomplete line in buffer
+            let remaining = buffer[last_newline_pos + 1..].to_string();
+            *buffer = remaining;
+
+            // Release the lock before processing
+            drop(buffer);
+
+            // Process the complete lines
+            return Self::parse_sse_event(&complete_lines);
+        }
+
+        // No complete lines yet
+        None
+    }
+
+    /// Flush any remaining content in the SSE buffer
+    pub async fn flush_sse_buffer(
+        sse_buffer: Arc<Mutex<String>>,
+    ) -> Option<Result<ChatStreamEvent, LlmError>> {
+        let remaining = {
+            let mut buffer = sse_buffer.lock().await;
+            let content = buffer.clone();
+            buffer.clear();
+            content
+        };
+
+        if !remaining.is_empty() {
+            // Try to parse remaining content as if it were complete
+            Self::parse_sse_event(&remaining)
+        } else {
+            None
+        }
+    }
+
+    /// Parse SSE event from Anthropic streaming response (original method for complete lines)
+    pub fn parse_sse_event(chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
         for line in chunk.lines() {
             let line = line.trim();
 
