@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 /// Performance metrics collector
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PerformanceMetrics {
     /// Request latency metrics
     pub latency: LatencyMetrics,
@@ -24,17 +24,7 @@ pub struct PerformanceMetrics {
     pub provider_metrics: HashMap<String, ProviderMetrics>,
 }
 
-impl Default for PerformanceMetrics {
-    fn default() -> Self {
-        Self {
-            latency: LatencyMetrics::default(),
-            throughput: ThroughputMetrics::default(),
-            error_rate: ErrorRateMetrics::default(),
-            memory: MemoryMetrics::default(),
-            provider_metrics: HashMap::new(),
-        }
-    }
-}
+
 
 /// Latency metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,7 +143,7 @@ impl Default for ErrorRateMetrics {
 }
 
 /// Memory usage metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MemoryMetrics {
     /// Current memory usage in bytes
     pub current_usage: u64,
@@ -167,17 +157,7 @@ pub struct MemoryMetrics {
     pub deallocations: u64,
 }
 
-impl Default for MemoryMetrics {
-    fn default() -> Self {
-        Self {
-            current_usage: 0,
-            peak_usage: 0,
-            avg_usage: 0,
-            allocations: 0,
-            deallocations: 0,
-        }
-    }
-}
+
 
 /// Provider-specific metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -459,6 +439,12 @@ pub mod optimization {
     #[allow(dead_code)]
     pub struct StringInterner {
         strings: std::collections::HashMap<String, &'static str>,
+    }
+
+    impl Default for StringInterner {
+        fn default() -> Self {
+            Self::new()
+        }
     }
 
     impl StringInterner {

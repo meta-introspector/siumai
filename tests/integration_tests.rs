@@ -3,9 +3,9 @@
 //! These tests verify the core functionality of the unified LLM interface
 
 use siumai::*;
-use siumai::types::*;
-use siumai::error::*;
-use siumai::traits::*;
+// use siumai::types::*;
+// use siumai::error::*;
+// use siumai::traits::*;
 use std::time::Duration;
 
 #[cfg(test)]
@@ -156,8 +156,10 @@ mod tests {
     #[test]
     fn test_http_config() {
         // Test HTTP configuration
-        let mut http_config = HttpConfig::default();
-        http_config.timeout = Some(Duration::from_secs(60));
+        let mut http_config = HttpConfig {
+            timeout: Some(Duration::from_secs(60)),
+            ..Default::default()
+        };
         http_config
             .headers
             .insert("Custom-Header".to_string(), "value".to_string());
@@ -328,7 +330,7 @@ mod builder_tests {
             .max_tokens(1000);
 
         // We can't actually build without API key, but we can test the builder pattern
-        assert!(true); // Placeholder assertion
+        // Placeholder assertion
     }
 
     #[test]
@@ -345,6 +347,6 @@ mod builder_tests {
 
         let _openai_builder = builder.openai().model("gpt-4").temperature(0.8);
 
-        assert!(true); // Placeholder assertion
+        // Placeholder assertion
     }
 }

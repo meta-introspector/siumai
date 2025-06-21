@@ -135,9 +135,7 @@ impl OpenAiConfig {
     /// * `config` - Optional web search configuration
     pub fn with_web_search(mut self, config: Option<WebSearchConfig>) -> Self {
         self.web_search_config = config.unwrap_or_else(|| {
-            let mut default_config = WebSearchConfig::default();
-            default_config.enabled = true;
-            default_config
+            WebSearchConfig { enabled: true, ..Default::default() }
         });
         self
     }
@@ -217,26 +215,26 @@ impl OpenAiConfig {
 
         // Validate common parameters
         if let Some(temp) = self.common_params.temperature {
-            if temp < 0.0 || temp > 2.0 {
+            if !(0.0..=2.0).contains(&temp) {
                 return Err("Temperature must be between 0.0 and 2.0".to_string());
             }
         }
 
         if let Some(top_p) = self.common_params.top_p {
-            if top_p < 0.0 || top_p > 1.0 {
+            if !(0.0..=1.0).contains(&top_p) {
                 return Err("Top-p must be between 0.0 and 1.0".to_string());
             }
         }
 
         // Validate OpenAI-specific parameters
         if let Some(freq_penalty) = self.openai_params.frequency_penalty {
-            if freq_penalty < -2.0 || freq_penalty > 2.0 {
+            if !(-2.0..=2.0).contains(&freq_penalty) {
                 return Err("Frequency penalty must be between -2.0 and 2.0".to_string());
             }
         }
 
         if let Some(pres_penalty) = self.openai_params.presence_penalty {
-            if pres_penalty < -2.0 || pres_penalty > 2.0 {
+            if !(-2.0..=2.0).contains(&pres_penalty) {
                 return Err("Presence penalty must be between -2.0 and 2.0".to_string());
             }
         }

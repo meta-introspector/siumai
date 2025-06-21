@@ -301,7 +301,7 @@ impl ChatCapability for OpenAiResponses {
 
         let response = self
             .http_client
-            .post(&self.responses_endpoint())
+            .post(self.responses_endpoint())
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")
             .json(&request_body)
@@ -344,7 +344,7 @@ impl ChatCapability for OpenAiResponses {
 
         let response = self
             .http_client
-            .post(&self.responses_endpoint())
+            .post(self.responses_endpoint())
             .header("Authorization", format!("Bearer {}", self.config.api_key))
             .header("Content-Type", "application/json")
             .header("Accept", "text/event-stream")
@@ -396,8 +396,8 @@ impl OpenAiResponses {
         let mut events = Vec::new();
 
         for line in chunk.lines() {
-            if line.starts_with("data: ") {
-                let data = &line[6..]; // Remove "data: " prefix
+            if let Some(data) = line.strip_prefix("data: ") {
+                // Remove "data: " prefix
 
                 if data == "[DONE]" {
                     // Stream end event

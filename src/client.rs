@@ -169,29 +169,17 @@ impl UnifiedLlmClient {
 
     /// Try to cast to embedding capability
     pub fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {
-        if self.supports("embedding") {
-            None // Similar to above
-        } else {
-            None
-        }
+        None // Embedding not implemented yet
     }
 
     /// Try to cast to vision capability
     pub fn as_vision_capability(&self) -> Option<&dyn VisionCapability> {
-        if self.supports("vision") {
-            None // Similar to above
-        } else {
-            None
-        }
+        None // Vision not implemented yet
     }
 
     /// Try to cast to image generation capability
     pub fn as_image_generation_capability(&self) -> Option<&dyn ImageGenerationCapability> {
-        if self.supports("image_generation") {
-            None // Similar to above
-        } else {
-            None
-        }
+        None // Image generation not implemented yet
     }
 }
 

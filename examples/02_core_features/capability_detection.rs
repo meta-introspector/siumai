@@ -75,7 +75,7 @@ async fn demonstrate_feature_availability() {
         println!("   Feature: {}", feature);
         
         for (name, client) in &providers {
-            let available = check_feature_availability(client.as_ref(), &name, feature).await;
+            let available = check_feature_availability(client.as_ref(), name, feature).await;
             let status = if available { "✅" } else { "❌" };
             println!("      {} {}", status, name);
         }
@@ -261,7 +261,7 @@ async fn check_feature_availability(client: &dyn ChatCapability, provider_name: 
 }
 
 /// Test streaming support
-async fn test_streaming_support(client: &dyn ChatCapability) -> bool {
+async fn test_streaming_support(_client: &dyn ChatCapability) -> bool {
     // In a real implementation, you would try to create a stream
     // For now, we'll assume all providers support streaming
     true
@@ -353,7 +353,7 @@ struct ProviderMetadata {
 }
 
 /// Get provider metadata
-async fn get_provider_metadata(client: &dyn ChatCapability, provider_name: &str) -> ProviderMetadata {
+async fn get_provider_metadata(_client: &dyn ChatCapability, provider_name: &str) -> ProviderMetadata {
     match provider_name {
         "OpenAI" => ProviderMetadata {
             provider_type: "Cloud API".to_string(),

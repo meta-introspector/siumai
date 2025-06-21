@@ -1,8 +1,10 @@
 //! 🤔 Claude Thinking Process
-//! 
+//!
 //! This example demonstrates Claude's thinking capabilities including:
 //! - Accessing thinking content and reasoning process
 //! - Reasoning analysis and step-by-step problem solving
+
+#![allow(clippy::useless_vec)]
 //! - Complex problem solving with visible thought process
 //! - Thinking vs output comparison
 //! - Advanced reasoning patterns

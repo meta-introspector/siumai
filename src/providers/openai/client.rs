@@ -77,6 +77,7 @@ impl OpenAiClient {
     }
 
     /// Creates a new OpenAI client (legacy constructor for backward compatibility)
+    #[allow(clippy::too_many_arguments)]
     pub fn new_legacy(
         api_key: String,
         base_url: String,

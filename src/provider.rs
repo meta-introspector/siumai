@@ -20,6 +20,7 @@ pub struct Siumai {
     /// The underlying provider client
     client: Box<dyn LlmClient>,
     /// Capability registry for dynamic dispatch
+    #[allow(dead_code)]
     capabilities: HashMap<String, Box<dyn Any + Send + Sync>>,
     /// Provider-specific metadata
     metadata: ProviderMetadata,

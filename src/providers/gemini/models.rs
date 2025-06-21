@@ -113,10 +113,8 @@ impl GeminiModels {
             // Default context windows based on model name
             if id.contains("1.5-pro") {
                 2_000_000 // 2M tokens for Gemini 1.5 Pro
-            } else if id.contains("1.5-flash") {
-                1_000_000 // 1M tokens for Gemini 1.5 Flash
-            } else if id.contains("2.0") {
-                1_000_000 // 1M tokens for Gemini 2.0
+            } else if id.contains("1.5-flash") || id.contains("2.0") {
+                1_000_000 // 1M tokens for Gemini 1.5 Flash and 2.0
             } else {
                 32_000 // Default fallback
             }
@@ -277,10 +275,8 @@ pub fn model_supports_capability(model_id: &str, capability: &str) -> bool {
 pub fn get_model_context_window(model_id: &str) -> u32 {
     if model_id.contains("1.5-pro") {
         2_000_000 // 2M tokens for Gemini 1.5 Pro
-    } else if model_id.contains("1.5-flash") {
-        1_000_000 // 1M tokens for Gemini 1.5 Flash
-    } else if model_id.contains("2.0") {
-        1_000_000 // 1M tokens for Gemini 2.0
+    } else if model_id.contains("1.5-flash") || model_id.contains("2.0") {
+        1_000_000 // 1M tokens for Gemini 1.5 Flash and 2.0
     } else {
         32_000 // Default fallback
     }
@@ -288,12 +284,8 @@ pub fn get_model_context_window(model_id: &str) -> u32 {
 
 /// Get the maximum output tokens for a model
 pub fn get_model_max_output_tokens(model_id: &str) -> u32 {
-    if model_id.contains("1.5-pro") {
-        8192 // Gemini 1.5 Pro max output
-    } else if model_id.contains("1.5-flash") {
-        8192 // Gemini 1.5 Flash max output
-    } else if model_id.contains("2.0") {
-        8192 // Gemini 2.0 max output
+    if model_id.contains("1.5-pro") || model_id.contains("1.5-flash") || model_id.contains("2.0") {
+        8192 // Gemini 1.5 Pro, 1.5 Flash, and 2.0 max output
     } else {
         4096 // Default fallback
     }

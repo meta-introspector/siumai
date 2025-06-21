@@ -356,9 +356,7 @@ impl RetryExecutor {
 
                     // Handle rate limits
                     if let Some(ref mut handler) = self.rate_limit_handler {
-                        if let Err(rate_limit_error) = handler.handle_rate_limit(&error).await {
-                            return Err(rate_limit_error);
-                        }
+                        handler.handle_rate_limit(&error).await?;
                     }
 
                     // Don't delay after the last attempt

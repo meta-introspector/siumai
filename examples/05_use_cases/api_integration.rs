@@ -1,4 +1,8 @@
 //! 🌐 API Integration - REST API with AI capabilities
+
+#![allow(dead_code)]
+#![allow(clippy::redundant_pattern_matching)]
+#![allow(clippy::unwrap_or_default)]
 //! 
 //! This example demonstrates how to integrate Siumai into a REST API service with:
 //! - HTTP server with AI endpoints

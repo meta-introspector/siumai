@@ -1339,6 +1339,6 @@ mod tests {
         let builder = LlmBuilder::new();
         let _openai_builder = builder.openai();
         // Basic test for builder creation
-        assert!(true); // Placeholder test
+        // Placeholder test
     }
 }

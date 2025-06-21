@@ -1,4 +1,6 @@
 //! 💻 Code Assistant - AI-powered coding helper
+
+#![allow(clippy::double_ended_iterator_last)]
 //! 
 //! This example demonstrates how to build a comprehensive code assistant with:
 //! - Code explanation and documentation generation

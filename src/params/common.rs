@@ -33,7 +33,7 @@ impl ParameterValidator {
 
     /// Validates top_p parameter
     pub fn validate_top_p(top_p: f64) -> Result<(), LlmError> {
-        if top_p < 0.0 || top_p > 1.0 {
+        if !(0.0..=1.0).contains(&top_p) {
             return Err(LlmError::InvalidParameter(
                 "top_p must be between 0.0 and 1.0".to_string(),
             ));
@@ -147,13 +147,11 @@ impl ParameterConverter {
     /// Converts parameter value based on provider requirements
     pub fn convert_param_value(
         value: &serde_json::Value,
-        param_name: &str,
-        provider_type: &ProviderType,
+        _param_name: &str,
+        _provider_type: &ProviderType,
     ) -> serde_json::Value {
-        match (param_name, provider_type) {
-            // Add any provider-specific value conversions here
-            _ => value.clone(),
-        }
+        // Add any provider-specific value conversions here
+        value.clone()
     }
 }
 

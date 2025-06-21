@@ -91,7 +91,6 @@ use serde_json;
 /// # Ok(())
 /// # }
 /// ```
-
 /// Example: Hugging Face Provider
 ///
 /// This example shows how to implement a provider for Hugging Face's Inference API
@@ -323,6 +322,12 @@ impl CustomProvider for HuggingFaceProvider {
 /// Builder for Hugging Face provider
 pub struct HuggingFaceProviderBuilder {
     config: Option<CustomProviderConfig>,
+}
+
+impl Default for HuggingFaceProviderBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl HuggingFaceProviderBuilder {

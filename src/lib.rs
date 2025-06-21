@@ -375,6 +375,6 @@ mod tests {
         let _anthropic_builder = Provider::anthropic();
         let _siumai_builder = Siumai::builder();
         // Basic test for builder creation
-        assert!(true); // Placeholder test
+        // Placeholder test
     }
 }

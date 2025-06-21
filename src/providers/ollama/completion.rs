@@ -44,7 +44,7 @@ impl OllamaCompletionCapability {
         stream: bool,
     ) -> Result<OllamaGenerateRequest, LlmError> {
         let model = model
-            .or_else(|| {
+            .or({
                 // Try to get model from ollama_params or use default
                 None
             })

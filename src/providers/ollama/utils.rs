@@ -186,8 +186,8 @@ pub fn parse_streaming_line(line: &str) -> Result<Option<serde_json::Value>, Llm
     }
     
     // Remove "data: " prefix if present
-    let json_str = if line.starts_with("data: ") {
-        &line[6..]
+    let json_str = if let Some(stripped) = line.strip_prefix("data: ") {
+        stripped
     } else {
         line
     };

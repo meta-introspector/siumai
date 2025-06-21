@@ -3,6 +3,9 @@
 //! This example demonstrates how to process large numbers of requests efficiently:
 //! - Concurrent request handling with proper rate limiting
 //! - Progress tracking and monitoring
+
+#![allow(unused_variables)]
+#![allow(clippy::let_and_return)]
 //! - Error handling and retry strategies at scale
 //! - Memory management for large batches
 //! - Performance optimization techniques

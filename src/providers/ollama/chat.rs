@@ -120,7 +120,7 @@ impl OllamaChatCapability {
                 "length" => FinishReason::Length,
                 _ => FinishReason::Other(reason.to_string()),
             }
-        }).or_else(|| {
+        }).or({
             if response.done { Some(FinishReason::Stop) } else { None }
         });
 
@@ -283,9 +283,11 @@ mod tests {
             OllamaParams::default(),
         );
 
-        let mut common_params = CommonParams::default();
-        common_params.model = "llama3.2".to_string();
-        common_params.temperature = Some(0.7);
+        let common_params = CommonParams {
+            model: "llama3.2".to_string(),
+            temperature: Some(0.7),
+            ..Default::default()
+        };
 
         let request = ChatRequest {
             messages: vec![ChatMessage {

@@ -57,7 +57,7 @@ impl EnhancedParameterValidator {
 
         // Validate top_p with simplified range checks
         if let Some(top_p) = params.top_p {
-            if top_p < 0.0 || top_p > 1.0 {
+            if !(0.0..=1.0).contains(&top_p) {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "top_p".to_string(),
                     value: top_p.to_string(),
@@ -279,30 +279,7 @@ impl EnhancedParameterValidator {
         }
     }
 
-    fn extract_used_params(params: &CommonParams) -> Vec<String> {
-        let mut used = Vec::new();
 
-        if !params.model.is_empty() {
-            used.push("model".to_string());
-        }
-        if params.temperature.is_some() {
-            used.push("temperature".to_string());
-        }
-        if params.max_tokens.is_some() {
-            used.push("max_tokens".to_string());
-        }
-        if params.top_p.is_some() {
-            used.push("top_p".to_string());
-        }
-        if params.stop_sequences.is_some() {
-            used.push("stop_sequences".to_string());
-        }
-        if params.seed.is_some() {
-            used.push("seed".to_string());
-        }
-
-        used
-    }
 }
 
 /// Validation report containing errors, warnings, and valid parameters

@@ -72,7 +72,7 @@ impl StreamProcessor {
                 let builder = self
                     .tool_calls
                     .entry(call_id.clone())
-                    .or_insert_with(ToolCallBuilder::new);
+                    .or_default();
 
                 builder.id = call_id.clone();
 
@@ -244,6 +244,12 @@ pub struct ToolCallBuilder {
     pub arguments: String,
 }
 
+impl Default for ToolCallBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ToolCallBuilder {
     pub fn new() -> Self {
         Self {
@@ -279,7 +285,6 @@ impl Default for StreamProcessor {
 /// Stream Utilities
 ///
 /// Utility functions for working with chat streams
-
 /// Collect all stream events into a single response
 ///
 /// This function consumes the entire stream and builds a final ChatResponse

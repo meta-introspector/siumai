@@ -212,13 +212,13 @@ impl GeminiChatCapability {
                         if !thinking_content.is_empty() {
                             thinking_content.push('\n');
                         }
-                        thinking_content.push_str(&text);
+                        thinking_content.push_str(text);
                     } else {
                         // Regular text content
                         if !text_content.is_empty() {
                             text_content.push('\n');
                         }
-                        text_content.push_str(&text);
+                        text_content.push_str(text);
                     }
                 }
                 Part::FunctionCall { function_call } => {
@@ -244,17 +244,13 @@ impl GeminiChatCapability {
         }
 
         // Calculate usage
-        let usage = if let Some(usage_metadata) = &response.usage_metadata {
-            Some(Usage {
+        let usage = response.usage_metadata.as_ref().map(|usage_metadata| Usage {
                 prompt_tokens: usage_metadata.prompt_token_count.unwrap_or(0) as u32,
                 completion_tokens: usage_metadata.candidates_token_count.unwrap_or(0) as u32,
                 total_tokens: usage_metadata.total_token_count.unwrap_or(0) as u32,
                 cached_tokens: None,
                 reasoning_tokens: usage_metadata.thoughts_token_count.map(|t| t as u32),
-            })
-        } else {
-            None
-        };
+            });
 
         // Determine finish reason
         let finish_reason = candidate.finish_reason.as_ref().map(|reason| match reason {

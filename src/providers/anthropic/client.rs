@@ -87,11 +87,7 @@ impl AnthropicClient {
 
     /// Enable thinking mode with specified budget tokens
     pub fn with_thinking_mode(mut self, budget_tokens: Option<u32>) -> Self {
-        let config = if let Some(budget) = budget_tokens {
-            Some(super::thinking::ThinkingConfig::enabled(budget))
-        } else {
-            None // No thinking configuration means disabled
-        };
+        let config = budget_tokens.map(super::thinking::ThinkingConfig::enabled);
         self.specific_params.thinking_config = config;
         self
     }

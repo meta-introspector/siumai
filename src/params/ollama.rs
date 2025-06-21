@@ -100,7 +100,7 @@ impl ParameterMapper for OllamaParameterMapper {
 
         // Merge any additional parameters from the generic params
         for (key, value) in &provider_params.params {
-            if !base.get(key).is_some() {
+            if base.get(key).is_none() {
                 base[key] = value.clone();
             }
         }
@@ -111,7 +111,7 @@ impl ParameterMapper for OllamaParameterMapper {
     fn validate_params(&self, params: &Value) -> Result<(), LlmError> {
         // Validate temperature
         if let Some(temp) = params.get("temperature").and_then(|v| v.as_f64()) {
-            if temp < 0.0 || temp > 2.0 {
+            if !(0.0..=2.0).contains(&temp) {
                 return Err(LlmError::InvalidParameter(
                     "Temperature must be between 0.0 and 2.0".to_string(),
                 ));
@@ -120,7 +120,7 @@ impl ParameterMapper for OllamaParameterMapper {
 
         // Validate top_p
         if let Some(top_p) = params.get("top_p").and_then(|v| v.as_f64()) {
-            if top_p < 0.0 || top_p > 1.0 {
+            if !(0.0..=1.0).contains(&top_p) {
                 return Err(LlmError::InvalidParameter(
                     "top_p must be between 0.0 and 1.0".to_string(),
                 ));

@@ -1,4 +1,6 @@
 //! 🚀 OpenAI Enhanced Features
+
+#![allow(clippy::needless_borrows_for_generic_args)]
 //! 
 //! This example demonstrates advanced OpenAI features including:
 //! - JSON mode and structured outputs

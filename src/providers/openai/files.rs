@@ -175,7 +175,7 @@ impl OpenAiFiles {
         }
 
         // Validate file extension if provided
-        if let Some(extension) = request.filename.split('.').last() {
+        if let Some(extension) = request.filename.split('.').next_back() {
             let supported_formats = self.get_supported_formats();
             if !supported_formats.contains(&extension.to_lowercase()) {
                 return Err(LlmError::InvalidInput(format!(

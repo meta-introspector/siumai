@@ -912,7 +912,7 @@ pub trait LlmProvider: Send + Sync {
 }
 
 /// Provider capability information.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ProviderCapabilities {
     pub chat: bool,
     pub audio: bool,
@@ -924,20 +924,7 @@ pub struct ProviderCapabilities {
     pub custom_features: HashMap<String, bool>,
 }
 
-impl Default for ProviderCapabilities {
-    fn default() -> Self {
-        Self {
-            chat: false,
-            audio: false,
-            vision: false,
-            tools: false,
-            embedding: false,
-            streaming: false,
-            file_management: false,
-            custom_features: HashMap::new(),
-        }
-    }
-}
+
 
 impl ProviderCapabilities {
     /// Creates new capability information.

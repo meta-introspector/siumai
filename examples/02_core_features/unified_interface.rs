@@ -315,7 +315,7 @@ async fn chat_with_fallback(message: &str) -> Result<(String, ChatResponse), Llm
 }
 
 /// Test if a provider supports streaming (simplified)
-async fn test_streaming_capability(client: &dyn ChatCapability) -> bool {
+async fn test_streaming_capability(_client: &dyn ChatCapability) -> bool {
     // In a real implementation, you would check the provider's capabilities
     // For now, we'll assume all providers support streaming
     true

@@ -1,4 +1,6 @@
 //! 🤖 Simple Chatbot - Interactive AI assistant
+
+#![allow(clippy::single_match)]
 //!
 //! This example demonstrates a complete chatbot implementation:
 //! - Interactive command-line interface

@@ -3,6 +3,8 @@
 //! This comprehensive example demonstrates response caching in LLM applications,
 //! from basic concepts to production-ready integration patterns.
 //!
+
+#![allow(clippy::useless_vec)]
 //! Caching can significantly improve performance and reduce costs by avoiding redundant API calls.
 //! This example covers:
 //! 1. Basic cache usage and performance comparison

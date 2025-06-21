@@ -32,7 +32,7 @@ impl std::fmt::Display for ProviderType {
 }
 
 /// Common AI parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CommonParams {
     /// Model name
     pub model: String,
@@ -48,18 +48,7 @@ pub struct CommonParams {
     pub seed: Option<u64>,
 }
 
-impl Default for CommonParams {
-    fn default() -> Self {
-        Self {
-            model: String::new(),
-            temperature: None,
-            max_tokens: None,
-            top_p: None,
-            stop_sequences: None,
-            seed: None,
-        }
-    }
-}
+
 
 impl CommonParams {
     /// Create CommonParams with pre-allocated model string capacity
@@ -317,7 +306,7 @@ pub enum CacheControl {
 }
 
 /// Message metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MessageMetadata {
     /// Message ID
     pub id: Option<String>,
@@ -329,16 +318,7 @@ pub struct MessageMetadata {
     pub custom: HashMap<String, serde_json::Value>,
 }
 
-impl Default for MessageMetadata {
-    fn default() -> Self {
-        Self {
-            id: None,
-            timestamp: None,
-            cache_control: None,
-            custom: HashMap::new(),
-        }
-    }
-}
+
 
 /// Response metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -888,7 +868,7 @@ impl ChatResponse {
 
     /// Check if the response has tool calls
     pub fn has_tool_calls(&self) -> bool {
-        self.tool_calls.as_ref().map_or(false, |calls| !calls.is_empty())
+        self.tool_calls.as_ref().is_some_and(|calls| !calls.is_empty())
     }
 
     /// Get tool calls
@@ -898,7 +878,7 @@ impl ChatResponse {
 
     /// Check if the response has thinking content
     pub fn has_thinking(&self) -> bool {
-        self.thinking.as_ref().map_or(false, |t| !t.is_empty())
+        self.thinking.as_ref().is_some_and(|t| !t.is_empty())
     }
 
     /// Get thinking content if available

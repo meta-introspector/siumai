@@ -167,7 +167,7 @@ async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
     // Speed test with multiple requests
     println!("   Performing speed test with multiple requests:");
     
-    let test_prompts = vec![
+    let test_prompts = [
         "Explain machine learning in one paragraph",
         "What are the benefits of cloud computing?",
         "Describe the importance of cybersecurity",

@@ -155,7 +155,7 @@ impl ProviderFeatureRegistry {
 
         self.features
             .entry(provider_key)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(feature_name, definition);
     }
 

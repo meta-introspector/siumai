@@ -410,19 +410,19 @@ mod tests {
         let _streaming = OpenAiStreaming::new(config, client);
 
         // Basic test for streaming client creation
-        assert!(true);
+        // Basic test for streaming client creation
     }
 
     #[test]
     fn test_sse_parsing() {
         let config = OpenAiConfig::new("test-key");
         let client = reqwest::Client::new();
-        let streaming = OpenAiStreaming::new(config, client);
+        let _streaming = OpenAiStreaming::new(config, client);
 
-        let sse_data = r#"data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}"#;
+        let _sse_data = r#"data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}"#;
 
         // This would require async test setup to properly test
         // For now, just verify the structure compiles
-        assert!(true);
+        // This would require async test setup to properly test
     }
 }

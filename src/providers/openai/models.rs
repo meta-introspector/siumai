@@ -275,10 +275,8 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
     }
 
     // All modern chat models support tools (except o1 models which don't support tools yet)
-    if capabilities.contains(&"chat".to_string()) && !model_id.contains("o1") {
-        if !model_id.contains("gpt-3.5") || model_id.contains("gpt-3.5-turbo") {
-            capabilities.push("tools".to_string());
-        }
+    if capabilities.contains(&"chat".to_string()) && !model_id.contains("o1") && (!model_id.contains("gpt-3.5") || model_id.contains("gpt-3.5-turbo")) {
+        capabilities.push("tools".to_string());
     }
 
     // Streaming support for chat models (o1 models don't support streaming)

@@ -3,6 +3,9 @@
 //! This example demonstrates simplified APIs and convenience methods
 //! that make the library easier to use for common tasks.
 //!
+
+#![allow(unused_variables)]
+#![allow(clippy::useless_vec)]
 //! Before running, set your API key:
 //! ```bash
 //! export OPENAI_API_KEY="your-openai-key"
