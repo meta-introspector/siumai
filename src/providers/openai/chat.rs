@@ -92,16 +92,43 @@ impl OpenAiChatCapability {
                 details: None,
             })?;
 
+        // Extract thinking content and filter it from the main content
+        let mut thinking_content: Option<String> = None;
+
         let content = if let Some(content) = choice.message.content {
             match content {
-                serde_json::Value::String(text) => MessageContent::Text(text),
+                serde_json::Value::String(text) => {
+                    // Check for <think> tags in the text content
+                    if contains_thinking_tags(&text) {
+                        thinking_content = extract_thinking_content(&text);
+                        // Filter out thinking tags from the main content
+                        let filtered_text = filter_thinking_content(&text);
+                        MessageContent::Text(filtered_text)
+                    } else {
+                        MessageContent::Text(text)
+                    }
+                },
                 serde_json::Value::Array(parts) => {
                     let mut content_parts = Vec::new();
                     for part in parts {
                         if let Some(text) = part.get("text").and_then(|t| t.as_str()) {
-                            content_parts.push(ContentPart::Text {
-                                text: text.to_string(),
-                            });
+                            // Check for thinking tags in each text part
+                            if contains_thinking_tags(text) {
+                                if thinking_content.is_none() {
+                                    thinking_content = extract_thinking_content(text);
+                                }
+                                // Filter out thinking tags from this part
+                                let filtered_text = filter_thinking_content(text);
+                                if !filtered_text.is_empty() {
+                                    content_parts.push(ContentPart::Text {
+                                        text: filtered_text,
+                                    });
+                                }
+                            } else {
+                                content_parts.push(ContentPart::Text {
+                                    text: text.to_string(),
+                                });
+                            }
                         }
                     }
                     MessageContent::MultiModal(content_parts)
@@ -154,7 +181,7 @@ impl OpenAiChatCapability {
             usage,
             finish_reason,
             tool_calls,
-            thinking: None, // OpenAI thinking will be handled separately
+            thinking: thinking_content, // Now includes extracted <think> content
             metadata: HashMap::new(),
         })
     }

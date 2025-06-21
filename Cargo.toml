@@ -52,6 +52,7 @@ rand = "0.8"
 
 # URL encoding
 urlencoding = "2.1"
+regex = "1.11.1"
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -93,6 +94,10 @@ path = "examples/02_core_features/capability_detection.rs"
 [[example]]
 name = "thinking_models"
 path = "examples/03_advanced_features/thinking_models.rs"
+
+[[example]]
+name = "thinking_content_processing"
+path = "examples/03_advanced_features/thinking_content_processing.rs"
 
 [[example]]
 name = "batch_processing"

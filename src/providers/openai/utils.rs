@@ -6,6 +6,7 @@ use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use regex::Regex;
 
 /// Build HTTP headers for `OpenAI` API requests
 pub fn build_headers(
@@ -189,4 +190,42 @@ pub fn get_default_models() -> Vec<String> {
         "o1-preview".to_string(),
         "o1-mini".to_string(),
     ]
+}
+
+/// Check if content contains thinking tags (`<think>` or `</think>`)
+/// This is used to detect DeepSeek-style thinking content
+pub fn contains_thinking_tags(content: &str) -> bool {
+    content.contains("<think>") || content.contains("</think>")
+}
+
+/// Extract thinking content from `<think>...</think>` tags
+/// Returns the content inside the tags, or None if no valid tags found
+pub fn extract_thinking_content(content: &str) -> Option<String> {
+    let re = Regex::new(r"(?s)<think>(.*?)</think>").ok()?;
+    re.captures(content)
+        .and_then(|caps| caps.get(1))
+        .map(|m| m.as_str().trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// Filter out thinking content from text for display purposes
+/// Removes `<think>...</think>` tags and their content
+pub fn filter_thinking_content(content: &str) -> String {
+    match Regex::new(r"(?s)<think>.*?</think>") {
+        Ok(re) => re.replace_all(content, "").trim().to_string(),
+        Err(_) => {
+            // Fallback to simple string replacement if regex fails
+            content.to_string()
+        }
+    }
+}
+
+/// Extract content without thinking tags
+/// If content contains thinking tags, filter them out; otherwise return as-is
+pub fn extract_content_without_thinking(content: &str) -> String {
+    if contains_thinking_tags(content) {
+        filter_thinking_content(content)
+    } else {
+        content.to_string()
+    }
 }

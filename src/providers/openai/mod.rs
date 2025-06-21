@@ -52,6 +52,9 @@ pub mod config;
 pub mod types;
 pub mod utils;
 
+#[cfg(test)]
+mod thinking_utils_test;
+
 // Capability modules
 pub mod audio;
 pub mod chat;

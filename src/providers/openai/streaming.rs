@@ -10,6 +10,7 @@ use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, ResponseMetadata, Usage};
 
 use super::config::OpenAiConfig;
+use super::utils::{contains_thinking_tags, extract_thinking_content, filter_thinking_content};
 
 /// `OpenAI` Server-Sent Events (SSE) response structure
 #[derive(Debug, Clone, Deserialize)]
@@ -316,10 +317,39 @@ impl OpenAiStreaming {
 
             // Handle content delta
             if let Some(content) = delta.content {
-                return ChatStreamEvent::ContentDelta {
-                    delta: content,
-                    index: Some(choice.index),
-                };
+                // Check for <think> tags in the content
+                if contains_thinking_tags(&content) {
+                    // Extract thinking content and emit as reasoning delta
+                    if let Some(thinking) = extract_thinking_content(&content) {
+                        return ChatStreamEvent::ReasoningDelta { delta: thinking };
+                    }
+                    // Filter out thinking tags from the main content
+                    let filtered_content = filter_thinking_content(&content);
+                    if !filtered_content.is_empty() {
+                        return ChatStreamEvent::ContentDelta {
+                            delta: filtered_content,
+                            index: Some(choice.index),
+                        };
+                    }
+                    // If content is only thinking tags, don't emit content delta
+                    return ChatStreamEvent::StreamStart {
+                        metadata: ResponseMetadata {
+                            id: Some(response.id),
+                            model: Some(response.model),
+                            created: Some(
+                                chrono::DateTime::from_timestamp(response.created as i64, 0)
+                                    .unwrap_or_else(chrono::Utc::now),
+                            ),
+                            provider: "openai".to_string(),
+                            request_id: None,
+                        },
+                    };
+                } else {
+                    return ChatStreamEvent::ContentDelta {
+                        delta: content,
+                        index: Some(choice.index),
+                    };
+                }
             }
 
             // Handle reasoning delta (o1 models)
