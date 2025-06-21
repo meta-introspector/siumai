@@ -8,7 +8,7 @@ use crate::error::LlmError;
 /// Ollama provider configuration
 #[derive(Debug, Clone)]
 pub struct OllamaConfig {
-    /// Base URL for Ollama API (default: http://localhost:11434)
+    /// Base URL for Ollama API (default: <http://localhost:11434>)
     pub base_url: String,
     /// Default model to use
     pub model: Option<String>,

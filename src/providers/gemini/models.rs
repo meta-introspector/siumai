@@ -52,7 +52,7 @@ pub struct ListModelsResponse {
     /// The returned Models.
     #[serde(default)]
     pub models: Vec<GeminiModel>,
-    /// A token, which can be sent as page_token to retrieve the next page.
+    /// A token, which can be sent as `page_token` to retrieve the next page.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_page_token: Option<String>,
 }
@@ -66,14 +66,14 @@ pub struct GeminiModels {
 
 impl GeminiModels {
     /// Create a new Gemini models capability
-    pub fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
+    pub const fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
         Self {
             config,
             http_client,
         }
     }
 
-    /// Convert GeminiModel to ModelInfo
+    /// Convert `GeminiModel` to `ModelInfo`
     fn convert_model(&self, model: GeminiModel) -> ModelInfo {
         // Extract model ID from the full name (e.g., "models/gemini-1.5-flash" -> "gemini-1.5-flash")
         let id = model
@@ -145,7 +145,7 @@ impl GeminiModels {
             // Add pagination parameters
             let mut params = Vec::new();
             if let Some(token) = &page_token {
-                params.push(format!("pageToken={}", token));
+                params.push(format!("pageToken={token}"));
             }
             params.push("pageSize=50".to_string()); // Request up to 50 models per page
 
@@ -167,12 +167,12 @@ impl GeminiModels {
                 let error_text = response.text().await.unwrap_or_default();
                 return Err(LlmError::api_error(
                     status_code,
-                    format!("Gemini API error: {} - {}", status_code, error_text),
+                    format!("Gemini API error: {status_code} - {error_text}"),
                 ));
             }
 
             let list_response: ListModelsResponse = response.json().await.map_err(|e| {
-                LlmError::ParseError(format!("Failed to parse models response: {}", e))
+                LlmError::ParseError(format!("Failed to parse models response: {e}"))
             })?;
 
             all_models.extend(list_response.models);
@@ -214,7 +214,7 @@ impl ModelListingCapability for GeminiModels {
         let full_model_name = if model_id.starts_with("models/") {
             model_id
         } else {
-            format!("models/{}", model_id)
+            format!("models/{model_id}")
         };
 
         let url = format!("{}/{}", self.config.base_url, full_model_name);
@@ -232,14 +232,14 @@ impl ModelListingCapability for GeminiModels {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::api_error(
                 status_code,
-                format!("Gemini API error: {} - {}", status_code, error_text),
+                format!("Gemini API error: {status_code} - {error_text}"),
             ));
         }
 
         let model: GeminiModel = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse model response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse model response: {e}")))?;
 
         Ok(self.convert_model(model))
     }

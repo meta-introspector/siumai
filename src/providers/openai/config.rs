@@ -1,16 +1,16 @@
-//! OpenAI Configuration
+//! `OpenAI` Configuration
 //!
-//! This module provides configuration structures for the OpenAI provider.
+//! This module provides configuration structures for the `OpenAI` provider.
 
 use std::collections::HashMap;
 
 use crate::params::OpenAiParams;
 use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 
-/// OpenAI provider configuration.
+/// `OpenAI` provider configuration.
 ///
 /// This structure holds all the configuration needed to create and use
-/// an OpenAI client, including authentication, API settings, and parameters.
+/// an `OpenAI` client, including authentication, API settings, and parameters.
 ///
 /// # Example
 /// ```rust
@@ -29,10 +29,10 @@ use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 /// ```
 #[derive(Debug, Clone)]
 pub struct OpenAiConfig {
-    /// OpenAI API key
+    /// `OpenAI` API key
     pub api_key: String,
 
-    /// Base URL for the OpenAI API
+    /// Base URL for the `OpenAI` API
     pub base_url: String,
 
     /// Optional organization ID
@@ -55,10 +55,10 @@ pub struct OpenAiConfig {
 }
 
 impl OpenAiConfig {
-    /// Create a new OpenAI configuration with the given API key.
+    /// Create a new `OpenAI` configuration with the given API key.
     ///
     /// # Arguments
-    /// * `api_key` - The OpenAI API key
+    /// * `api_key` - The `OpenAI` API key
     ///
     /// # Returns
     /// A new configuration with default settings
@@ -75,7 +75,7 @@ impl OpenAiConfig {
         }
     }
 
-    /// Set the base URL for the OpenAI API.
+    /// Set the base URL for the `OpenAI` API.
     ///
     /// # Arguments
     /// * `url` - The base URL
@@ -115,7 +115,7 @@ impl OpenAiConfig {
     ///
     /// # Arguments
     /// * `temperature` - The temperature value
-    pub fn with_temperature(mut self, temperature: f32) -> Self {
+    pub const fn with_temperature(mut self, temperature: f32) -> Self {
         self.common_params.temperature = Some(temperature);
         self
     }
@@ -124,7 +124,7 @@ impl OpenAiConfig {
     ///
     /// # Arguments
     /// * `max_tokens` - The maximum number of tokens
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
         self
     }
@@ -141,7 +141,7 @@ impl OpenAiConfig {
     }
 
     /// Enable web search with default settings.
-    pub fn enable_web_search(mut self) -> Self {
+    pub const fn enable_web_search(mut self) -> Self {
         self.web_search_config.enabled = true;
         self
     }
@@ -170,10 +170,10 @@ impl OpenAiConfig {
         self.project.clone()
     }
 
-    /// Get all HTTP headers needed for OpenAI API requests.
+    /// Get all HTTP headers needed for `OpenAI` API requests.
     ///
     /// # Returns
-    /// HashMap of header names to values
+    /// `HashMap` of header names to values
     pub fn get_headers(&self) -> HashMap<String, String> {
         let mut headers = HashMap::new();
 

@@ -55,19 +55,19 @@ impl<P: OpenAiCompatibleProvider> OpenAiCompatibleBuilder<P> {
     }
 
     /// Set the temperature parameter
-    pub fn temperature(mut self, temp: f32) -> Self {
+    pub const fn temperature(mut self, temp: f32) -> Self {
         self.config.common_params.temperature = Some(temp);
         self
     }
 
     /// Set the maximum number of tokens to generate
-    pub fn max_tokens(mut self, tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, tokens: u32) -> Self {
         self.config.common_params.max_tokens = Some(tokens);
         self
     }
 
-    /// Set the top_p parameter for nucleus sampling
-    pub fn top_p(mut self, top_p: f32) -> Self {
+    /// Set the `top_p` parameter for nucleus sampling
+    pub const fn top_p(mut self, top_p: f32) -> Self {
         self.config.common_params.top_p = Some(top_p);
         self
     }
@@ -79,7 +79,7 @@ impl<P: OpenAiCompatibleProvider> OpenAiCompatibleBuilder<P> {
     }
 
     /// Set the random seed for reproducible outputs
-    pub fn seed(mut self, seed: u64) -> Self {
+    pub const fn seed(mut self, seed: u64) -> Self {
         self.config.common_params.seed = Some(seed);
         self
     }
@@ -122,10 +122,10 @@ impl<P: OpenAiCompatibleProvider> OpenAiCompatibleBuilder<P> {
 
 /// OpenAI-compatible client wrapper that provides provider-specific metadata.
 ///
-/// This struct wraps an OpenAI client but provides provider-specific information
+/// This struct wraps an `OpenAI` client but provides provider-specific information
 /// and maintains type safety for the provider.
 pub struct OpenAiCompatibleClient<P: OpenAiCompatibleProvider> {
-    /// Underlying OpenAI client
+    /// Underlying `OpenAI` client
     pub(crate) client: OpenAiClient,
     /// Provider type marker
     _provider: PhantomData<P>,
@@ -133,7 +133,7 @@ pub struct OpenAiCompatibleClient<P: OpenAiCompatibleProvider> {
 
 impl<P: OpenAiCompatibleProvider> OpenAiCompatibleClient<P> {
     /// Create a new compatible client
-    pub fn new(client: OpenAiClient) -> Self {
+    pub const fn new(client: OpenAiClient) -> Self {
         Self {
             client,
             _provider: PhantomData,
@@ -141,31 +141,31 @@ impl<P: OpenAiCompatibleProvider> OpenAiCompatibleClient<P> {
     }
 
     /// Get the provider ID
-    pub fn provider_id(&self) -> &'static str {
+    pub const fn provider_id(&self) -> &'static str {
         P::PROVIDER_ID
     }
 
     /// Get the provider display name
-    pub fn display_name(&self) -> &'static str {
+    pub const fn display_name(&self) -> &'static str {
         P::DISPLAY_NAME
     }
 
     /// Get the provider description
-    pub fn description(&self) -> &'static str {
+    pub const fn description(&self) -> &'static str {
         P::DESCRIPTION
     }
 
-    /// Get the underlying OpenAI client
-    pub fn inner(&self) -> &OpenAiClient {
+    /// Get the underlying `OpenAI` client
+    pub const fn inner(&self) -> &OpenAiClient {
         &self.client
     }
 
-    /// Get the underlying OpenAI client mutably
-    pub fn inner_mut(&mut self) -> &mut OpenAiClient {
+    /// Get the underlying `OpenAI` client mutably
+    pub const fn inner_mut(&mut self) -> &mut OpenAiClient {
         &mut self.client
     }
 
-    /// Convert into the underlying OpenAI client
+    /// Convert into the underlying `OpenAI` client
     pub fn into_inner(self) -> OpenAiClient {
         self.client
     }
@@ -193,17 +193,17 @@ impl OpenAiCompatibleBuilder<DeepSeekProvider> {
 
 /// OpenRouter-specific builder methods
 impl OpenAiCompatibleBuilder<OpenRouterProvider> {
-    /// Set the site URL for OpenRouter (becomes HTTP-Referer header)
+    /// Set the site URL for `OpenRouter` (becomes HTTP-Referer header)
     pub fn site_url<S: Into<String>>(self, url: S) -> Result<Self, LlmError> {
         self.with_provider_param("site_url".to_string(), url.into())
     }
 
-    /// Set the application name for OpenRouter (becomes X-Title header)
+    /// Set the application name for `OpenRouter` (becomes X-Title header)
     pub fn app_name<S: Into<String>>(self, name: S) -> Result<Self, LlmError> {
         self.with_provider_param("app_name".to_string(), name.into())
     }
 
-    /// Set fallback models for OpenRouter routing
+    /// Set fallback models for `OpenRouter` routing
     pub fn fallback_models(self, models: Vec<String>) -> Result<Self, LlmError> {
         self.with_provider_param("fallback_models".to_string(), models)
     }

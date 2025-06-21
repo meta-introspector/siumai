@@ -1,7 +1,7 @@
 //! OpenAI-Compatible Provider Interface
 //!
 //! This module provides a unified interface for OpenAI-compatible providers,
-//! allowing seamless integration of providers like DeepSeek, OpenRouter, etc.
+//! allowing seamless integration of providers like `DeepSeek`, `OpenRouter`, etc.
 //!
 //! # Design Principles
 //! - **Type Safety**: Compile-time validation of provider configurations

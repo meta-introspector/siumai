@@ -210,12 +210,12 @@ impl GeminiParamsBuilder {
         }
     }
 
-    pub fn top_k(mut self, top_k: u32) -> Self {
+    pub const fn top_k(mut self, top_k: u32) -> Self {
         self.params.top_k = Some(top_k);
         self
     }
 
-    pub fn candidate_count(mut self, count: u32) -> Self {
+    pub const fn candidate_count(mut self, count: u32) -> Self {
         self.params.candidate_count = Some(count);
         self
     }
@@ -249,7 +249,7 @@ impl GeminiParamsBuilder {
         self
     }
 
-    pub fn stream(mut self, enabled: bool) -> Self {
+    pub const fn stream(mut self, enabled: bool) -> Self {
         self.params.stream = Some(enabled);
         self
     }
@@ -281,15 +281,15 @@ mod tests {
             seed: Some(42), // Should be ignored for Gemini
         };
 
-        let mapped = mapper.map_common_params(&params);
-        assert_eq!(mapped["model"], "gemini-pro");
-        assert_eq!(mapped["maxOutputTokens"], 1000);
+        let mapped_params = mapper.map_common_params(&params);
+        assert_eq!(mapped_params["model"], "gemini-pro");
+        assert_eq!(mapped_params["maxOutputTokens"], 1000);
         // Use approximate comparison for floating point values
-        let top_p_val = mapped["topP"].as_f64().unwrap();
+        let top_p_val = mapped_params["topP"].as_f64().unwrap();
         assert!((top_p_val - 0.9).abs() < 1e-6);
-        assert_eq!(mapped["stopSequences"], serde_json::json!(["STOP"]));
+        assert_eq!(mapped_params["stopSequences"], serde_json::json!(["STOP"]));
         // Seed should not be present for Gemini
-        assert!(mapped.get("seed").is_none());
+        assert!(mapped_params.get("seed").is_none());
     }
 
     #[test]

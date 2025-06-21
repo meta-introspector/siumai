@@ -164,7 +164,7 @@ pub mod prelude {
 pub struct Provider;
 
 impl Provider {
-    /// Create an OpenAI client builder
+    /// Create an `OpenAI` client builder
     pub fn openai() -> crate::builder::OpenAiBuilder {
         crate::builder::LlmBuilder::new().openai()
     }
@@ -184,12 +184,12 @@ impl Provider {
         crate::builder::LlmBuilder::new().xai()
     }
 
-    /// Create an OpenRouter client builder
+    /// Create an `OpenRouter` client builder
     pub fn openrouter() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::OpenRouterProvider> {
         crate::builder::LlmBuilder::new().openrouter()
     }
 
-    /// Create a DeepSeek client builder
+    /// Create a `DeepSeek` client builder
     pub fn deepseek() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<crate::providers::openai_compatible::DeepSeekProvider> {
         crate::builder::LlmBuilder::new().deepseek()
     }
@@ -243,8 +243,8 @@ pub use crate::builder::{
 // Convenient macro definitions
 /// Creates a user message
 ///
-/// For simple text messages, returns ChatMessage directly.
-/// For messages with additional parameters, returns ChatMessageBuilder.
+/// For simple text messages, returns `ChatMessage` directly.
+/// For messages with additional parameters, returns `ChatMessageBuilder`.
 #[macro_export]
 macro_rules! user {
     // Simple text message - returns ChatMessage directly
@@ -275,8 +275,8 @@ macro_rules! user_builder {
 
 /// Creates a system message
 ///
-/// For simple text messages, returns ChatMessage directly.
-/// For messages with additional parameters, returns ChatMessageBuilder.
+/// For simple text messages, returns `ChatMessage` directly.
+/// For messages with additional parameters, returns `ChatMessageBuilder`.
 #[macro_export]
 macro_rules! system {
     // Simple text message - returns ChatMessage directly
@@ -297,8 +297,8 @@ macro_rules! system {
 
 /// Creates an assistant message
 ///
-/// For simple text messages, returns ChatMessage directly.
-/// For messages with additional parameters, returns ChatMessageBuilder.
+/// For simple text messages, returns `ChatMessage` directly.
+/// For messages with additional parameters, returns `ChatMessageBuilder`.
 #[macro_export]
 macro_rules! assistant {
     // Simple text message - returns ChatMessage directly
@@ -319,7 +319,7 @@ macro_rules! assistant {
 
 /// Creates a tool message
 ///
-/// Returns ChatMessage directly since tool messages are typically simple.
+/// Returns `ChatMessage` directly since tool messages are typically simple.
 #[macro_export]
 macro_rules! tool {
     ($content:expr, id: $id:expr) => {

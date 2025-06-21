@@ -77,7 +77,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
     ];
 
     for (model_name, description) in models {
-        println!("   Testing {}: {}", model_name, description);
+        println!("   Testing {model_name}: {description}");
         
         let ai = Siumai::builder()
             .anthropic()
@@ -104,7 +104,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
                     }
                 }
             }
-            Err(e) => println!("   ❌ Error with {}: {}", model_name, e),
+            Err(e) => println!("   ❌ Error with {model_name}: {e}"),
         }
         println!();
     }
@@ -123,8 +123,8 @@ async fn demo_parameter_optimization(api_key: &str) -> Result<(), Box<dyn std::e
     ];
 
     for (use_case, temperature, max_tokens, prompt) in use_cases {
-        println!("   Use case: {}", use_case);
-        println!("     Temperature: {}, Max tokens: {}", temperature, max_tokens);
+        println!("   Use case: {use_case}");
+        println!("     Temperature: {temperature}, Max tokens: {max_tokens}");
         
         let ai = Siumai::builder()
             .anthropic()
@@ -144,7 +144,7 @@ async fn demo_parameter_optimization(api_key: &str) -> Result<(), Box<dyn std::e
                     println!("     📝 Response: {}...", &preview[..preview.len().min(80)]);
                 }
             }
-            Err(e) => println!("     ❌ Error: {}", e),
+            Err(e) => println!("     ❌ Error: {e}"),
         }
         println!();
     }
@@ -185,7 +185,7 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
                 println!("   📚 Initial response about Rust basics");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Follow-up question that requires context
@@ -203,7 +203,7 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
                 println!("   Total conversation length: {} messages", conversation_len + 1);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Context management tips
@@ -241,7 +241,7 @@ async fn demo_cost_effective_usage(api_key: &str) -> Result<(), Box<dyn std::err
                 println!("   💰 Simple calculation with Haiku: {}", text.trim());
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Strategy 2: Batch multiple questions
@@ -266,7 +266,7 @@ async fn demo_cost_effective_usage(api_key: &str) -> Result<(), Box<dyn std::err
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Strategy 3: Optimize token usage
@@ -309,7 +309,7 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
                 println!("   {}", &text[..text.len().min(100)]);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Feature 2: Long-form reasoning
@@ -333,7 +333,7 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
                 );
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Feature 3: Code understanding and generation
@@ -356,7 +356,7 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
                 );
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     println!("   🌟 Claude Unique Strengths:");
@@ -414,4 +414,4 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
 /// - Implement conversation persistence
 /// - Add usage monitoring
 /// - Create task-specific configurations
-fn _documentation() {}
+const fn _documentation() {}

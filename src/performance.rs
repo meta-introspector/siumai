@@ -181,7 +181,7 @@ pub struct ProviderMetrics {
 }
 
 impl ProviderMetrics {
-    pub fn new(provider: String) -> Self {
+    pub const fn new(provider: String) -> Self {
         Self {
             provider,
             request_count: 0,

@@ -30,7 +30,7 @@ impl EnhancedParameterValidator {
                     value: temp.to_string(),
                     min: min as f64,
                     max: max as f64,
-                    provider: format!("{:?}", provider_type),
+                    provider: format!("{provider_type:?}"),
                 });
                 has_errors = true;
             } else {
@@ -47,7 +47,7 @@ impl EnhancedParameterValidator {
                     value: max_tokens.to_string(),
                     min: min as f64,
                     max: max as f64,
-                    provider: format!("{:?}", provider_type),
+                    provider: format!("{provider_type:?}"),
                 });
                 has_errors = true;
             } else {
@@ -63,7 +63,7 @@ impl EnhancedParameterValidator {
                     value: top_p.to_string(),
                     min: 0.0,
                     max: 1.0,
-                    provider: format!("{:?}", provider_type),
+                    provider: format!("{provider_type:?}"),
                 });
                 has_errors = true;
             } else {
@@ -75,7 +75,7 @@ impl EnhancedParameterValidator {
         if !params.model.is_empty() && !Self::is_model_supported(&params.model, provider_type) {
             report.add_warning(ValidationWarning::UnsupportedModel {
                 model: params.model.clone(),
-                provider: format!("{:?}", provider_type),
+                provider: format!("{provider_type:?}"),
                 suggestion: Self::suggest_alternative_model(&params.model, provider_type),
             });
         }
@@ -87,7 +87,7 @@ impl EnhancedParameterValidator {
                 report.add_error(ValidationError::TooManyStopSequences {
                     count: stop_sequences.len(),
                     max: max_sequences,
-                    provider: format!("{:?}", provider_type),
+                    provider: format!("{provider_type:?}"),
                 });
                 has_errors = true;
             }
@@ -145,7 +145,7 @@ impl EnhancedParameterValidator {
             report.add_incompatibility(ParameterIncompatibility {
                 parameter: "model".to_string(),
                 issue: format!("Model '{}' not supported by target provider", params.model),
-                suggestion: suggested_model.map(|m| format!("Use '{}' instead", m)),
+                suggestion: suggested_model.map(|m| format!("Use '{m}' instead")),
             });
         }
 
@@ -215,7 +215,7 @@ impl EnhancedParameterValidator {
     // Helper methods for simplified validation
 
     /// Get temperature range for a provider (min, max)
-    fn get_temperature_range(provider_type: &ProviderType) -> (f32, f32) {
+    const fn get_temperature_range(provider_type: &ProviderType) -> (f32, f32) {
         match provider_type {
             ProviderType::OpenAi => (0.0, 2.0),
             ProviderType::Anthropic => (0.0, 1.0),
@@ -227,14 +227,14 @@ impl EnhancedParameterValidator {
     }
 
     /// Get max tokens range for a provider (min, max)
-    fn get_max_tokens_range(provider_type: &ProviderType) -> (u32, u32) {
+    const fn get_max_tokens_range(provider_type: &ProviderType) -> (u32, u32) {
         match provider_type {
-            ProviderType::OpenAi => (1, 128000),
-            ProviderType::Anthropic => (1, 200000),
-            ProviderType::Gemini => (1, 2097152),
-            ProviderType::XAI => (1, 131072),
-            ProviderType::Ollama => (1, 32768),
-            ProviderType::Custom(_) => (1, 100000),
+            ProviderType::OpenAi => (1, 128_000),
+            ProviderType::Anthropic => (1, 200_000),
+            ProviderType::Gemini => (1, 2_097_152),
+            ProviderType::XAI => (1, 131_072),
+            ProviderType::Ollama => (1, 32_768),
+            ProviderType::Custom(_) => (1, 100_000),
         }
     }
 
@@ -268,7 +268,7 @@ impl EnhancedParameterValidator {
         }
     }
 
-    fn max_stop_sequences(provider_type: &ProviderType) -> usize {
+    const fn max_stop_sequences(provider_type: &ProviderType) -> usize {
         match provider_type {
             ProviderType::OpenAi => 4,
             ProviderType::Anthropic => 5,
@@ -292,7 +292,7 @@ pub struct ValidationReport {
 }
 
 impl ValidationReport {
-    pub fn new(provider: ProviderType) -> Self {
+    pub const fn new(provider: ProviderType) -> Self {
         Self {
             provider,
             errors: Vec::new(),
@@ -313,14 +313,14 @@ impl ValidationReport {
         self.valid_params.push(param);
     }
 
-    pub fn has_errors(&self) -> bool {
+    pub const fn has_errors(&self) -> bool {
         !self.errors.is_empty()
     }
 
     pub fn error_summary(&self) -> String {
         self.errors
             .iter()
-            .map(|e| format!("{:?}", e))
+            .map(|e| format!("{e:?}"))
             .collect::<Vec<_>>()
             .join("; ")
     }
@@ -376,7 +376,7 @@ pub struct CompatibilityReport {
 }
 
 impl CompatibilityReport {
-    pub fn new(source: ProviderType, target: ProviderType) -> Self {
+    pub const fn new(source: ProviderType, target: ProviderType) -> Self {
         Self {
             source_provider: source,
             target_provider: target,
@@ -388,7 +388,7 @@ impl CompatibilityReport {
         self.incompatibilities.push(incompatibility);
     }
 
-    pub fn is_compatible(&self) -> bool {
+    pub const fn is_compatible(&self) -> bool {
         self.incompatibilities.is_empty()
     }
 }
@@ -409,7 +409,7 @@ pub struct OptimizationReport {
 }
 
 impl OptimizationReport {
-    pub fn new(provider: ProviderType) -> Self {
+    pub const fn new(provider: ProviderType) -> Self {
         Self {
             provider,
             optimizations: Vec::new(),
@@ -420,7 +420,7 @@ impl OptimizationReport {
         self.optimizations.push(optimization);
     }
 
-    pub fn has_optimizations(&self) -> bool {
+    pub const fn has_optimizations(&self) -> bool {
         !self.optimizations.is_empty()
     }
 }

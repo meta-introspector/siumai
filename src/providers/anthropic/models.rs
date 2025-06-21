@@ -1,7 +1,7 @@
 //! Anthropic Models API Implementation
 //!
 //! Implements model listing functionality according to the official Anthropic API documentation:
-//! https://docs.anthropic.com/en/api/models-list
+//! <https://docs.anthropic.com/en/api/models-list>
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -23,7 +23,7 @@ pub struct AnthropicModels {
 
 impl AnthropicModels {
     /// Create a new Anthropic models instance
-    pub fn new(
+    pub const fn new(
         api_key: String,
         base_url: String,
         http_client: reqwest::Client,
@@ -50,13 +50,13 @@ impl AnthropicModels {
         // Build query parameters
         let mut query_params = Vec::new();
         if let Some(before) = before_id {
-            query_params.push(format!("before_id={}", before));
+            query_params.push(format!("before_id={before}"));
         }
         if let Some(after) = after_id {
-            query_params.push(format!("after_id={}", after));
+            query_params.push(format!("after_id={after}"));
         }
         if let Some(limit_val) = limit {
-            query_params.push(format!("limit={}", limit_val));
+            query_params.push(format!("limit={limit_val}"));
         }
 
         if !query_params.is_empty() {
@@ -93,7 +93,7 @@ impl AnthropicModels {
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("Anthropic Models API error: {}", error_text),
+                message: format!("Anthropic Models API error: {error_text}"),
                 details: serde_json::from_str(&error_text).ok(),
             });
         }
@@ -136,7 +136,7 @@ impl AnthropicModels {
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("Anthropic Model API error: {}", error_text),
+                message: format!("Anthropic Model API error: {error_text}"),
                 details: serde_json::from_str(&error_text).ok(),
             });
         }
@@ -177,7 +177,7 @@ impl ModelListingCapability for AnthropicModels {
     }
 }
 
-/// Convert Anthropic model info to our ModelInfo structure
+/// Convert Anthropic model info to our `ModelInfo` structure
 fn convert_anthropic_model_to_model_info(anthropic_model: AnthropicModelInfo) -> ModelInfo {
     // Parse creation date
     let created = anthropic_model
@@ -237,38 +237,38 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
     match model_id {
         // Claude 4 models
         id if id.contains("claude-sonnet-4") => {
-            (Some(200000), Some(8192), Some(0.000003), Some(0.000015))
+            (Some(200_000), Some(8192), Some(0.000_003), Some(0.000_015))
         }
         id if id.contains("claude-opus-4") => {
-            (Some(200000), Some(8192), Some(0.000015), Some(0.000075))
+            (Some(200_000), Some(8192), Some(0.000_015), Some(0.000_075))
         }
 
         // Claude 3.7 models
         id if id.contains("claude-3-7-sonnet") => {
-            (Some(200000), Some(8192), Some(0.000003), Some(0.000015))
+            (Some(200_000), Some(8192), Some(0.000_003), Some(0.000_015))
         }
 
         // Claude 3.5 models
         id if id.contains("claude-3-5-sonnet") => {
-            (Some(200000), Some(8192), Some(0.000003), Some(0.000015))
+            (Some(200_000), Some(8192), Some(0.000_003), Some(0.000_015))
         }
         id if id.contains("claude-3-5-haiku") => {
-            (Some(200000), Some(8192), Some(0.00000025), Some(0.00000125))
+            (Some(200_000), Some(8192), Some(0.000_000_25), Some(0.000_001_25))
         }
 
         // Claude 3 models
         id if id.contains("claude-3-opus") => {
-            (Some(200000), Some(4096), Some(0.000015), Some(0.000075))
+            (Some(200_000), Some(4096), Some(0.000_015), Some(0.000_075))
         }
         id if id.contains("claude-3-sonnet") => {
-            (Some(200000), Some(4096), Some(0.000003), Some(0.000015))
+            (Some(200_000), Some(4096), Some(0.000_003), Some(0.000_015))
         }
         id if id.contains("claude-3-haiku") => {
-            (Some(200000), Some(4096), Some(0.00000025), Some(0.00000125))
+            (Some(200_000), Some(4096), Some(0.000_000_25), Some(0.000_001_25))
         }
 
         // Default for unknown models
-        _ => (Some(200000), Some(4096), None, None),
+        _ => (Some(200_000), Some(4096), None, None),
     }
 }
 
@@ -288,7 +288,7 @@ mod tests {
     fn test_model_specs() {
         let (context, max_output, input_cost, output_cost) =
             estimate_model_specs("claude-3-5-sonnet-20241022");
-        assert_eq!(context, Some(200000));
+        assert_eq!(context, Some(200_000));
         assert_eq!(max_output, Some(8192));
         assert!(input_cost.is_some());
         assert!(output_cost.is_some());

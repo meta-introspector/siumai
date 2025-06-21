@@ -63,7 +63,7 @@ impl Default for ParameterConstraints {
             temperature_min: 0.0,
             temperature_max: 2.0,
             max_tokens_min: 1,
-            max_tokens_max: 100000,
+            max_tokens_max: 100_000,
             top_p_min: 0.0,
             top_p_max: 1.0,
         }
@@ -98,7 +98,7 @@ impl ParameterMapperFactory {
     }
 
     /// Validates that a provider type has a mapper
-    pub fn has_mapper(provider_type: &ProviderType) -> bool {
+    pub const fn has_mapper(provider_type: &ProviderType) -> bool {
         matches!(
             provider_type,
             ProviderType::OpenAi

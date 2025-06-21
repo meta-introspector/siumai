@@ -1,6 +1,6 @@
-//! OpenAI Files API Implementation
+//! `OpenAI` Files API Implementation
 //!
-//! This module provides the OpenAI implementation of the FileManagementCapability trait,
+//! This module provides the `OpenAI` implementation of the `FileManagementCapability` trait,
 //! including file upload, listing, retrieval, and deletion operations.
 
 use async_trait::async_trait;
@@ -15,7 +15,7 @@ use crate::types::{
 
 use super::config::OpenAiConfig;
 
-/// OpenAI file upload API request structure
+/// `OpenAI` file upload API request structure
 #[derive(Debug, Clone, Serialize)]
 #[allow(dead_code)]
 struct OpenAiFileUploadForm {
@@ -23,7 +23,7 @@ struct OpenAiFileUploadForm {
     purpose: String,
 }
 
-/// OpenAI file API response structure
+/// `OpenAI` file API response structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiFileResponse {
     /// File ID
@@ -44,7 +44,7 @@ struct OpenAiFileResponse {
     status_details: Option<String>,
 }
 
-/// OpenAI file list API response structure
+/// `OpenAI` file list API response structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiFileListResponse {
     /// Object type (should be "list")
@@ -56,7 +56,7 @@ struct OpenAiFileListResponse {
     has_more: Option<bool>,
 }
 
-/// OpenAI file deletion API response structure
+/// `OpenAI` file deletion API response structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiFileDeleteResponse {
     /// File ID that was deleted
@@ -68,10 +68,10 @@ struct OpenAiFileDeleteResponse {
     deleted: bool,
 }
 
-/// OpenAI file management capability implementation.
+/// `OpenAI` file management capability implementation.
 ///
 /// This struct provides the OpenAI-specific implementation of file management
-/// operations using the OpenAI Files API.
+/// operations using the `OpenAI` Files API.
 ///
 /// # Supported Operations
 /// - File upload with various purposes (assistants, fine-tune, batch, etc.)
@@ -81,22 +81,22 @@ struct OpenAiFileDeleteResponse {
 /// - File content download
 ///
 /// # API Reference
-/// https://platform.openai.com/docs/api-reference/files
+/// <https://platform.openai.com/docs/api-reference/files>
 #[derive(Debug, Clone)]
 pub struct OpenAiFiles {
-    /// OpenAI configuration
+    /// `OpenAI` configuration
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
 }
 
 impl OpenAiFiles {
-    /// Create a new OpenAI files instance.
+    /// Create a new `OpenAI` files instance.
     ///
     /// # Arguments
-    /// * `config` - OpenAI configuration
+    /// * `config` - `OpenAI` configuration
     /// * `http_client` - HTTP client for making requests
-    pub fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
+    pub const fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         Self {
             config,
             http_client,
@@ -114,7 +114,7 @@ impl OpenAiFiles {
     }
 
     /// Get maximum file size in bytes.
-    pub fn get_max_file_size(&self) -> u64 {
+    pub const fn get_max_file_size(&self) -> u64 {
         512 * 1024 * 1024 // 512 MB
     }
 
@@ -179,8 +179,7 @@ impl OpenAiFiles {
             let supported_formats = self.get_supported_formats();
             if !supported_formats.contains(&extension.to_lowercase()) {
                 return Err(LlmError::InvalidInput(format!(
-                    "Unsupported file format: {}. Supported formats: {:?}",
-                    extension, supported_formats
+                    "Unsupported file format: {extension}. Supported formats: {supported_formats:?}"
                 )));
             }
         }
@@ -188,7 +187,7 @@ impl OpenAiFiles {
         Ok(())
     }
 
-    /// Convert OpenAI file response to our standard format.
+    /// Convert `OpenAI` file response to our standard format.
     fn convert_file_response(&self, openai_file: OpenAiFileResponse) -> FileObject {
         let mut metadata = HashMap::new();
         metadata.insert(
@@ -230,9 +229,9 @@ impl OpenAiFiles {
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -248,12 +247,12 @@ impl OpenAiFiles {
             .unwrap_or_else(|_| "Unknown error".to_string());
 
         match status.as_u16() {
-            404 => LlmError::NotFound(format!("File not found: {}", error_text)),
+            404 => LlmError::NotFound(format!("File not found: {error_text}")),
             413 => LlmError::InvalidInput("File too large".to_string()),
             415 => LlmError::InvalidInput("Unsupported file type".to_string()),
             _ => LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI Files API error {}: {}", status, error_text),
+                message: format!("OpenAI Files API error {status}: {error_text}"),
                 details: None,
             },
         }
@@ -280,7 +279,7 @@ impl FileManagementCapability for OpenAiFiles {
                             .as_deref()
                             .unwrap_or("application/octet-stream"),
                     )
-                    .map_err(|e| LlmError::HttpError(format!("Invalid MIME type: {}", e)))?,
+                    .map_err(|e| LlmError::HttpError(format!("Invalid MIME type: {e}")))?,
             );
 
         let request_builder = self.make_request(reqwest::Method::POST, "files").await?;
@@ -288,7 +287,7 @@ impl FileManagementCapability for OpenAiFiles {
             .multipart(form)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -297,7 +296,7 @@ impl FileManagementCapability for OpenAiFiles {
         let openai_response: OpenAiFileResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         Ok(self.convert_file_response(openai_response))
     }
@@ -314,7 +313,7 @@ impl FileManagementCapability for OpenAiFiles {
                 params.push(format!("purpose={}", urlencoding::encode(&purpose)));
             }
             if let Some(limit) = q.limit {
-                params.push(format!("limit={}", limit));
+                params.push(format!("limit={limit}"));
             }
             if let Some(after) = q.after {
                 params.push(format!("after={}", urlencoding::encode(&after)));
@@ -333,7 +332,7 @@ impl FileManagementCapability for OpenAiFiles {
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -342,7 +341,7 @@ impl FileManagementCapability for OpenAiFiles {
         let openai_response: OpenAiFileListResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         let files: Vec<FileObject> = openai_response
             .data
@@ -359,13 +358,13 @@ impl FileManagementCapability for OpenAiFiles {
 
     /// Retrieve file metadata.
     async fn retrieve_file(&self, file_id: String) -> Result<FileObject, LlmError> {
-        let endpoint = format!("files/{}", file_id);
+        let endpoint = format!("files/{file_id}");
 
         let request_builder = self.make_request(reqwest::Method::GET, &endpoint).await?;
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -374,14 +373,14 @@ impl FileManagementCapability for OpenAiFiles {
         let openai_response: OpenAiFileResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         Ok(self.convert_file_response(openai_response))
     }
 
     /// Delete a file permanently.
     async fn delete_file(&self, file_id: String) -> Result<FileDeleteResponse, LlmError> {
-        let endpoint = format!("files/{}", file_id);
+        let endpoint = format!("files/{file_id}");
 
         let request_builder = self
             .make_request(reqwest::Method::DELETE, &endpoint)
@@ -389,7 +388,7 @@ impl FileManagementCapability for OpenAiFiles {
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -398,7 +397,7 @@ impl FileManagementCapability for OpenAiFiles {
         let openai_response: OpenAiFileDeleteResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         Ok(FileDeleteResponse {
             id: openai_response.id,
@@ -408,13 +407,13 @@ impl FileManagementCapability for OpenAiFiles {
 
     /// Get file content as bytes.
     async fn get_file_content(&self, file_id: String) -> Result<Vec<u8>, LlmError> {
-        let endpoint = format!("files/{}/content", file_id);
+        let endpoint = format!("files/{file_id}/content");
 
         let request_builder = self.make_request(reqwest::Method::GET, &endpoint).await?;
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -423,7 +422,7 @@ impl FileManagementCapability for OpenAiFiles {
         let content = response
             .bytes()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Failed to read response body: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Failed to read response body: {e}")))?;
 
         Ok(content.to_vec())
     }

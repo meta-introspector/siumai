@@ -28,14 +28,14 @@ pub struct GeminiChatCapability {
 
 impl GeminiChatCapability {
     /// Create a new Gemini chat capability
-    pub fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
+    pub const fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
         Self {
             config,
             http_client,
         }
     }
 
-    /// Convert ChatMessage to Gemini Content
+    /// Convert `ChatMessage` to Gemini Content
     fn convert_message_to_content(&self, message: &ChatMessage) -> Result<Content, LlmError> {
         let role = match message.role {
             crate::types::MessageRole::User => Some("user".to_string()),
@@ -52,15 +52,12 @@ impl GeminiChatCapability {
         let mut parts = Vec::new();
 
         // Add text content
-        match &message.content {
-            crate::types::MessageContent::Text(text) => {
-                if !text.is_empty() {
-                    parts.push(Part::Text { text: text.clone(), thought: None });
-                }
+        if let crate::types::MessageContent::Text(text) = &message.content {
+            if !text.is_empty() {
+                parts.push(Part::Text { text: text.clone(), thought: None });
             }
-            _ => {
-                // Handle other content types if needed
-            }
+        } else {
+            // Handle other content types if needed
         }
 
         // Add tool calls
@@ -146,13 +143,10 @@ impl GeminiChatCapability {
         for message in messages {
             if message.role == crate::types::MessageRole::System {
                 // Handle system message as system instruction
-                match &message.content {
-                    crate::types::MessageContent::Text(text) => {
-                        system_instruction = Some(Content::system_text(text.clone()));
-                    }
-                    _ => {
-                        // Handle other content types if needed
-                    }
+                if let crate::types::MessageContent::Text(text) = &message.content {
+                    system_instruction = Some(Content::system_text(text.clone()));
+                } else {
+                    // Handle other content types if needed
                 }
             } else {
                 contents.push(self.convert_message_to_content(message)?);
@@ -182,7 +176,7 @@ impl GeminiChatCapability {
         })
     }
 
-    /// Convert Gemini response to ChatResponse
+    /// Convert Gemini response to `ChatResponse`
     fn convert_response(
         &self,
         response: GenerateContentResponse,
@@ -324,14 +318,14 @@ impl GeminiChatCapability {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::api_error(
                 status_code,
-                format!("Gemini API error: {} - {}", status_code, error_text),
+                format!("Gemini API error: {status_code} - {error_text}"),
             ));
         }
 
         let gemini_response: GenerateContentResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         Ok(gemini_response)
     }
@@ -379,7 +373,7 @@ impl ChatCapability for GeminiChatCapability {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::api_error(
                 status_code,
-                format!("Gemini streaming API error: {} - {}", status_code, error_text),
+                format!("Gemini streaming API error: {status_code} - {error_text}"),
             ));
         }
 

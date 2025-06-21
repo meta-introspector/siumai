@@ -1,10 +1,10 @@
-//! OpenAI Responses API Implementation
+//! `OpenAI` Responses API Implementation
 //!
-//! This module implements the OpenAI Responses API which combines the simplicity
+//! This module implements the `OpenAI` Responses API which combines the simplicity
 //! of Chat Completions with the tool-use capabilities of the Assistants API.
 //! It supports built-in tools like web search, file search, and computer use.
 //!
-//! API Reference: https://platform.openai.com/docs/api-reference/responses
+//! API Reference: <https://platform.openai.com/docs/api-reference/responses>
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ use crate::web_search::{WebSearchCapability, WebSearchProvider};
 
 use super::config::OpenAiConfig;
 
-/// OpenAI Responses API client
+/// `OpenAI` Responses API client
 #[allow(dead_code)]
 pub struct OpenAiResponses {
     /// HTTP client
@@ -126,7 +126,7 @@ impl OpenAiResponses {
         Ok(body)
     }
 
-    /// Convert ChatMessage to API format
+    /// Convert `ChatMessage` to API format
     fn convert_message_to_api_format(
         &self,
         message: &ChatMessage,
@@ -238,17 +238,17 @@ impl OpenAiResponses {
             .map(|usage_data| crate::types::Usage {
                 prompt_tokens: usage_data
                     .get("input_tokens")
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|v| v as u32)
                     .unwrap_or(0),
                 completion_tokens: usage_data
                     .get("output_tokens")
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|v| v as u32)
                     .unwrap_or(0),
                 total_tokens: usage_data
                     .get("total_tokens")
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|v| v as u32)
                     .unwrap_or(0),
                 reasoning_tokens: None,
@@ -260,7 +260,7 @@ impl OpenAiResponses {
             id: response_data
                 .get("id")
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+                .map(std::string::ToString::to_string),
             model: Some(self.config.common_params.model.clone()),
             created: None,
             provider: "openai".to_string(),
@@ -277,13 +277,13 @@ impl OpenAiResponses {
             id: response_data
                 .get("id")
                 .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+                .map(std::string::ToString::to_string),
             content: crate::types::MessageContent::Text(content),
             model: Some(self.config.common_params.model.clone()),
             usage,
             finish_reason: None, // TODO: Extract finish reason
             tool_calls: None, // TODO: Extract tool calls from response
-            thinking: provider_data.get("reasoning").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            thinking: provider_data.get("reasoning").and_then(|v| v.as_str()).map(std::string::ToString::to_string),
             metadata: provider_data,
         })
     }
@@ -314,7 +314,7 @@ impl ChatCapability for OpenAiResponses {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::api_error(
                 status_code,
-                format!("OpenAI Responses API error: {}", error_text),
+                format!("OpenAI Responses API error: {error_text}"),
             ));
         }
 
@@ -358,7 +358,7 @@ impl ChatCapability for OpenAiResponses {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::api_error(
                 status_code,
-                format!("OpenAI Responses API streaming error: {}", error_text),
+                format!("OpenAI Responses API streaming error: {error_text}"),
             ));
         }
 
@@ -425,20 +425,20 @@ impl OpenAiResponses {
                                 let id = tool_call
                                     .get("id")
                                     .and_then(|id| id.as_str())
-                                    .map(|s| s.to_string())
+                                    .map(std::string::ToString::to_string)
                                     .unwrap_or_default();
 
                                 let function_name = tool_call
                                     .get("function")
                                     .and_then(|func| func.get("name"))
                                     .and_then(|n| n.as_str())
-                                    .map(|s| s.to_string());
+                                    .map(std::string::ToString::to_string);
 
                                 let arguments_delta = tool_call
                                     .get("function")
                                     .and_then(|func| func.get("arguments"))
                                     .and_then(|a| a.as_str())
-                                    .map(|s| s.to_string());
+                                    .map(std::string::ToString::to_string);
 
                                 events.push(crate::stream::ChatStreamEvent::ToolCallDelta {
                                     id,
@@ -455,22 +455,22 @@ impl OpenAiResponses {
                         let usage_info = crate::types::Usage {
                             prompt_tokens: usage
                                 .get("prompt_tokens")
-                                .and_then(|v| v.as_u64())
+                                .and_then(serde_json::Value::as_u64)
                                 .map(|v| v as u32)
                                 .unwrap_or(0),
                             completion_tokens: usage
                                 .get("completion_tokens")
-                                .and_then(|v| v.as_u64())
+                                .and_then(serde_json::Value::as_u64)
                                 .map(|v| v as u32)
                                 .unwrap_or(0),
                             total_tokens: usage
                                 .get("total_tokens")
-                                .and_then(|v| v.as_u64())
+                                .and_then(serde_json::Value::as_u64)
                                 .map(|v| v as u32)
                                 .unwrap_or(0),
                             reasoning_tokens: usage
                                 .get("reasoning_tokens")
-                                .and_then(|v| v.as_u64())
+                                .and_then(serde_json::Value::as_u64)
                                 .map(|v| v as u32),
                             cached_tokens: None,
                         };

@@ -110,7 +110,7 @@ impl ParameterMapper for OllamaParameterMapper {
 
     fn validate_params(&self, params: &Value) -> Result<(), LlmError> {
         // Validate temperature
-        if let Some(temp) = params.get("temperature").and_then(|v| v.as_f64()) {
+        if let Some(temp) = params.get("temperature").and_then(serde_json::Value::as_f64) {
             if !(0.0..=2.0).contains(&temp) {
                 return Err(LlmError::InvalidParameter(
                     "Temperature must be between 0.0 and 2.0".to_string(),
@@ -119,7 +119,7 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate top_p
-        if let Some(top_p) = params.get("top_p").and_then(|v| v.as_f64()) {
+        if let Some(top_p) = params.get("top_p").and_then(serde_json::Value::as_f64) {
             if !(0.0..=1.0).contains(&top_p) {
                 return Err(LlmError::InvalidParameter(
                     "top_p must be between 0.0 and 1.0".to_string(),
@@ -128,7 +128,7 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate num_predict (max_tokens)
-        if let Some(num_predict) = params.get("num_predict").and_then(|v| v.as_u64()) {
+        if let Some(num_predict) = params.get("num_predict").and_then(serde_json::Value::as_u64) {
             if num_predict == 0 {
                 return Err(LlmError::InvalidParameter(
                     "num_predict must be greater than 0".to_string(),
@@ -137,7 +137,7 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate num_ctx
-        if let Some(num_ctx) = params.get("num_ctx").and_then(|v| v.as_u64()) {
+        if let Some(num_ctx) = params.get("num_ctx").and_then(serde_json::Value::as_u64) {
             if num_ctx == 0 {
                 return Err(LlmError::InvalidParameter(
                     "num_ctx must be greater than 0".to_string(),
@@ -146,7 +146,7 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate num_batch
-        if let Some(num_batch) = params.get("num_batch").and_then(|v| v.as_u64()) {
+        if let Some(num_batch) = params.get("num_batch").and_then(serde_json::Value::as_u64) {
             if num_batch == 0 {
                 return Err(LlmError::InvalidParameter(
                     "num_batch must be greater than 0".to_string(),
@@ -155,7 +155,7 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate num_gpu
-        if let Some(num_gpu) = params.get("num_gpu").and_then(|v| v.as_u64()) {
+        if let Some(num_gpu) = params.get("num_gpu").and_then(serde_json::Value::as_u64) {
             if num_gpu > 64 {
                 return Err(LlmError::InvalidParameter(
                     "num_gpu should not exceed 64".to_string(),
@@ -164,7 +164,7 @@ impl ParameterMapper for OllamaParameterMapper {
         }
 
         // Validate num_thread
-        if let Some(num_thread) = params.get("num_thread").and_then(|v| v.as_u64()) {
+        if let Some(num_thread) = params.get("num_thread").and_then(serde_json::Value::as_u64) {
             if num_thread == 0 || num_thread > 256 {
                 return Err(LlmError::InvalidParameter(
                     "num_thread must be between 1 and 256".to_string(),
@@ -180,7 +180,7 @@ impl ParameterMapper for OllamaParameterMapper {
             temperature_min: 0.0,
             temperature_max: 2.0,
             max_tokens_min: 1,
-            max_tokens_max: 100000,
+            max_tokens_max: 100_000,
             top_p_min: 0.0,
             top_p_max: 1.0,
         }
@@ -229,7 +229,7 @@ impl OllamaProviderParams {
     }
 
     /// Enable raw mode
-    pub fn raw(mut self, raw: bool) -> Self {
+    pub const fn raw(mut self, raw: bool) -> Self {
         self.raw = Some(raw);
         self
     }
@@ -247,43 +247,43 @@ impl OllamaProviderParams {
     }
 
     /// Enable NUMA support
-    pub fn numa(mut self, numa: bool) -> Self {
+    pub const fn numa(mut self, numa: bool) -> Self {
         self.numa = Some(numa);
         self
     }
 
     /// Set context window size
-    pub fn num_ctx(mut self, num_ctx: u32) -> Self {
+    pub const fn num_ctx(mut self, num_ctx: u32) -> Self {
         self.num_ctx = Some(num_ctx);
         self
     }
 
     /// Set batch size
-    pub fn num_batch(mut self, num_batch: u32) -> Self {
+    pub const fn num_batch(mut self, num_batch: u32) -> Self {
         self.num_batch = Some(num_batch);
         self
     }
 
     /// Set number of GPU layers
-    pub fn num_gpu(mut self, num_gpu: u32) -> Self {
+    pub const fn num_gpu(mut self, num_gpu: u32) -> Self {
         self.num_gpu = Some(num_gpu);
         self
     }
 
     /// Set main GPU
-    pub fn main_gpu(mut self, main_gpu: u32) -> Self {
+    pub const fn main_gpu(mut self, main_gpu: u32) -> Self {
         self.main_gpu = Some(main_gpu);
         self
     }
 
     /// Enable memory mapping
-    pub fn use_mmap(mut self, use_mmap: bool) -> Self {
+    pub const fn use_mmap(mut self, use_mmap: bool) -> Self {
         self.use_mmap = Some(use_mmap);
         self
     }
 
     /// Set number of threads
-    pub fn num_thread(mut self, num_thread: u32) -> Self {
+    pub const fn num_thread(mut self, num_thread: u32) -> Self {
         self.num_thread = Some(num_thread);
         self
     }
@@ -315,12 +315,12 @@ mod tests {
             seed: Some(42),
         };
 
-        let mapped = mapper.map_common_params(&common_params);
-        assert_eq!(mapped["model"], "llama3.2");
-        assert!((mapped["temperature"].as_f64().unwrap() - 0.7).abs() < 0.001);
-        assert_eq!(mapped["num_predict"], 1000);
-        assert!((mapped["top_p"].as_f64().unwrap() - 0.9).abs() < 0.001);
-        assert_eq!(mapped["seed"], 42);
+        let mapped_params = mapper.map_common_params(&common_params);
+        assert_eq!(mapped_params["model"], "llama3.2");
+        assert!((mapped_params["temperature"].as_f64().unwrap() - 0.7).abs() < 0.001);
+        assert_eq!(mapped_params["num_predict"], 1000);
+        assert!((mapped_params["top_p"].as_f64().unwrap() - 0.9).abs() < 0.001);
+        assert_eq!(mapped_params["seed"], 42);
     }
 
     #[test]

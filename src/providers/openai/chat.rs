@@ -1,6 +1,6 @@
-//! OpenAI Chat Capability Implementation
+//! `OpenAI` Chat Capability Implementation
 //!
-//! Implements the ChatCapability trait for OpenAI.
+//! Implements the `ChatCapability` trait for `OpenAI`.
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ use crate::types::*;
 use super::types::*;
 use super::utils::*;
 
-/// OpenAI Chat Capability Implementation
+/// `OpenAI` Chat Capability Implementation
 pub struct OpenAiChatCapability {
     pub api_key: String,
     pub base_url: String,
@@ -26,8 +26,8 @@ pub struct OpenAiChatCapability {
 }
 
 impl OpenAiChatCapability {
-    /// Create a new OpenAI chat capability instance
-    pub fn new(
+    /// Create a new `OpenAI` chat capability instance
+    pub const fn new(
         api_key: String,
         base_url: String,
         http_client: reqwest::Client,
@@ -80,7 +80,7 @@ impl OpenAiChatCapability {
         Ok(body)
     }
 
-    /// Parse the OpenAI response
+    /// Parse the `OpenAI` response
     fn parse_chat_response(&self, response: OpenAiChatResponse) -> Result<ChatResponse, LlmError> {
         let choice = response
             .choices
@@ -202,7 +202,7 @@ impl ChatCapability for OpenAiChatCapability {
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI API error: {}", error_text),
+                message: format!("OpenAI API error: {error_text}"),
                 details: serde_json::from_str(&error_text).ok(),
             });
         }
@@ -246,12 +246,12 @@ impl ChatCapability for OpenAiChatCapability {
 
 /// Legacy implementation for backward compatibility
 impl OpenAiChatCapability {
-    /// Chat with a ChatRequest (legacy method)
+    /// Chat with a `ChatRequest` (legacy method)
     pub async fn chat(&self, request: ChatRequest) -> Result<ChatResponse, LlmError> {
         self.chat_with_tools(request.messages, request.tools).await
     }
 
-    /// Chat stream with a ChatRequest (legacy method)
+    /// Chat stream with a `ChatRequest` (legacy method)
     pub async fn chat_stream_request(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
         ChatCapability::chat_stream(self, request.messages, request.tools).await
     }

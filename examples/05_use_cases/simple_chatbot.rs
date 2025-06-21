@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut chatbot = match Chatbot::new().await {
         Ok(bot) => bot,
         Err(e) => {
-            println!("❌ Failed to initialize chatbot: {}", e);
+            println!("❌ Failed to initialize chatbot: {e}");
             println!("💡 Make sure you have set API keys or Ollama is running");
             return Ok(());
         }
@@ -196,11 +196,11 @@ impl Chatbot {
                 Ok(response) => {
                     self.add_assistant_message(&response);
                     if !self.use_streaming {
-                        println!("{}", response);
+                        println!("{response}");
                     }
                 }
                 Err(e) => {
-                    println!("❌ Error: {}", e);
+                    println!("❌ Error: {e}");
                     println!("💡 Try again or use /help for commands");
                 }
             }
@@ -230,7 +230,7 @@ impl Chatbot {
                 return Ok(true); // Signal to exit
             }
             _ => {
-                println!("❓ Unknown command: {}", command);
+                println!("❓ Unknown command: {command}");
                 println!("💡 Type /help to see available commands");
             }
         }
@@ -283,12 +283,12 @@ impl Chatbot {
             match message.role {
                 MessageRole::User => {
                     if let Some(text) = message.content.text() {
-                        println!("🧑 You: {}", text);
+                        println!("🧑 You: {text}");
                     }
                 }
                 MessageRole::Assistant => {
                     if let Some(text) = message.content.text() {
-                        println!("🤖 AI: {}", text);
+                        println!("🤖 AI: {text}");
                     }
                 }
                 _ => {}
@@ -321,7 +321,7 @@ impl Chatbot {
         while let Some(event) = stream.next().await {
             match event? {
                 ChatStreamEvent::ContentDelta { delta, .. } => {
-                    print!("{}", delta);
+                    print!("{delta}");
                     io::stdout().flush().unwrap();
                     full_response.push_str(&delta);
                 }

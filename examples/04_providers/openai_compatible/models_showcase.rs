@@ -1,7 +1,7 @@
-//! 🔄 OpenAI Compatible Models
+//! 🔄 `OpenAI` Compatible Models
 //! 
 //! This example demonstrates various OpenAI-compatible providers including:
-//! - DeepSeek integration and specialized models
+//! - `DeepSeek` integration and specialized models
 //! - Groq high-speed inference capabilities
 //! - Local model deployment options
 //! - Performance comparison across providers
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Demo DeepSeek specialized models
+/// Demo `DeepSeek` specialized models
 async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Exploring DeepSeek specialized capabilities...");
     
@@ -95,14 +95,14 @@ async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
                 println!("   💻 DeepSeek Coder response:");
                 let lines: Vec<&str> = text.lines().take(5).collect();
                 for line in lines {
-                    println!("      {}", line);
+                    println!("      {line}");
                 }
                 if text.lines().count() > 5 {
                     println!("      ... (truncated)");
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // DeepSeek Reasoning model
@@ -138,7 +138,7 @@ async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
                 );
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -223,11 +223,11 @@ async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>>
     ];
 
     for (name, model, env_key) in providers {
-        println!("   Testing {} performance:", name);
+        println!("   Testing {name} performance:");
         
         let api_key = std::env::var(env_key)
             .unwrap_or_else(|_| {
-                println!("     ⚠️  {} not set, using demo key", env_key);
+                println!("     ⚠️  {env_key} not set, using demo key");
                 "demo-key".to_string()
             });
 
@@ -258,7 +258,7 @@ async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>>
                     }
                 }
             }
-            Err(e) => println!("     ❌ Error: {}", e),
+            Err(e) => println!("     ❌ Error: {e}"),
         }
         println!();
     }
@@ -280,9 +280,9 @@ async fn demo_cost_optimization() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (complexity, task, recommended_model) in tasks {
-        println!("   {} task: {}", complexity, recommended_model);
-        println!("     Task: {}", task);
-        println!("     Recommended: {}", recommended_model);
+        println!("   {complexity} task: {recommended_model}");
+        println!("     Task: {task}");
+        println!("     Recommended: {recommended_model}");
         println!("     Rationale: {}",
             match complexity {
                 "Simple" => "Fast model for quick answers",
@@ -357,9 +357,9 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
     ];
 
     for (provider, use_cases) in recommendations {
-        println!("   🎯 {} - Best Use Cases:", provider);
+        println!("   🎯 {provider} - Best Use Cases:");
         for use_case in use_cases {
-            println!("      • {}", use_case);
+            println!("      • {use_case}");
         }
         println!();
     }
@@ -378,30 +378,30 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
-/// 🎯 Key OpenAI Compatible Providers Summary:
+/// 🎯 Key `OpenAI` Compatible Providers Summary:
 ///
 /// Provider Options:
 /// - Groq: Ultra-fast inference with Llama models
-/// - DeepSeek: Specialized coding and reasoning models
+/// - `DeepSeek`: Specialized coding and reasoning models
 /// - Local: Self-hosted models for privacy/cost
 /// - Others: Various OpenAI-compatible services
 ///
 /// Performance Characteristics:
 /// - Groq: Fastest inference, excellent for real-time
-/// - DeepSeek: Specialized capabilities, good performance
-/// - OpenAI: Highest quality, moderate speed
+/// - `DeepSeek`: Specialized capabilities, good performance
+/// - `OpenAI`: Highest quality, moderate speed
 /// - Local: Variable, depends on hardware
 ///
 /// Cost Considerations:
 /// - Groq: Very cost-effective, high throughput
-/// - DeepSeek: Competitive pricing, specialized value
-/// - OpenAI: Premium pricing, premium quality
+/// - `DeepSeek`: Competitive pricing, specialized value
+/// - `OpenAI`: Premium pricing, premium quality
 /// - Local: Hardware costs, no API fees
 ///
 /// Use Case Matching:
 /// - Real-time applications → Groq
-/// - Code-heavy tasks → DeepSeek
-/// - High-quality content → OpenAI
+/// - Code-heavy tasks → `DeepSeek`
+/// - High-quality content → `OpenAI`
 /// - Privacy-sensitive → Local
 ///
 /// Optimization Strategies:
@@ -424,4 +424,4 @@ async fn demo_use_case_recommendations() -> Result<(), Box<dyn std::error::Error
 /// - Set up cost monitoring
 /// - Create performance benchmarks
 /// - Plan fallback strategies
-fn _documentation() {}
+const fn _documentation() {}

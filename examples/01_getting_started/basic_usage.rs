@@ -89,7 +89,7 @@ async fn simple_chat_example(api_key: &str) -> Result<(), Box<dyn std::error::Er
                 println!("   📊 Tokens used: {}", usage.total_tokens);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -145,7 +145,7 @@ async fn provider_configuration_example(api_key: &str) -> Result<(), Box<dyn std
                 println!("     Response: {}", text.trim());
             }
         }
-        Err(e) => println!("     ❌ Error: {}", e),
+        Err(e) => println!("     ❌ Error: {e}"),
     }
 
     // Configuration 2: Anthropic (if key available)
@@ -167,7 +167,7 @@ async fn provider_configuration_example(api_key: &str) -> Result<(), Box<dyn std
                     println!("     Response: {}", text.trim());
                 }
             }
-            Err(e) => println!("     ❌ Error: {}", e),
+            Err(e) => println!("     ❌ Error: {e}"),
         }
     } else {
         println!("   🧠 Anthropic: Skipped (no API key)");
@@ -200,7 +200,7 @@ async fn parameter_customization_example(api_key: &str) -> Result<(), Box<dyn st
                 println!("     {}", text.trim());
             }
         }
-        Err(e) => println!("     ❌ Error: {}", e),
+        Err(e) => println!("     ❌ Error: {e}"),
     }
 
     println!();
@@ -222,7 +222,7 @@ async fn parameter_customization_example(api_key: &str) -> Result<(), Box<dyn st
                 println!("     {}", text.trim());
             }
         }
-        Err(e) => println!("     ❌ Error: {}", e),
+        Err(e) => println!("     ❌ Error: {e}"),
     }
 
     Ok(())
@@ -244,7 +244,7 @@ async fn error_handling_example(api_key: &str) -> Result<(), Box<dyn std::error:
 
     match result {
         Ok(_) => println!("     ✅ Model accepted (might fail at runtime)"),
-        Err(e) => println!("     ❌ Expected error: {}", e),
+        Err(e) => println!("     ❌ Expected error: {e}"),
     }
 
     // Test 2: Empty message handling
@@ -263,7 +263,7 @@ async fn error_handling_example(api_key: &str) -> Result<(), Box<dyn std::error:
             println!("     ✅ Handled empty messages: {}",
                     response.text().unwrap_or("No response".to_string()));
         }
-        Err(e) => println!("     ❌ Expected error with empty messages: {}", e),
+        Err(e) => println!("     ❌ Expected error with empty messages: {e}"),
     }
 
     // Test 3: Timeout handling (simulated)
@@ -280,8 +280,8 @@ async fn error_handling_example(api_key: &str) -> Result<(), Box<dyn std::error:
 /// 🎯 Key Basic Usage Concepts Summary:
 ///
 /// Core Components:
-/// - SiumaiBuilder: Creates AI clients with configuration
-/// - ChatMessage: Represents messages in conversations
+/// - `SiumaiBuilder`: Creates AI clients with configuration
+/// - `ChatMessage`: Represents messages in conversations
 /// - Provider: Specifies which AI service to use
 /// - Parameters: Control AI behavior (temperature, tokens, etc.)
 ///
@@ -293,8 +293,8 @@ async fn error_handling_example(api_key: &str) -> Result<(), Box<dyn std::error:
 /// Essential Parameters:
 /// - model: Which AI model to use
 /// - temperature: Creativity level (0.0-1.0)
-/// - max_tokens: Maximum response length
-/// - api_key: Authentication for the service
+/// - `max_tokens`: Maximum response length
+/// - `api_key`: Authentication for the service
 ///
 /// Error Handling:
 /// - Always use Result types
@@ -314,4 +314,4 @@ async fn error_handling_example(api_key: &str) -> Result<(), Box<dyn std::error:
 /// - Try different providers
 /// - Learn about advanced features
 /// - Build real applications
-fn _documentation() {}
+const fn _documentation() {}

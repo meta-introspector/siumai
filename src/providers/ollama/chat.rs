@@ -1,6 +1,6 @@
 //! Ollama Chat Capability Implementation
 //!
-//! Implements the ChatCapability trait for Ollama using the /api/chat endpoint.
+//! Implements the `ChatCapability` trait for Ollama using the /api/chat endpoint.
 
 use async_trait::async_trait;
 use futures_util::StreamExt;
@@ -24,7 +24,7 @@ pub struct OllamaChatCapability {
 
 impl OllamaChatCapability {
     /// Creates a new Ollama chat capability
-    pub fn new(
+    pub const fn new(
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
@@ -203,9 +203,7 @@ impl ChatCapability for OllamaChatCapability {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Chat request failed: {} - {}",
-                status,
-                error_text
+                "Chat request failed: {status} - {error_text}"
             )));
         }
 
@@ -231,7 +229,7 @@ impl ChatCapability for OllamaChatCapability {
                         index: Some(0),
                     })
                 }
-                Err(e) => Err(LlmError::StreamError(format!("Stream error: {}", e))),
+                Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
             }
         });
 
@@ -258,9 +256,7 @@ impl OllamaChatCapability {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Chat request failed: {} - {}",
-                status,
-                error_text
+                "Chat request failed: {status} - {error_text}"
             )));
         }
 

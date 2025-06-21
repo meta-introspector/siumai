@@ -1,9 +1,9 @@
-//! OpenAI Models API Implementation
+//! `OpenAI` Models API Implementation
 //!
-//! This module implements the OpenAI Models API for listing and retrieving
+//! This module implements the `OpenAI` Models API for listing and retrieving
 //! information about available models.
 //!
-//! API Reference: https://platform.openai.com/docs/api-reference/models
+//! API Reference: <https://platform.openai.com/docs/api-reference/models>
 
 use async_trait::async_trait;
 use reqwest::header::HeaderMap;
@@ -15,11 +15,11 @@ use crate::types::{HttpConfig, ModelInfo};
 use super::types::*;
 use super::utils::build_headers;
 
-/// OpenAI Models API client
+/// `OpenAI` Models API client
 pub struct OpenAiModels {
     /// API key for authentication
     pub api_key: String,
-    /// Base URL for OpenAI API
+    /// Base URL for `OpenAI` API
     pub base_url: String,
     /// HTTP client
     pub http_client: reqwest::Client,
@@ -32,8 +32,8 @@ pub struct OpenAiModels {
 }
 
 impl OpenAiModels {
-    /// Create a new OpenAI models client
-    pub fn new(
+    /// Create a new `OpenAI` models client
+    pub const fn new(
         api_key: String,
         base_url: String,
         http_client: reqwest::Client,
@@ -71,7 +71,7 @@ impl OpenAiModels {
         format!("{}/models/{}", self.base_url, model_id)
     }
 
-    /// Convert OpenAI model response to ModelInfo
+    /// Convert `OpenAI` model response to `ModelInfo`
     fn convert_openai_model_to_model_info(&self, openai_model: OpenAiModel) -> ModelInfo {
         // Determine capabilities based on model ID
         let capabilities = determine_model_capabilities(&openai_model.id);
@@ -179,7 +179,7 @@ impl ModelListingCapability for OpenAiModels {
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI Models API error: {}", error_text),
+                message: format!("OpenAI Models API error: {error_text}"),
                 details: serde_json::from_str(&error_text).ok(),
             });
         }
@@ -208,7 +208,7 @@ impl ModelListingCapability for OpenAiModels {
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI Model API error: {}", error_text),
+                message: format!("OpenAI Model API error: {error_text}"),
                 details: serde_json::from_str(&error_text).ok(),
             });
         }
@@ -291,29 +291,29 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
 fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64>, Option<f64>) {
     match model_id {
         // GPT-4o models
-        "gpt-4o" => (Some(128000), Some(16384), Some(0.0000025), Some(0.00001)),
-        "gpt-4o-mini" => (Some(128000), Some(16384), Some(0.00000015), Some(0.0000006)),
-        "gpt-4o-mini-tts" => (None, None, Some(0.000015), None), // TTS pricing per character
+        "gpt-4o" => (Some(128_000), Some(16_384), Some(0.000_002_5), Some(0.000_01)),
+        "gpt-4o-mini" => (Some(128_000), Some(16_384), Some(0.000_000_15), Some(0.000_000_6)),
+        "gpt-4o-mini-tts" => (None, None, Some(0.000_015), None), // TTS pricing per character
 
         // GPT-4 Turbo models
         id if id.contains("gpt-4-turbo") => {
-            (Some(128000), Some(4096), Some(0.00001), Some(0.00003))
+            (Some(128_000), Some(4096), Some(0.000_01), Some(0.000_03))
         }
 
         // GPT-4 models
-        "gpt-4" => (Some(8192), Some(4096), Some(0.00003), Some(0.00006)),
-        "gpt-4-32k" => (Some(32768), Some(4096), Some(0.00006), Some(0.00012)),
+        "gpt-4" => (Some(8192), Some(4096), Some(0.000_03), Some(0.000_06)),
+        "gpt-4-32k" => (Some(32_768), Some(4096), Some(0.000_06), Some(0.000_12)),
 
         // o1 models (reasoning models)
-        "o1-preview" => (Some(128000), Some(32768), Some(0.000015), Some(0.00006)),
-        "o1-mini" => (Some(128000), Some(65536), Some(0.000003), Some(0.000012)),
+        "o1-preview" => (Some(128_000), Some(32_768), Some(0.000_015), Some(0.000_06)),
+        "o1-mini" => (Some(128_000), Some(65_536), Some(0.000_003), Some(0.000_012)),
 
         // GPT-3.5 Turbo models
-        "gpt-3.5-turbo" => (Some(16385), Some(4096), Some(0.0000005), Some(0.0000015)),
-        "gpt-3.5-turbo-16k" => (Some(16385), Some(4096), Some(0.000003), Some(0.000004)),
+        "gpt-3.5-turbo" => (Some(16_385), Some(4096), Some(0.000_000_5), Some(0.000_001_5)),
+        "gpt-3.5-turbo-16k" => (Some(16_385), Some(4096), Some(0.000_003), Some(0.000_004)),
 
         // TTS models
-        "tts-1" => (None, None, Some(0.000015), None), // Per character
+        "tts-1" => (None, None, Some(0.000_015), None), // Per character
         "tts-1-hd" => (None, None, Some(0.00003), None), // Per character
 
         // Whisper models
@@ -325,12 +325,12 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
         "gpt-image-1" => (None, None, Some(0.03), None), // Per image (estimated)
 
         // Embedding models
-        "text-embedding-3-small" => (Some(8191), None, Some(0.00000002), None),
-        "text-embedding-3-large" => (Some(8191), None, Some(0.00000013), None),
-        "text-embedding-ada-002" => (Some(8191), None, Some(0.0000001), None),
+        "text-embedding-3-small" => (Some(8191), None, Some(0.000_000_02), None),
+        "text-embedding-3-large" => (Some(8191), None, Some(0.000_000_13), None),
+        "text-embedding-ada-002" => (Some(8191), None, Some(0.000_000_1), None),
 
         // Moderation models
-        id if id.contains("text-moderation") => (Some(32768), None, Some(0.0), None), // Free
+        id if id.contains("text-moderation") => (Some(32_768), None, Some(0.0), None), // Free
 
         // Default fallback for unknown models
         _ => (Some(4096), Some(2048), Some(0.00001), Some(0.00003)),
@@ -377,8 +377,8 @@ mod tests {
     #[test]
     fn test_estimate_model_specs() {
         let (context, max_output, input_cost, output_cost) = estimate_model_specs("gpt-4o");
-        assert_eq!(context, Some(128000));
-        assert_eq!(max_output, Some(16384));
+        assert_eq!(context, Some(128_000));
+        assert_eq!(max_output, Some(16_384));
         assert!(input_cost.is_some());
         assert!(output_cost.is_some());
     }

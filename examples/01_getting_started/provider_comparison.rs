@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// Compare the same prompt across different providers
 async fn compare_providers(prompt: &str) {
     println!("⚖️  Provider Performance Comparison:\n");
-    println!("   Test prompt: \"{}\"\n", prompt);
+    println!("   Test prompt: \"{prompt}\"\n");
 
     // Test OpenAI
     test_provider_performance("OpenAI", || async {
@@ -102,7 +102,7 @@ where
     F: FnOnce() -> Fut,
     Fut: std::future::Future<Output = Result<ChatResponse, LlmError>>,
 {
-    println!("   🧪 Testing {}:", provider_name);
+    println!("   🧪 Testing {provider_name}:");
     
     let start_time = Instant::now();
     
@@ -126,11 +126,11 @@ where
                 } else {
                     text.to_string()
                 };
-                println!("      💬 Preview: {}", preview);
+                println!("      💬 Preview: {preview}");
             }
         }
         Err(e) => {
-            println!("      ❌ Failed: {}", e);
+            println!("      ❌ Failed: {e}");
             match provider_name {
                 "OpenAI" => println!("      💡 Set OPENAI_API_KEY environment variable"),
                 "Anthropic" => println!("      💡 Set ANTHROPIC_API_KEY environment variable"),
@@ -256,7 +256,7 @@ async fn provide_recommendations() {
 /// 5. Plan for scaling and reliability
 ///
 /// Next Steps:
-/// - basic_usage.rs: Learn core functionality
-/// - ../02_core_features/: Explore advanced features
-/// - ../04_providers/: Provider-specific capabilities
-fn _documentation() {}
+/// - `basic_usage.rs`: Learn core functionality
+/// - ../`02_core_features/`: Explore advanced features
+/// - ../`04_providers/`: Provider-specific capabilities
+const fn _documentation() {}

@@ -1,6 +1,6 @@
-//! 💬 OpenAI Basic Chat - Essential OpenAI functionality
+//! 💬 `OpenAI` Basic Chat - Essential `OpenAI` functionality
 //!
-//! This example demonstrates core OpenAI chat features:
+//! This example demonstrates core `OpenAI` chat features:
 //! - Model selection and configuration
 //! - Parameter tuning for different use cases
 //! - Token usage monitoring and optimization
@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Demonstrate different OpenAI models and their characteristics
+/// Demonstrate different `OpenAI` models and their characteristics
 async fn demonstrate_model_selection(api_key: &str) {
     println!("🤖 Model Selection:\n");
 
@@ -58,7 +58,7 @@ async fn demonstrate_model_selection(api_key: &str) {
     let test_prompt = "Explain quantum computing in exactly 50 words.";
 
     for (model, description) in models {
-        println!("   Testing {}: {}", model, description);
+        println!("   Testing {model}: {description}");
 
         match LlmBuilder::new()
             .openai()
@@ -78,7 +78,7 @@ async fn demonstrate_model_selection(api_key: &str) {
                         let duration = start_time.elapsed();
                         
                         if let Some(text) = response.content_text() {
-                            println!("      Response: {}", text);
+                            println!("      Response: {text}");
                         }
                         
                         if let Some(usage) = &response.usage {
@@ -92,19 +92,19 @@ async fn demonstrate_model_selection(api_key: &str) {
                                 "gpt-3.5-turbo" => usage.total_tokens as f64 * 0.0015 / 1000.0,
                                 _ => 0.0,
                             };
-                            println!("      Estimated cost: ${:.6}", cost);
+                            println!("      Estimated cost: ${cost:.6}");
                         }
                         
                         println!("      Response time: {}ms", duration.as_millis());
                         println!("      ✅ Success");
                     }
                     Err(e) => {
-                        println!("      ❌ Failed: {}", e);
+                        println!("      ❌ Failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("      ❌ Client creation failed: {}", e);
+                println!("      ❌ Client creation failed: {e}");
             }
         }
         println!();
@@ -122,7 +122,7 @@ async fn demonstrate_parameter_tuning(api_key: &str) {
     ];
 
     for (scenario, temperature, prompt) in scenarios {
-        println!("   Scenario: {} (temperature: {})", scenario, temperature);
+        println!("   Scenario: {scenario} (temperature: {temperature})");
 
         match LlmBuilder::new()
             .openai()
@@ -144,17 +144,17 @@ async fn demonstrate_parameter_tuning(api_key: &str) {
                             } else {
                                 text.to_string()
                             };
-                            println!("      Response: {}", preview);
+                            println!("      Response: {preview}");
                         }
                         println!("      ✅ Success");
                     }
                     Err(e) => {
-                        println!("      ❌ Failed: {}", e);
+                        println!("      ❌ Failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("      ❌ Client creation failed: {}", e);
+                println!("      ❌ Client creation failed: {e}");
             }
         }
         println!();
@@ -172,7 +172,7 @@ async fn demonstrate_token_optimization(api_key: &str) {
     ];
 
     for (strategy, max_tokens, prompt) in optimization_strategies {
-        println!("   Strategy: {}", strategy);
+        println!("   Strategy: {strategy}");
 
         let mut builder = LlmBuilder::new()
             .openai()
@@ -197,7 +197,7 @@ async fn demonstrate_token_optimization(api_key: &str) {
                             } else {
                                 text.to_string()
                             };
-                            println!("      Preview: {}", preview);
+                            println!("      Preview: {preview}");
                         }
                         
                         if let Some(usage) = &response.usage {
@@ -209,12 +209,12 @@ async fn demonstrate_token_optimization(api_key: &str) {
                         println!("      ✅ Success");
                     }
                     Err(e) => {
-                        println!("      ❌ Failed: {}", e);
+                        println!("      ❌ Failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("      ❌ Client creation failed: {}", e);
+                println!("      ❌ Client creation failed: {e}");
             }
         }
         println!();
@@ -236,17 +236,17 @@ async fn demonstrate_response_formats(api_key: &str) {
             match client.chat(messages).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
-                        println!("      Response: {}", text);
+                        println!("      Response: {text}");
                     }
                     println!("      ✅ Standard format success");
                 }
                 Err(e) => {
-                    println!("      ❌ Failed: {}", e);
+                    println!("      ❌ Failed: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("      ❌ Client creation failed: {}", e);
+            println!("      ❌ Client creation failed: {e}");
         }
     }
 
@@ -269,17 +269,17 @@ async fn demonstrate_response_formats(api_key: &str) {
             match client.chat(messages).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
-                        println!("      JSON Response: {}", text);
+                        println!("      JSON Response: {text}");
                     }
                     println!("      ✅ JSON format success");
                 }
                 Err(e) => {
-                    println!("      ❌ Failed: {}", e);
+                    println!("      ❌ Failed: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("      ❌ JSON client creation failed: {}", e);
+            println!("      ❌ JSON client creation failed: {e}");
         }
     }
     
@@ -305,11 +305,11 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
                     if let Some(text) = response.content_text() {
                         conversation.push(assistant!(text));
                         println!("   User: I need help with algebra. What are variables?");
-                        println!("   Assistant: {}", text);
+                        println!("   Assistant: {text}");
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ First exchange failed: {}", e);
+                    println!("   ❌ First exchange failed: {e}");
                     return;
                 }
             }
@@ -322,11 +322,11 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
                     if let Some(text) = response.content_text() {
                         conversation.push(assistant!(text));
                         println!("   User: Can you give me a simple example with variables?");
-                        println!("   Assistant: {}", text);
+                        println!("   Assistant: {text}");
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Second exchange failed: {}", e);
+                    println!("   ❌ Second exchange failed: {e}");
                     return;
                 }
             }
@@ -338,24 +338,24 @@ async fn demonstrate_conversation_patterns(api_key: &str) {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
                         println!("   User: What was my original question?");
-                        println!("   Assistant: {}", text);
+                        println!("   Assistant: {text}");
                     }
                     println!("   ✅ Conversation memory maintained successfully");
                 }
                 Err(e) => {
-                    println!("   ❌ Third exchange failed: {}", e);
+                    println!("   ❌ Third exchange failed: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("   ❌ Client creation failed: {}", e);
+            println!("   ❌ Client creation failed: {e}");
         }
     }
     
     println!();
 }
 
-/// Helper function to create OpenAI client
+/// Helper function to create `OpenAI` client
 async fn create_openai_client(api_key: &str, model: &str) -> Result<impl ChatCapability, LlmError> {
     LlmBuilder::new()
         .openai()

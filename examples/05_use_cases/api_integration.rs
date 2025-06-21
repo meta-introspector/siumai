@@ -133,7 +133,7 @@ impl ApiServer {
 
         // Get AI response
         let response = self.ai.chat(messages).await
-            .map_err(|e| ApiError::InternalError(format!("AI error: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("AI error: {e}")))?;
 
         let response_time = start_time.elapsed();
         
@@ -181,7 +181,7 @@ impl ApiServer {
 
         // Get AI response
         let response = self.ai.chat(messages).await
-            .map_err(|e| ApiError::InternalError(format!("AI error: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("AI error: {e}")))?;
 
         let response_time = start_time.elapsed();
         
@@ -229,7 +229,7 @@ impl ApiServer {
 
         // Get AI response
         let response = self.ai.chat(messages).await
-            .map_err(|e| ApiError::InternalError(format!("AI error: {}", e)))?;
+            .map_err(|e| ApiError::InternalError(format!("AI error: {e}")))?;
 
         let response_time = start_time.elapsed();
         
@@ -310,7 +310,7 @@ impl ApiServer {
                 println!("✅ Chat response: {}", &response.response[..100.min(response.response.len())]);
                 println!("   Response time: {}ms", response.response_time_ms);
             }
-            Err(e) => println!("❌ Chat error: {:?}", e),
+            Err(e) => println!("❌ Chat error: {e:?}"),
         }
 
         println!();
@@ -327,7 +327,7 @@ impl ApiServer {
                 println!("✅ Generated content: {}", &response.content[..100.min(response.content.len())]);
                 println!("   Response time: {}ms", response.response_time_ms);
             }
-            Err(e) => println!("❌ Generate error: {:?}", e),
+            Err(e) => println!("❌ Generate error: {e:?}"),
         }
 
         println!();
@@ -599,4 +599,4 @@ impl ApiStats {
 /// - Add comprehensive logging
 /// - Implement circuit breakers
 /// - Add distributed tracing
-fn _documentation() {}
+const fn _documentation() {}

@@ -53,17 +53,17 @@ async fn demonstrate_basic_chat() {
                     Ok(response) => {
                         println!("   User: What is the capital of Japan?");
                         if let Some(text) = response.content_text() {
-                            println!("   AI: {}", text);
+                            println!("   AI: {text}");
                         }
                         println!("   ✅ Basic chat successful\n");
                     }
                     Err(e) => {
-                        println!("   ❌ Basic chat failed: {}\n", e);
+                        println!("   ❌ Basic chat failed: {e}\n");
                     }
                 }
             }
             Err(e) => {
-                println!("   ❌ Client creation failed: {}\n", e);
+                println!("   ❌ Client creation failed: {e}\n");
             }
         }
     } else {
@@ -106,17 +106,17 @@ async fn demonstrate_message_types() {
                         println!("   Assistant: Previous explanation about variables");
                         println!("   User: Requesting an example");
                         if let Some(text) = response.content_text() {
-                            println!("   AI: {}", text);
+                            println!("   AI: {text}");
                         }
                         println!("   ✅ Message types demonstration successful\n");
                     }
                     Err(e) => {
-                        println!("   ❌ Message types failed: {}\n", e);
+                        println!("   ❌ Message types failed: {e}\n");
                     }
                 }
             }
             Err(e) => {
-                println!("   ❌ Client creation failed: {}\n", e);
+                println!("   ❌ Client creation failed: {e}\n");
             }
         }
     } else {

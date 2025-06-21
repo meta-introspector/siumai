@@ -1,6 +1,6 @@
-//! OpenAI Embeddings Implementation
+//! `OpenAI` Embeddings Implementation
 //!
-//! This module provides the OpenAI implementation of the EmbeddingCapability trait.
+//! This module provides the `OpenAI` implementation of the `EmbeddingCapability` trait.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use crate::types::{EmbeddingResponse, EmbeddingUsage};
 
 use super::config::OpenAiConfig;
 
-/// OpenAI embeddings API request structure
+/// `OpenAI` embeddings API request structure
 #[derive(Debug, Clone, Serialize)]
 struct OpenAiEmbeddingRequest {
     /// Input text(s) to embed
@@ -30,7 +30,7 @@ struct OpenAiEmbeddingRequest {
     user: Option<String>,
 }
 
-/// OpenAI embeddings API response structure
+/// `OpenAI` embeddings API response structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiEmbeddingResponse {
     /// List of embedding objects
@@ -59,10 +59,10 @@ struct OpenAiEmbeddingUsage {
     total_tokens: u32,
 }
 
-/// OpenAI embeddings capability implementation.
+/// `OpenAI` embeddings capability implementation.
 ///
 /// This struct provides the OpenAI-specific implementation of text embeddings
-/// using the OpenAI Embeddings API.
+/// using the `OpenAI` Embeddings API.
 ///
 /// # Supported Models
 /// - text-embedding-3-small (1536 dimensions)
@@ -70,22 +70,22 @@ struct OpenAiEmbeddingUsage {
 /// - text-embedding-ada-002 (1536 dimensions, legacy)
 ///
 /// # API Reference
-/// https://platform.openai.com/docs/api-reference/embeddings
+/// <https://platform.openai.com/docs/api-reference/embeddings>
 #[derive(Debug, Clone)]
 pub struct OpenAiEmbeddings {
-    /// OpenAI configuration
+    /// `OpenAI` configuration
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
 }
 
 impl OpenAiEmbeddings {
-    /// Create a new OpenAI embeddings instance.
+    /// Create a new `OpenAI` embeddings instance.
     ///
     /// # Arguments
-    /// * `config` - OpenAI configuration
+    /// * `config` - `OpenAI` configuration
     /// * `http_client` - HTTP client for making requests
-    pub fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
+    pub const fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         Self {
             config,
             http_client,
@@ -107,9 +107,9 @@ impl OpenAiEmbeddings {
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -120,7 +120,7 @@ impl OpenAiEmbeddings {
             .json(&request)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -130,7 +130,7 @@ impl OpenAiEmbeddings {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI API error {}: {}", status, error_text),
+                message: format!("OpenAI API error {status}: {error_text}"),
                 details: None,
             });
         }
@@ -138,12 +138,12 @@ impl OpenAiEmbeddings {
         let openai_response: OpenAiEmbeddingResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         Ok(openai_response)
     }
 
-    /// Convert OpenAI response to our standard format.
+    /// Convert `OpenAI` response to our standard format.
     fn convert_response(&self, openai_response: OpenAiEmbeddingResponse) -> EmbeddingResponse {
         // Sort embeddings by index to maintain order
         let mut embeddings_with_index: Vec<_> = openai_response.data.into_iter().collect();

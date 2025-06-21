@@ -60,25 +60,25 @@ async fn demonstrate_claude_thinking() {
                         // Check if thinking process is available
                         if let Some(thinking) = &response.thinking {
                             println!("\n   🧠 Claude's Thinking Process:");
-                            println!("   {}", thinking);
+                            println!("   {thinking}");
                             println!("\n   📝 Final Answer:");
                         } else {
                             println!("\n   📝 Response (thinking not available):");
                         }
                         
                         if let Some(text) = response.content_text() {
-                            println!("   {}", text);
+                            println!("   {text}");
                         }
                         
                         println!("   ✅ Claude thinking demonstration successful");
                     }
                     Err(e) => {
-                        println!("   ❌ Claude thinking failed: {}", e);
+                        println!("   ❌ Claude thinking failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("   ❌ Failed to create Claude client: {}", e);
+                println!("   ❌ Failed to create Claude client: {e}");
             }
         }
     } else {
@@ -110,8 +110,8 @@ async fn demonstrate_reasoning_optimization() {
                 ];
 
                 for (approach, prompt) in reasoning_prompts {
-                    println!("   Approach: {}", approach);
-                    println!("   Prompt: {}", prompt);
+                    println!("   Approach: {approach}");
+                    println!("   Prompt: {prompt}");
                     
                     let messages = vec![user!(prompt)];
                     
@@ -123,7 +123,7 @@ async fn demonstrate_reasoning_optimization() {
                                 } else {
                                     text.to_string()
                                 };
-                                println!("   Response: {}", preview);
+                                println!("   Response: {preview}");
                             }
                             
                             if let Some(thinking) = &response.thinking {
@@ -133,14 +133,14 @@ async fn demonstrate_reasoning_optimization() {
                             println!("   ✅ Success");
                         }
                         Err(e) => {
-                            println!("   ❌ Failed: {}", e);
+                            println!("   ❌ Failed: {e}");
                         }
                     }
                     println!();
                 }
             }
             Err(e) => {
-                println!("   ❌ Failed to create client: {}", e);
+                println!("   ❌ Failed to create client: {e}");
             }
         }
     } else {
@@ -170,7 +170,7 @@ async fn demonstrate_thinking_analysis() {
 
                 match client.chat(messages).await {
                     Ok(response) => {
-                        println!("   Problem: {}", complex_problem);
+                        println!("   Problem: {complex_problem}");
                         
                         if let Some(thinking) = &response.thinking {
                             println!("\n   🧠 Thinking Analysis:");
@@ -189,23 +189,23 @@ async fn demonstrate_thinking_analysis() {
                                 thinking.clone()
                             };
                             println!("\n   🔍 Thinking Preview:");
-                            println!("   {}", preview);
+                            println!("   {preview}");
                         }
                         
                         if let Some(text) = response.content_text() {
                             println!("\n   📝 Final Solution:");
-                            println!("   {}", text);
+                            println!("   {text}");
                         }
                         
                         println!("\n   ✅ Thinking analysis completed");
                     }
                     Err(e) => {
-                        println!("   ❌ Analysis failed: {}", e);
+                        println!("   ❌ Analysis failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("   ❌ Failed to create client: {}", e);
+                println!("   ❌ Failed to create client: {e}");
             }
         }
     } else {
@@ -234,7 +234,7 @@ async fn demonstrate_reasoning_vs_output() {
 
                 match client.chat(messages).await {
                     Ok(response) => {
-                        println!("   Question: {}", problem);
+                        println!("   Question: {problem}");
                         
                         if let Some(thinking) = &response.thinking {
                             println!("\n   🧠 Internal Reasoning:");
@@ -260,19 +260,19 @@ async fn demonstrate_reasoning_vs_output() {
                             } else {
                                 text.to_string()
                             };
-                            println!("      Preview: {}", preview);
+                            println!("      Preview: {preview}");
                         }
                         
                         println!("\n   💡 Key Insight: Thinking shows the reasoning process, output shows the refined conclusion");
                         println!("   ✅ Comparison completed");
                     }
                     Err(e) => {
-                        println!("   ❌ Comparison failed: {}", e);
+                        println!("   ❌ Comparison failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("   ❌ Failed to create client: {}", e);
+                println!("   ❌ Failed to create client: {e}");
             }
         }
     } else {

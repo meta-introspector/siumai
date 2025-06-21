@@ -57,7 +57,7 @@ impl ProviderFeatures {
             Some(FeatureConfig::Boolean(enabled)) => *enabled,
             Some(FeatureConfig::Object(obj)) => obj
                 .get("enabled")
-                .and_then(|v| v.as_bool())
+                .and_then(serde_json::Value::as_bool)
                 .unwrap_or(false),
             _ => false,
         }
@@ -107,7 +107,7 @@ pub enum FeatureConfig {
 
 impl FeatureConfig {
     /// Create a boolean feature config
-    pub fn boolean(enabled: bool) -> Self {
+    pub const fn boolean(enabled: bool) -> Self {
         Self::Boolean(enabled)
     }
 
@@ -117,12 +117,12 @@ impl FeatureConfig {
     }
 
     /// Create a numeric feature config
-    pub fn number(value: f64) -> Self {
+    pub const fn number(value: f64) -> Self {
         Self::Number(value)
     }
 
     /// Create an object feature config
-    pub fn object(value: serde_json::Value) -> Self {
+    pub const fn object(value: serde_json::Value) -> Self {
         Self::Object(value)
     }
 }
@@ -185,8 +185,7 @@ impl ProviderFeatureRegistry {
             definition.validate(config)
         } else {
             Err(LlmError::InvalidParameter(format!(
-                "Unknown feature '{}' for provider '{}'",
-                name, provider
+                "Unknown feature '{name}' for provider '{provider}'"
             )))
         }
     }
@@ -294,13 +293,13 @@ impl FeatureDefinition {
     }
 
     /// Set configuration type
-    pub fn with_config_type(mut self, config_type: FeatureConfigType) -> Self {
+    pub const fn with_config_type(mut self, config_type: FeatureConfigType) -> Self {
         self.config_type = config_type;
         self
     }
 
     /// Mark as experimental
-    pub fn experimental(mut self) -> Self {
+    pub const fn experimental(mut self) -> Self {
         self.experimental = true;
         self
     }

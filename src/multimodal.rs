@@ -323,7 +323,7 @@ impl ImageFormat {
     }
 
     /// Get MIME type
-    pub fn mime_type(&self) -> &'static str {
+    pub const fn mime_type(&self) -> &'static str {
         match self {
             Self::Jpeg => "image/jpeg",
             Self::Png => "image/png",
@@ -338,7 +338,7 @@ impl ImageFormat {
 
 impl std::fmt::Display for ImageFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -393,7 +393,7 @@ impl AudioFormat {
     }
 
     /// Get MIME type
-    pub fn mime_type(&self) -> &'static str {
+    pub const fn mime_type(&self) -> &'static str {
         match self {
             Self::Mp3 => "audio/mpeg",
             Self::Wav => "audio/wav",
@@ -407,7 +407,7 @@ impl AudioFormat {
 
 impl std::fmt::Display for AudioFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -455,7 +455,7 @@ impl DocumentFormat {
     }
 
     /// Get MIME type
-    pub fn mime_type(&self) -> &'static str {
+    pub const fn mime_type(&self) -> &'static str {
         match self {
             Self::Pdf => "application/pdf",
             Self::Docx => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -471,7 +471,7 @@ impl DocumentFormat {
 
 impl std::fmt::Display for DocumentFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

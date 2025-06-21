@@ -52,7 +52,7 @@ impl CustomProviderConfig {
     }
 
     /// Set timeout
-    pub fn with_timeout(mut self, timeout_seconds: u64) -> Self {
+    pub const fn with_timeout(mut self, timeout_seconds: u64) -> Self {
         self.timeout = Some(timeout_seconds);
         self
     }
@@ -153,7 +153,7 @@ impl CustomChatRequest {
     }
 
     /// Enable streaming
-    pub fn with_stream(mut self, stream: bool) -> Self {
+    pub const fn with_stream(mut self, stream: bool) -> Self {
         self.stream = stream;
         self
     }
@@ -201,7 +201,7 @@ impl CustomChatResponse {
     }
 
     /// Add usage information
-    pub fn with_usage(mut self, usage: Usage) -> Self {
+    pub const fn with_usage(mut self, usage: Usage) -> Self {
         self.usage = Some(usage);
         self
     }
@@ -220,7 +220,7 @@ impl CustomChatResponse {
         self
     }
 
-    /// Convert to standard ChatResponse
+    /// Convert to standard `ChatResponse`
     pub fn to_chat_response(&self, _provider_name: &str) -> ChatResponse {
         ChatResponse {
             id: None,
@@ -268,7 +268,7 @@ impl CustomProviderClient {
         }
 
         let http_client = client_builder.build().map_err(|e| {
-            LlmError::ConfigurationError(format!("Failed to create HTTP client: {}", e))
+            LlmError::ConfigurationError(format!("Failed to create HTTP client: {e}"))
         })?;
 
         Ok(Self {
@@ -284,12 +284,12 @@ impl CustomProviderClient {
     }
 
     /// Get the configuration
-    pub fn config(&self) -> &CustomProviderConfig {
+    pub const fn config(&self) -> &CustomProviderConfig {
         &self.config
     }
 
     /// Get the HTTP client
-    pub fn http_client(&self) -> &reqwest::Client {
+    pub const fn http_client(&self) -> &reqwest::Client {
         &self.http_client
     }
 }

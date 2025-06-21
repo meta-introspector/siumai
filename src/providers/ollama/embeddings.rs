@@ -1,6 +1,6 @@
 //! Ollama Embeddings Capability Implementation
 //!
-//! Implements the EmbeddingCapability trait for Ollama using the /api/embed endpoint.
+//! Implements the `EmbeddingCapability` trait for Ollama using the /api/embed endpoint.
 
 use async_trait::async_trait;
 
@@ -22,7 +22,7 @@ pub struct OllamaEmbeddingCapability {
 
 impl OllamaEmbeddingCapability {
     /// Creates a new Ollama embedding capability
-    pub fn new(
+    pub const fn new(
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
@@ -113,9 +113,7 @@ impl OllamaEmbeddingCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Embedding request failed: {} - {}",
-                status,
-                error_text
+                "Embedding request failed: {status} - {error_text}"
             )));
         }
 
@@ -150,9 +148,7 @@ impl OllamaEmbeddingCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Embedding request failed: {} - {}",
-                status,
-                error_text
+                "Embedding request failed: {status} - {error_text}"
             )));
         }
 
@@ -190,9 +186,7 @@ impl EmbeddingCapability for OllamaEmbeddingCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Embedding request failed: {} - {}",
-                status,
-                error_text
+                "Embedding request failed: {status} - {error_text}"
             )));
         }
 

@@ -1,7 +1,7 @@
 //! Siumai LLM Interface
 //!
 //! This module provides the main siumai interface for calling different provider functionality,
-//! similar to llm_dart's approach. It uses dynamic dispatch to route calls to the
+//! similar to `llm_dart`'s approach. It uses dynamic dispatch to route calls to the
 //! appropriate provider implementation.
 
 use crate::client::LlmClient;
@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 /// The main siumai LLM provider that can dynamically dispatch to different capabilities
 ///
-/// This is inspired by llm_dart's unified interface design, allowing you to
+/// This is inspired by `llm_dart`'s unified interface design, allowing you to
 /// call different provider functionality through a single interface.
 pub struct Siumai {
     /// The underlying provider client
@@ -67,7 +67,7 @@ impl Siumai {
     }
 
     /// Get provider metadata
-    pub fn metadata(&self) -> &ProviderMetadata {
+    pub const fn metadata(&self) -> &ProviderMetadata {
         &self.metadata
     }
 
@@ -210,7 +210,7 @@ impl SiumaiBuilder {
 
     // Convenience methods for specific providers (llm_dart style)
 
-    /// Create an OpenAI provider (convenience method)
+    /// Create an `OpenAI` provider (convenience method)
     pub fn openai(mut self) -> Self {
         self.provider_type = Some(ProviderType::OpenAi);
         self.provider_name = Some("openai".to_string());
@@ -238,14 +238,14 @@ impl SiumaiBuilder {
         self
     }
 
-    /// Create a DeepSeek provider (convenience method)
+    /// Create a `DeepSeek` provider (convenience method)
     pub fn deepseek(mut self) -> Self {
         self.provider_type = Some(ProviderType::Custom("deepseek".to_string()));
         self.provider_name = Some("deepseek".to_string());
         self
     }
 
-    /// Create an OpenRouter provider (convenience method)
+    /// Create an `OpenRouter` provider (convenience method)
     pub fn openrouter(mut self) -> Self {
         self.provider_type = Some(ProviderType::Custom("openrouter".to_string()));
         self.provider_name = Some("openrouter".to_string());
@@ -285,24 +285,24 @@ impl SiumaiBuilder {
     }
 
     /// Set temperature
-    pub fn temperature(mut self, temperature: f32) -> Self {
+    pub const fn temperature(mut self, temperature: f32) -> Self {
         self.common_params.temperature = Some(temperature);
         self
     }
 
     /// Set max tokens
-    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
         self
     }
 
-    /// Set organization (for OpenAI)
+    /// Set organization (for `OpenAI`)
     pub fn organization<S: Into<String>>(mut self, organization: S) -> Self {
         self.organization = Some(organization.into());
         self
     }
 
-    /// Set project (for OpenAI)
+    /// Set project (for `OpenAI`)
     pub fn project<S: Into<String>>(mut self, project: S) -> Self {
         self.project = Some(project.into());
         self
@@ -472,7 +472,7 @@ impl SiumaiBuilder {
                     },
                     _ => {
                         return Err(LlmError::UnsupportedOperation(
-                            format!("Custom provider '{}' not yet implemented", name),
+                            format!("Custom provider '{name}' not yet implemented"),
                         ));
                     }
                 }
@@ -490,7 +490,7 @@ pub struct AudioCapabilityProxy<'a> {
 }
 
 impl<'a> AudioCapabilityProxy<'a> {
-    pub fn new(provider: &'a Siumai, reported_support: bool) -> Self {
+    pub const fn new(provider: &'a Siumai, reported_support: bool) -> Self {
         Self { provider, reported_support }
     }
 
@@ -499,7 +499,7 @@ impl<'a> AudioCapabilityProxy<'a> {
     /// Note: This is based on static capability information and may not reflect
     /// the actual capabilities of the current model. Use as a hint, not a restriction.
     /// The library will never block operations based on this information.
-    pub fn is_reported_as_supported(&self) -> bool {
+    pub const fn is_reported_as_supported(&self) -> bool {
         self.reported_support
     }
 
@@ -542,12 +542,12 @@ pub struct EmbeddingCapabilityProxy<'a> {
 }
 
 impl<'a> EmbeddingCapabilityProxy<'a> {
-    pub fn new(provider: &'a Siumai, reported_support: bool) -> Self {
+    pub const fn new(provider: &'a Siumai, reported_support: bool) -> Self {
         Self { provider, reported_support }
     }
 
     /// Check if the provider reports embedding support (for reference only)
-    pub fn is_reported_as_supported(&self) -> bool {
+    pub const fn is_reported_as_supported(&self) -> bool {
         self.reported_support
     }
 
@@ -584,12 +584,12 @@ pub struct VisionCapabilityProxy<'a> {
 }
 
 impl<'a> VisionCapabilityProxy<'a> {
-    pub fn new(provider: &'a Siumai, reported_support: bool) -> Self {
+    pub const fn new(provider: &'a Siumai, reported_support: bool) -> Self {
         Self { provider, reported_support }
     }
 
     /// Check if the provider reports vision support (for reference only)
-    pub fn is_reported_as_supported(&self) -> bool {
+    pub const fn is_reported_as_supported(&self) -> bool {
         self.reported_support
     }
 
@@ -665,7 +665,7 @@ impl ProviderRegistry {
         let factory = self
             .factories
             .get(name)
-            .ok_or_else(|| LlmError::ConfigurationError(format!("Unknown provider: {}", name)))?;
+            .ok_or_else(|| LlmError::ConfigurationError(format!("Unknown provider: {name}")))?;
 
         let client = factory.create_provider(config)?;
         Ok(Siumai::new(client))

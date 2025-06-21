@@ -116,12 +116,12 @@ async fn common_task_helpers(api_key: &str) -> Result<(), Box<dyn std::error::Er
     // Helper 1: Simple question
     println!("   📝 Simple question helper:");
     let response = simple_ask(&ai, "What is the capital of Japan?").await?;
-    println!("      Answer: {}", response);
+    println!("      Answer: {response}");
 
     // Helper 2: Translation
     println!("   🌍 Translation helper:");
     let response = translate(&ai, "Hello, how are you?", "Spanish").await?;
-    println!("      Translation: {}", response);
+    println!("      Translation: {response}");
 
     // Helper 3: Explanation
     println!("   💡 Explanation helper:");
@@ -131,7 +131,7 @@ async fn common_task_helpers(api_key: &str) -> Result<(), Box<dyn std::error::Er
     // Helper 4: Creative generation
     println!("   🎨 Creative generation helper:");
     let response = generate_creative(&ai, "haiku", "about programming").await?;
-    println!("      Creative content: {}", response);
+    println!("      Creative content: {response}");
 
     Ok(())
 }
@@ -262,21 +262,21 @@ async fn simple_ask<T: ChatCapability + Sync>(ai: &T, question: &str) -> Result<
 
 /// Translation helper
 async fn translate<T: ChatCapability + Sync>(ai: &T, text: &str, target_language: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let prompt = format!("Translate this text to {}: {}", target_language, text);
+    let prompt = format!("Translate this text to {target_language}: {text}");
     let response = ai.chat(vec![ChatMessage::user(&prompt).build()]).await?;
     Ok(response.text().unwrap_or_default())
 }
 
 /// Explanation helper
 async fn explain<T: ChatCapability + Sync>(ai: &T, topic: &str, audience: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let prompt = format!("Explain {} to {}", topic, audience);
+    let prompt = format!("Explain {topic} to {audience}");
     let response = ai.chat(vec![ChatMessage::user(&prompt).build()]).await?;
     Ok(response.text().unwrap_or_default())
 }
 
 /// Creative generation helper
 async fn generate_creative<T: ChatCapability + Sync>(ai: &T, content_type: &str, topic: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let prompt = format!("Write a {} about {}", content_type, topic);
+    let prompt = format!("Write a {content_type} about {topic}");
     let response = ai.chat(vec![
         ChatMessage::system("You are a creative writer").build(),
         ChatMessage::user(&prompt).build()
@@ -348,4 +348,4 @@ async fn continue_conversation<T: ChatCapability + Sync>(
 /// - Try advanced configurations
 /// - Build custom helpers
 /// - Integrate with applications
-fn _documentation() {}
+const fn _documentation() {}

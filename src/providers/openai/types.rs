@@ -1,10 +1,10 @@
 //! OpenAI-specific Data Types
 //!
-//! Contains data structures specific to the OpenAI API.
+//! Contains data structures specific to the `OpenAI` API.
 
 use serde::{Deserialize, Serialize};
 
-/// OpenAI Message format
+/// `OpenAI` Message format
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenAiMessage {
     pub role: String,
@@ -13,7 +13,7 @@ pub struct OpenAiMessage {
     pub tool_call_id: Option<String>,
 }
 
-/// OpenAI Tool Call
+/// `OpenAI` Tool Call
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenAiToolCall {
     pub id: String,
@@ -21,14 +21,14 @@ pub struct OpenAiToolCall {
     pub function: Option<OpenAiFunction>,
 }
 
-/// OpenAI Function
+/// `OpenAI` Function
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpenAiFunction {
     pub name: String,
     pub arguments: String,
 }
 
-/// OpenAI Chat Response
+/// `OpenAI` Chat Response
 #[derive(Debug, Deserialize)]
 pub struct OpenAiChatResponse {
     pub id: String,
@@ -39,7 +39,7 @@ pub struct OpenAiChatResponse {
     pub usage: Option<OpenAiUsage>,
 }
 
-/// OpenAI Choice
+/// `OpenAI` Choice
 #[derive(Debug, Deserialize)]
 pub struct OpenAiChoice {
     pub index: u32,
@@ -47,7 +47,7 @@ pub struct OpenAiChoice {
     pub finish_reason: Option<String>,
 }
 
-/// OpenAI Usage
+/// `OpenAI` Usage
 #[derive(Debug, Deserialize)]
 pub struct OpenAiUsage {
     pub prompt_tokens: Option<u32>,
@@ -55,7 +55,7 @@ pub struct OpenAiUsage {
     pub total_tokens: Option<u32>,
 }
 
-/// OpenAI Model information
+/// `OpenAI` Model information
 #[derive(Debug, Deserialize)]
 pub struct OpenAiModel {
     pub id: String,
@@ -67,7 +67,7 @@ pub struct OpenAiModel {
     pub parent: Option<String>,
 }
 
-/// OpenAI Models API response
+/// `OpenAI` Models API response
 #[derive(Debug, Deserialize)]
 pub struct OpenAiModelsResponse {
     pub object: String,

@@ -1,6 +1,6 @@
 //! Anthropic Chat Capability Implementation
 //!
-//! Implements the ChatCapability trait for Anthropic Claude.
+//! Implements the `ChatCapability` trait for Anthropic Claude.
 
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -26,7 +26,7 @@ pub struct AnthropicChatCapability {
 
 impl AnthropicChatCapability {
     /// Create a new Anthropic chat capability instance
-    pub fn new(
+    pub const fn new(
         api_key: String,
         base_url: String,
         http_client: reqwest::Client,
@@ -206,7 +206,7 @@ impl ChatCapability for AnthropicChatCapability {
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("Anthropic API error: {}", error_text),
+                message: format!("Anthropic API error: {error_text}"),
                 details: serde_json::from_str(&error_text).ok(),
             });
         }
@@ -229,12 +229,12 @@ impl ChatCapability for AnthropicChatCapability {
 
 /// Legacy implementation for backward compatibility
 impl AnthropicChatCapability {
-    /// Chat with a ChatRequest (legacy method)
+    /// Chat with a `ChatRequest` (legacy method)
     pub async fn chat(&self, request: ChatRequest) -> Result<ChatResponse, LlmError> {
         self.chat_with_tools(request.messages, request.tools).await
     }
 
-    /// Chat stream with a ChatRequest (legacy method)
+    /// Chat stream with a `ChatRequest` (legacy method)
     pub async fn chat_stream_request(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
         ChatCapability::chat_stream(self, request.messages, request.tools).await
     }

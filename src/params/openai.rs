@@ -1,4 +1,4 @@
-//! OpenAI Parameter Mapping
+//! `OpenAI` Parameter Mapping
 //!
 //! Contains OpenAI-specific parameter mapping and validation logic.
 
@@ -10,7 +10,7 @@ use super::mapper::{ParameterConstraints, ParameterMapper};
 use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderParams, ProviderType};
 
-/// OpenAI Parameter Mapper
+/// `OpenAI` Parameter Mapper
 pub struct OpenAiParameterMapper;
 
 impl ParameterMapper for OpenAiParameterMapper {
@@ -49,7 +49,7 @@ impl ParameterMapper for OpenAiParameterMapper {
 
         if let Some(max_tokens) = params.get("max_tokens") {
             if let Some(max_tokens_val) = max_tokens.as_u64() {
-                ParameterValidator::validate_max_tokens(max_tokens_val, 1, 128000, "OpenAI")?;
+                ParameterValidator::validate_max_tokens(max_tokens_val, 1, 128_000, "OpenAI")?;
             }
         }
 
@@ -94,7 +94,7 @@ impl ParameterMapper for OpenAiParameterMapper {
                 ParameterValidator::validate_max_tokens(
                     tokens_val,
                     1,
-                    128000,
+                    128_000,
                     "OpenAI max_completion_tokens",
                 )?;
             }
@@ -118,8 +118,7 @@ impl ParameterMapper for OpenAiParameterMapper {
                     if let Some(modality_str) = modality.as_str() {
                         if !["text", "audio"].contains(&modality_str) {
                             return Err(LlmError::InvalidParameter(format!(
-                                "Invalid modality '{}'. Supported modalities: text, audio",
-                                modality_str
+                                "Invalid modality '{modality_str}'. Supported modalities: text, audio"
                             )));
                         }
                     }
@@ -132,8 +131,7 @@ impl ParameterMapper for OpenAiParameterMapper {
             if let Some(tier_str) = service_tier.as_str() {
                 if !["auto", "default"].contains(&tier_str) {
                     return Err(LlmError::InvalidParameter(format!(
-                        "Invalid service_tier '{}'. Supported tiers: auto, default",
-                        tier_str
+                        "Invalid service_tier '{tier_str}'. Supported tiers: auto, default"
                     )));
                 }
             }
@@ -178,7 +176,7 @@ impl ParameterMapper for OpenAiParameterMapper {
             temperature_min: 0.0,
             temperature_max: 2.0,
             max_tokens_min: 1,
-            max_tokens_max: 128000,
+            max_tokens_max: 128_000,
             top_p_min: 0.0,
             top_p_max: 1.0,
         }
@@ -214,7 +212,7 @@ pub struct OpenAiParams {
     pub modalities: Option<Vec<String>>,
     /// Reasoning effort level for reasoning models
     pub reasoning_effort: Option<ReasoningEffort>,
-    /// Maximum completion tokens (replaces max_tokens for some models)
+    /// Maximum completion tokens (replaces `max_tokens` for some models)
     pub max_completion_tokens: Option<u32>,
     /// Service tier for prioritized access
     pub service_tier: Option<String>,
@@ -226,7 +224,7 @@ impl super::common::ProviderParamsExt for OpenAiParams {
     }
 }
 
-/// OpenAI Response Format
+/// `OpenAI` Response Format
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ResponseFormat {
@@ -238,7 +236,7 @@ pub enum ResponseFormat {
     JsonSchema { schema: serde_json::Value },
 }
 
-/// OpenAI Tool Choice
+/// `OpenAI` Tool Choice
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ToolChoice {
@@ -267,7 +265,7 @@ pub enum ReasoningEffort {
     High,
 }
 
-/// OpenAI parameter builder for convenient parameter construction
+/// `OpenAI` parameter builder for convenient parameter construction
 pub struct OpenAiParamsBuilder {
     params: OpenAiParams,
 }
@@ -289,7 +287,7 @@ impl OpenAiParamsBuilder {
         self
     }
 
-    pub fn parallel_tool_calls(mut self, enabled: bool) -> Self {
+    pub const fn parallel_tool_calls(mut self, enabled: bool) -> Self {
         self.params.parallel_tool_calls = Some(enabled);
         self
     }
@@ -299,27 +297,27 @@ impl OpenAiParamsBuilder {
         self
     }
 
-    pub fn frequency_penalty(mut self, penalty: f32) -> Self {
+    pub const fn frequency_penalty(mut self, penalty: f32) -> Self {
         self.params.frequency_penalty = Some(penalty);
         self
     }
 
-    pub fn presence_penalty(mut self, penalty: f32) -> Self {
+    pub const fn presence_penalty(mut self, penalty: f32) -> Self {
         self.params.presence_penalty = Some(penalty);
         self
     }
 
-    pub fn n(mut self, choices: u32) -> Self {
+    pub const fn n(mut self, choices: u32) -> Self {
         self.params.n = Some(choices);
         self
     }
 
-    pub fn stream(mut self, enabled: bool) -> Self {
+    pub const fn stream(mut self, enabled: bool) -> Self {
         self.params.stream = Some(enabled);
         self
     }
 
-    pub fn logprobs(mut self, enabled: bool, top_logprobs: Option<u32>) -> Self {
+    pub const fn logprobs(mut self, enabled: bool, top_logprobs: Option<u32>) -> Self {
         self.params.logprobs = Some(enabled);
         self.params.top_logprobs = top_logprobs;
         self
@@ -330,12 +328,12 @@ impl OpenAiParamsBuilder {
         self
     }
 
-    pub fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
+    pub const fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
         self.params.reasoning_effort = Some(effort);
         self
     }
 
-    pub fn max_completion_tokens(mut self, tokens: u32) -> Self {
+    pub const fn max_completion_tokens(mut self, tokens: u32) -> Self {
         self.params.max_completion_tokens = Some(tokens);
         self
     }
@@ -377,11 +375,11 @@ mod tests {
             seed: Some(42),
         };
 
-        let mapped = mapper.map_common_params(&params);
-        assert_eq!(mapped["model"], "gpt-4");
-        assert_eq!(mapped["max_tokens"], 1000);
-        assert_eq!(mapped["seed"], 42);
-        assert_eq!(mapped["stop"], serde_json::json!(["STOP"]));
+        let mapped_params = mapper.map_common_params(&params);
+        assert_eq!(mapped_params["model"], "gpt-4");
+        assert_eq!(mapped_params["max_tokens"], 1000);
+        assert_eq!(mapped_params["seed"], 42);
+        assert_eq!(mapped_params["stop"], serde_json::json!(["STOP"]));
     }
 
     #[test]

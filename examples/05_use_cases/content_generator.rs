@@ -164,7 +164,7 @@ impl ContentGenerator {
 
     /// Generate blog post
     async fn generate_blog_post(&self, topic: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("📝 Generating blog post about: {}", topic);
+        println!("📝 Generating blog post about: {topic}");
         
         let system_prompt = "You are a professional blog writer and content strategist. \
             Create engaging, well-structured, and informative blog posts that capture \
@@ -172,7 +172,7 @@ impl ContentGenerator {
             professional tone.";
 
         let user_prompt = format!(
-            "Write a comprehensive blog post about '{}'. \
+            "Write a comprehensive blog post about '{topic}'. \
             Include:\n\
             1. Compelling headline\n\
             2. Engaging introduction\n\
@@ -182,8 +182,7 @@ impl ContentGenerator {
             6. SEO-friendly structure\n\n\
             Target length: 800-1200 words\n\
             Tone: Professional yet approachable\n\
-            Audience: General readers interested in the topic",
-            topic
+            Audience: General readers interested in the topic"
         );
 
         let messages = vec![
@@ -195,7 +194,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📄 Generated Blog Post:\n{}", text);
+            println!("📄 Generated Blog Post:\n{text}");
             
             // Optionally save to file
             self.save_content_to_file(&text, &format!("blog_{}.md", self.sanitize_filename(topic)))?;
@@ -206,7 +205,7 @@ impl ContentGenerator {
 
     /// Generate marketing copy
     async fn generate_marketing_copy(&self, product: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🎯 Generating marketing copy for: {}", product);
+        println!("🎯 Generating marketing copy for: {product}");
         
         let system_prompt = "You are an expert copywriter and marketing strategist. \
             Create compelling, persuasive marketing copy that drives action. \
@@ -214,7 +213,7 @@ impl ContentGenerator {
             Use proven copywriting techniques and psychological triggers.";
 
         let user_prompt = format!(
-            "Create comprehensive marketing copy for '{}'. \
+            "Create comprehensive marketing copy for '{product}'. \
             Include:\n\
             1. Attention-grabbing headline\n\
             2. Compelling value proposition\n\
@@ -225,8 +224,7 @@ impl ContentGenerator {
             7. Multiple format variations (email, web, social)\n\n\
             Focus on benefits over features\n\
             Use emotional triggers and persuasive language\n\
-            Target audience: Potential customers",
-            product
+            Target audience: Potential customers"
         );
 
         let messages = vec![
@@ -238,7 +236,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📢 Generated Marketing Copy:\n{}", text);
+            println!("📢 Generated Marketing Copy:\n{text}");
             
             self.save_content_to_file(&text, &format!("marketing_{}.md", self.sanitize_filename(product)))?;
         }
@@ -248,7 +246,7 @@ impl ContentGenerator {
 
     /// Generate social media content
     async fn generate_social_media_content(&self, topic: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("📱 Generating social media content about: {}", topic);
+        println!("📱 Generating social media content about: {topic}");
 
         let system_prompt = "You are a social media expert and content creator. \
             Create engaging, shareable social media content that drives engagement. \
@@ -256,7 +254,7 @@ impl ContentGenerator {
             Use hashtags, emojis, and platform-appropriate formatting.";
 
         let user_prompt = format!(
-            "Create social media content about '{}' for multiple platforms:\n\
+            "Create social media content about '{topic}' for multiple platforms:\n\
             1. Twitter/X post (280 characters)\n\
             2. LinkedIn post (professional tone)\n\
             3. Instagram caption with hashtags\n\
@@ -266,8 +264,7 @@ impl ContentGenerator {
             - Use appropriate tone and style\n\
             - Include relevant hashtags\n\
             - Add engaging elements (questions, polls, etc.)\n\
-            - Consider visual content suggestions",
-            topic
+            - Consider visual content suggestions"
         );
 
         let messages = vec![
@@ -279,7 +276,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📲 Generated Social Media Content:\n{}", text);
+            println!("📲 Generated Social Media Content:\n{text}");
 
             self.save_content_to_file(&text, &format!("social_{}.md", self.sanitize_filename(topic)))?;
         }
@@ -289,7 +286,7 @@ impl ContentGenerator {
 
     /// Generate email content
     async fn generate_email_content(&self, purpose: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("📧 Generating email content for: {}", purpose);
+        println!("📧 Generating email content for: {purpose}");
 
         let system_prompt = "You are a professional email copywriter and communication expert. \
             Create effective email content that achieves specific business objectives. \
@@ -297,7 +294,7 @@ impl ContentGenerator {
             Consider email best practices and deliverability.";
 
         let user_prompt = format!(
-            "Create email content for '{}'. \
+            "Create email content for '{purpose}'. \
             Include:\n\
             1. Compelling subject line (with alternatives)\n\
             2. Professional greeting\n\
@@ -311,8 +308,7 @@ impl ContentGenerator {
             - Newsletter\n\
             - Promotional\n\n\
             Tone: Professional yet personable\n\
-            Focus on recipient value and clear next steps",
-            purpose
+            Focus on recipient value and clear next steps"
         );
 
         let messages = vec![
@@ -324,7 +320,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📬 Generated Email Content:\n{}", text);
+            println!("📬 Generated Email Content:\n{text}");
 
             self.save_content_to_file(&text, &format!("email_{}.md", self.sanitize_filename(purpose)))?;
         }
@@ -334,7 +330,7 @@ impl ContentGenerator {
 
     /// Generate technical documentation
     async fn generate_technical_docs(&self, topic: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("📚 Generating technical documentation for: {}", topic);
+        println!("📚 Generating technical documentation for: {topic}");
 
         let system_prompt = "You are a technical writer and documentation expert. \
             Create clear, comprehensive technical documentation that helps users \
@@ -342,7 +338,7 @@ impl ContentGenerator {
             examples, and best practices for technical writing.";
 
         let user_prompt = format!(
-            "Create technical documentation for '{}'. \
+            "Create technical documentation for '{topic}'. \
             Include:\n\
             1. Overview and introduction\n\
             2. Prerequisites and requirements\n\
@@ -354,8 +350,7 @@ impl ContentGenerator {
             8. API reference (if applicable)\n\n\
             Structure: Use clear headings and subheadings\n\
             Style: Technical but accessible\n\
-            Include practical examples and use cases",
-            topic
+            Include practical examples and use cases"
         );
 
         let messages = vec![
@@ -367,7 +362,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📖 Generated Technical Documentation:\n{}", text);
+            println!("📖 Generated Technical Documentation:\n{text}");
 
             self.save_content_to_file(&text, &format!("docs_{}.md", self.sanitize_filename(topic)))?;
         }
@@ -377,7 +372,7 @@ impl ContentGenerator {
 
     /// Generate SEO-optimized content
     async fn generate_seo_content(&self, keyword: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🔍 Generating SEO-optimized content for keyword: {}", keyword);
+        println!("🔍 Generating SEO-optimized content for keyword: {keyword}");
 
         let system_prompt = "You are an SEO expert and content strategist. \
             Create content that ranks well in search engines while providing \
@@ -385,7 +380,7 @@ impl ContentGenerator {
             semantic SEO, and content structure best practices.";
 
         let user_prompt = format!(
-            "Create SEO-optimized content targeting the keyword '{}'. \
+            "Create SEO-optimized content targeting the keyword '{keyword}'. \
             Include:\n\
             1. SEO-optimized title (H1) with keyword\n\
             2. Meta description (150-160 characters)\n\
@@ -400,8 +395,7 @@ impl ContentGenerator {
             - Use semantic keywords and variations\n\
             - Include long-tail keyword opportunities\n\
             - Structure for featured snippets\n\
-            - Optimize for user intent",
-            keyword
+            - Optimize for user intent"
         );
 
         let messages = vec![
@@ -413,7 +407,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("🎯 Generated SEO Content:\n{}", text);
+            println!("🎯 Generated SEO Content:\n{text}");
 
             self.save_content_to_file(&text, &format!("seo_{}.md", self.sanitize_filename(keyword)))?;
         }
@@ -423,7 +417,7 @@ impl ContentGenerator {
 
     /// Generate creative content
     async fn generate_creative_content(&self, prompt: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🎨 Generating creative content for: {}", prompt);
+        println!("🎨 Generating creative content for: {prompt}");
 
         let system_prompt = "You are a creative writer and storyteller. \
             Create engaging, imaginative content that captivates readers. \
@@ -432,7 +426,7 @@ impl ContentGenerator {
             specific creative request.";
 
         let user_prompt = format!(
-            "Create creative content based on this prompt: '{}'\n\n\
+            "Create creative content based on this prompt: '{prompt}'\n\n\
             Consider different creative formats:\n\
             1. Short story or narrative\n\
             2. Poem or creative verse\n\
@@ -445,8 +439,7 @@ impl ContentGenerator {
             - Compelling characters and dialogue\n\
             - Engaging plot or structure\n\
             - Emotional resonance\n\
-            - Unique voice and style",
-            prompt
+            - Unique voice and style"
         );
 
         let messages = vec![
@@ -458,7 +451,7 @@ impl ContentGenerator {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("✨ Generated Creative Content:\n{}", text);
+            println!("✨ Generated Creative Content:\n{text}");
 
             self.save_content_to_file(&text, &format!("creative_{}.md", self.sanitize_filename(prompt)))?;
         }
@@ -471,10 +464,10 @@ impl ContentGenerator {
         // Create output directory if it doesn't exist
         fs::create_dir_all("generated_content")?;
 
-        let file_path = format!("generated_content/{}", filename);
+        let file_path = format!("generated_content/{filename}");
         fs::write(&file_path, content)?;
 
-        println!("💾 Content saved to: {}", file_path);
+        println!("💾 Content saved to: {file_path}");
         Ok(())
     }
 
@@ -568,4 +561,4 @@ impl ContentGenerator {
 /// - Add A/B testing capabilities
 /// - Implement content performance analytics
 /// - Create team collaboration features
-fn _documentation() {}
+const fn _documentation() {}

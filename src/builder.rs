@@ -53,9 +53,9 @@ use crate::providers::ollama::config::OllamaParams;
 
 
 
-/// Quick OpenAI client creation with minimal configuration.
+/// Quick `OpenAI` client creation with minimal configuration.
 ///
-/// Uses environment variable OPENAI_API_KEY and default settings.
+/// Uses environment variable `OPENAI_API_KEY` and default settings.
 ///
 /// # Example
 /// ```rust,no_run
@@ -76,7 +76,7 @@ pub async fn quick_openai() -> Result<crate::providers::openai::OpenAiClient, Ll
     quick_openai_with_model("gpt-4o-mini").await
 }
 
-/// Quick OpenAI client creation with custom model.
+/// Quick `OpenAI` client creation with custom model.
 pub async fn quick_openai_with_model(model: &str) -> Result<crate::providers::openai::OpenAiClient, LlmError> {
     LlmBuilder::new()
         .openai()
@@ -87,7 +87,7 @@ pub async fn quick_openai_with_model(model: &str) -> Result<crate::providers::op
 
 /// Quick Anthropic client creation with minimal configuration.
 ///
-/// Uses environment variable ANTHROPIC_API_KEY and default settings.
+/// Uses environment variable `ANTHROPIC_API_KEY` and default settings.
 pub async fn quick_anthropic() -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
     quick_anthropic_with_model("claude-3-5-sonnet-20241022").await
 }
@@ -103,7 +103,7 @@ pub async fn quick_anthropic_with_model(model: &str) -> Result<crate::providers:
 
 /// Quick Gemini client creation with minimal configuration.
 ///
-/// Uses environment variable GEMINI_API_KEY and default settings.
+/// Uses environment variable `GEMINI_API_KEY` and default settings.
 pub async fn quick_gemini() -> Result<crate::providers::gemini::GeminiClient, LlmError> {
     quick_gemini_with_model("gemini-1.5-flash").await
 }
@@ -119,7 +119,7 @@ pub async fn quick_gemini_with_model(model: &str) -> Result<crate::providers::ge
 
 /// Quick Ollama client creation with minimal configuration.
 ///
-/// Uses default Ollama settings (http://localhost:11434) and llama3.2 model.
+/// Uses default Ollama settings (<http://localhost:11434>) and llama3.2 model.
 pub async fn quick_ollama() -> Result<crate::providers::ollama::OllamaClient, LlmError> {
     quick_ollama_with_model("llama3.2").await
 }
@@ -256,7 +256,7 @@ impl LlmBuilder {
     ///
     /// # Arguments
     /// * `timeout` - Maximum time to wait for a request
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
     }
@@ -265,7 +265,7 @@ impl LlmBuilder {
     ///
     /// # Arguments
     /// * `timeout` - Maximum time to wait for connection establishment
-    pub fn with_connect_timeout(mut self, timeout: Duration) -> Self {
+    pub const fn with_connect_timeout(mut self, timeout: Duration) -> Self {
         self.connect_timeout = Some(timeout);
         self
     }
@@ -293,7 +293,7 @@ impl LlmBuilder {
     ///
     /// # Arguments
     /// * `enabled` - Whether to enable HTTP/2 prior knowledge
-    pub fn with_http2_prior_knowledge(mut self, enabled: bool) -> Self {
+    pub const fn with_http2_prior_knowledge(mut self, enabled: bool) -> Self {
         self.http2_prior_knowledge = Some(enabled);
         self
     }
@@ -302,7 +302,7 @@ impl LlmBuilder {
     ///
     /// # Arguments
     /// * `enabled` - Whether to enable gzip compression
-    pub fn with_gzip(mut self, enabled: bool) -> Self {
+    pub const fn with_gzip(mut self, enabled: bool) -> Self {
         self.gzip = Some(enabled);
         self
     }
@@ -311,7 +311,7 @@ impl LlmBuilder {
     ///
     /// # Arguments
     /// * `enabled` - Whether to enable brotli compression
-    pub fn with_brotli(mut self, enabled: bool) -> Self {
+    pub const fn with_brotli(mut self, enabled: bool) -> Self {
         self.brotli = Some(enabled);
         self
     }
@@ -319,7 +319,7 @@ impl LlmBuilder {
     /// Set a proxy URL.
     ///
     /// # Arguments
-    /// * `proxy_url` - The proxy URL (e.g., "http://proxy.example.com:8080")
+    /// * `proxy_url` - The proxy URL (e.g., "<http://proxy.example.com:8080>")
     pub fn with_proxy<S: Into<String>>(mut self, proxy_url: S) -> Self {
         self.proxy = Some(proxy_url.into());
         self
@@ -329,7 +329,7 @@ impl LlmBuilder {
     ///
     /// # Arguments
     /// * `enabled` - Whether to enable cookie storage
-    pub fn with_cookie_store(mut self, enabled: bool) -> Self {
+    pub const fn with_cookie_store(mut self, enabled: bool) -> Self {
         self.cookie_store = Some(enabled);
         self
     }
@@ -338,7 +338,7 @@ impl LlmBuilder {
 
     // Provider-specific builders
 
-    /// Create an OpenAI client builder.
+    /// Create an `OpenAI` client builder.
     ///
     /// # Returns
     /// OpenAI-specific builder for further configuration
@@ -358,7 +358,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// Gemini-specific builder for further configuration
-    pub fn gemini(self) -> GeminiBuilder {
+    pub const fn gemini(self) -> GeminiBuilder {
         GeminiBuilder::new(self)
     }
 
@@ -374,15 +374,15 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// xAI-specific builder for further configuration
-    pub fn xai(self) -> GenericProviderBuilder {
+    pub const fn xai(self) -> GenericProviderBuilder {
         GenericProviderBuilder::new(self, ProviderType::XAI)
     }
 
     // OpenAI-Compatible Providers
 
-    /// Create a DeepSeek client builder (OpenAI-compatible).
+    /// Create a `DeepSeek` client builder (OpenAI-compatible).
     ///
-    /// DeepSeek provides cost-effective AI with reasoning capabilities.
+    /// `DeepSeek` provides cost-effective AI with reasoning capabilities.
     /// Uses OpenAI-compatible API with provider-specific optimizations.
     ///
     /// # Example
@@ -407,9 +407,9 @@ impl LlmBuilder {
         crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
     }
 
-    /// Create an OpenRouter client builder (OpenAI-compatible).
+    /// Create an `OpenRouter` client builder (OpenAI-compatible).
     ///
-    /// OpenRouter provides access to multiple AI models through a unified API.
+    /// `OpenRouter` provides access to multiple AI models through a unified API.
     /// Supports model routing and fallback strategies.
     ///
     /// # Example
@@ -436,7 +436,7 @@ impl LlmBuilder {
     }
 
     /// Generic provider builder (for custom providers)
-    pub fn provider(self, provider_type: ProviderType) -> GenericProviderBuilder {
+    pub const fn provider(self, provider_type: ProviderType) -> GenericProviderBuilder {
         GenericProviderBuilder::new(self, provider_type)
     }
 
@@ -474,7 +474,7 @@ impl LlmBuilder {
 
         if let Some(proxy_url) = &self.proxy {
             let proxy = reqwest::Proxy::all(proxy_url)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid proxy URL: {}", e)))?;
+                .map_err(|e| LlmError::ConfigurationError(format!("Invalid proxy URL: {e}")))?;
             builder = builder.proxy(proxy);
         }
 
@@ -486,10 +486,10 @@ impl LlmBuilder {
         for (name, value) in &self.default_headers {
             let header_name =
                 reqwest::header::HeaderName::from_bytes(name.as_bytes()).map_err(|e| {
-                    LlmError::ConfigurationError(format!("Invalid header name '{}': {}", name, e))
+                    LlmError::ConfigurationError(format!("Invalid header name '{name}': {e}"))
                 })?;
             let header_value = reqwest::header::HeaderValue::from_str(value).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid header value '{}': {}", value, e))
+                LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
             })?;
             headers.insert(header_name, header_value);
         }
@@ -499,7 +499,7 @@ impl LlmBuilder {
         }
 
         builder.build().map_err(|e| {
-            LlmError::ConfigurationError(format!("Failed to build HTTP client: {}", e))
+            LlmError::ConfigurationError(format!("Failed to build HTTP client: {e}"))
         })
     }
 }
@@ -571,19 +571,19 @@ impl OpenAiBuilder {
     }
 
     /// Sets the temperature
-    pub fn temperature(mut self, temp: f32) -> Self {
+    pub const fn temperature(mut self, temp: f32) -> Self {
         self.common_params.temperature = Some(temp);
         self
     }
 
     /// Sets the maximum number of tokens
-    pub fn max_tokens(mut self, tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, tokens: u32) -> Self {
         self.common_params.max_tokens = Some(tokens);
         self
     }
 
-    /// Sets top_p
-    pub fn top_p(mut self, top_p: f32) -> Self {
+    /// Sets `top_p`
+    pub const fn top_p(mut self, top_p: f32) -> Self {
         self.common_params.top_p = Some(top_p);
         self
     }
@@ -595,7 +595,7 @@ impl OpenAiBuilder {
     }
 
     /// Sets the random seed
-    pub fn seed(mut self, seed: u64) -> Self {
+    pub const fn seed(mut self, seed: u64) -> Self {
         self.common_params.seed = Some(seed);
         self
     }
@@ -615,13 +615,13 @@ impl OpenAiBuilder {
     }
 
     /// Sets the frequency penalty
-    pub fn frequency_penalty(mut self, penalty: f32) -> Self {
+    pub const fn frequency_penalty(mut self, penalty: f32) -> Self {
         self.openai_params.frequency_penalty = Some(penalty);
         self
     }
 
     /// Sets the presence penalty
-    pub fn presence_penalty(mut self, penalty: f32) -> Self {
+    pub const fn presence_penalty(mut self, penalty: f32) -> Self {
         self.openai_params.presence_penalty = Some(penalty);
         self
     }
@@ -633,7 +633,7 @@ impl OpenAiBuilder {
     }
 
     /// Enables parallel tool calls
-    pub fn parallel_tool_calls(mut self, enabled: bool) -> Self {
+    pub const fn parallel_tool_calls(mut self, enabled: bool) -> Self {
         self.openai_params.parallel_tool_calls = Some(enabled);
         self
     }
@@ -644,7 +644,7 @@ impl OpenAiBuilder {
         self
     }
 
-    /// Builds the OpenAI client
+    /// Builds the `OpenAI` client
     pub async fn build(self) -> Result<OpenAiClient, LlmError> {
         let api_key = self
             .api_key
@@ -725,18 +725,18 @@ impl AnthropicBuilder {
         self
     }
 
-    /// Common parameter setting methods (similar to OpenAI)
-    pub fn temperature(mut self, temp: f32) -> Self {
+    /// Common parameter setting methods (similar to `OpenAI`)
+    pub const fn temperature(mut self, temp: f32) -> Self {
         self.common_params.temperature = Some(temp);
         self
     }
 
-    pub fn max_tokens(mut self, tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, tokens: u32) -> Self {
         self.common_params.max_tokens = Some(tokens);
         self
     }
 
-    pub fn top_p(mut self, top_p: f32) -> Self {
+    pub const fn top_p(mut self, top_p: f32) -> Self {
         self.common_params.top_p = Some(top_p);
         self
     }
@@ -750,19 +750,19 @@ impl AnthropicBuilder {
     }
 
     /// Sets the thinking budget
-    pub fn thinking_budget(mut self, budget: u32) -> Self {
+    pub const fn thinking_budget(mut self, budget: u32) -> Self {
         self.anthropic_params.thinking_budget = Some(budget);
         self
     }
 
     /// Enable thinking mode with default budget (10k tokens)
-    pub fn with_thinking_enabled(mut self) -> Self {
+    pub const fn with_thinking_enabled(mut self) -> Self {
         self.anthropic_params.thinking_budget = Some(10000);
         self
     }
 
     /// Enable thinking mode with specified budget tokens
-    pub fn with_thinking_mode(mut self, budget_tokens: Option<u32>) -> Self {
+    pub const fn with_thinking_mode(mut self, budget_tokens: Option<u32>) -> Self {
         self.anthropic_params.thinking_budget = budget_tokens;
         self
     }
@@ -849,7 +849,7 @@ impl AnthropicBuilder {
 /// Gemini-specific builder for configuring Gemini clients.
 ///
 /// This builder provides Gemini-specific configuration options while
-/// inheriting common HTTP and timeout settings from the base LlmBuilder.
+/// inheriting common HTTP and timeout settings from the base `LlmBuilder`.
 ///
 /// # Example
 /// ```rust,no_run
@@ -901,7 +901,7 @@ pub struct GeminiBuilder {
 
 impl GeminiBuilder {
     /// Create a new Gemini builder
-    pub fn new(base: LlmBuilder) -> Self {
+    pub const fn new(base: LlmBuilder) -> Self {
         Self {
             base,
             api_key: None,
@@ -938,25 +938,25 @@ impl GeminiBuilder {
     }
 
     /// Set temperature (0.0 to 2.0)
-    pub fn temperature(mut self, temperature: f32) -> Self {
+    pub const fn temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
 
     /// Set maximum output tokens
-    pub fn max_tokens(mut self, max_tokens: i32) -> Self {
+    pub const fn max_tokens(mut self, max_tokens: i32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set top-p (0.0 to 1.0)
-    pub fn top_p(mut self, top_p: f32) -> Self {
+    pub const fn top_p(mut self, top_p: f32) -> Self {
         self.top_p = Some(top_p);
         self
     }
 
     /// Set top-k
-    pub fn top_k(mut self, top_k: i32) -> Self {
+    pub const fn top_k(mut self, top_k: i32) -> Self {
         self.top_k = Some(top_k);
         self
     }
@@ -968,7 +968,7 @@ impl GeminiBuilder {
     }
 
     /// Set candidate count
-    pub fn candidate_count(mut self, count: i32) -> Self {
+    pub const fn candidate_count(mut self, count: i32) -> Self {
         self.candidate_count = Some(count);
         self
     }
@@ -995,7 +995,7 @@ impl GeminiBuilder {
     /// - Use positive values to set a specific token budget
     ///
     /// The actual supported range depends on the model being used.
-    pub fn thinking_budget(mut self, budget: i32) -> Self {
+    pub const fn thinking_budget(mut self, budget: i32) -> Self {
         if self.thinking_config.is_none() {
             self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::new());
         }
@@ -1009,7 +1009,7 @@ impl GeminiBuilder {
     ///
     /// This controls whether thinking summaries are included in the response,
     /// not whether the model thinks internally.
-    pub fn thought_summaries(mut self, include: bool) -> Self {
+    pub const fn thought_summaries(mut self, include: bool) -> Self {
         if self.thinking_config.is_none() {
             self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::new());
         }
@@ -1020,7 +1020,7 @@ impl GeminiBuilder {
     }
 
     /// Enable dynamic thinking (model decides when and how much to think)
-    pub fn thinking(mut self) -> Self {
+    pub const fn thinking(mut self) -> Self {
         self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::dynamic());
         self
     }
@@ -1029,7 +1029,7 @@ impl GeminiBuilder {
     ///
     /// Note: Not all models support disabling thinking. If the model doesn't
     /// support it, the API will return an appropriate error.
-    pub fn disable_thinking(mut self) -> Self {
+    pub const fn disable_thinking(mut self) -> Self {
         self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::disabled());
         self
     }
@@ -1049,7 +1049,7 @@ impl GeminiBuilder {
         // Basic validation of thinking configuration
         if let Some(thinking_config) = &self.thinking_config {
             thinking_config.validate().map_err(|e| {
-                crate::error::LlmError::ConfigurationError(format!("Invalid thinking configuration: {}", e))
+                crate::error::LlmError::ConfigurationError(format!("Invalid thinking configuration: {e}"))
             })?;
         }
 
@@ -1136,7 +1136,7 @@ impl OllamaBuilder {
     /// Set the base URL for Ollama API
     ///
     /// # Arguments
-    /// * `url` - The base URL (e.g., "http://localhost:11434")
+    /// * `url` - The base URL (e.g., "<http://localhost:11434>")
     pub fn base_url<S: Into<String>>(mut self, url: S) -> Self {
         self.base_url = Some(url.into());
         self
@@ -1155,7 +1155,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `temperature` - Temperature value (0.0 to 2.0)
-    pub fn temperature(mut self, temperature: f32) -> Self {
+    pub const fn temperature(mut self, temperature: f32) -> Self {
         self.common_params.temperature = Some(temperature);
         self
     }
@@ -1164,7 +1164,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `max_tokens` - Maximum tokens to generate
-    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
         self
     }
@@ -1173,7 +1173,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `top_p` - Top-p value (0.0 to 1.0)
-    pub fn top_p(mut self, top_p: f32) -> Self {
+    pub const fn top_p(mut self, top_p: f32) -> Self {
         self.common_params.top_p = Some(top_p);
         self
     }
@@ -1191,7 +1191,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `raw` - Whether to enable raw mode
-    pub fn raw(mut self, raw: bool) -> Self {
+    pub const fn raw(mut self, raw: bool) -> Self {
         self.ollama_params.raw = Some(raw);
         self
     }
@@ -1220,7 +1220,7 @@ impl OllamaBuilder {
     /// Set multiple model options at once
     ///
     /// # Arguments
-    /// * `options` - HashMap of options
+    /// * `options` - `HashMap` of options
     pub fn options(mut self, options: std::collections::HashMap<String, serde_json::Value>) -> Self {
         self.ollama_params.options = Some(options);
         self
@@ -1230,7 +1230,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `numa` - Whether to enable NUMA support
-    pub fn numa(mut self, numa: bool) -> Self {
+    pub const fn numa(mut self, numa: bool) -> Self {
         self.ollama_params.numa = Some(numa);
         self
     }
@@ -1239,7 +1239,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `num_ctx` - Context window size
-    pub fn num_ctx(mut self, num_ctx: u32) -> Self {
+    pub const fn num_ctx(mut self, num_ctx: u32) -> Self {
         self.ollama_params.num_ctx = Some(num_ctx);
         self
     }
@@ -1248,7 +1248,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `num_gpu` - Number of GPU layers
-    pub fn num_gpu(mut self, num_gpu: u32) -> Self {
+    pub const fn num_gpu(mut self, num_gpu: u32) -> Self {
         self.ollama_params.num_gpu = Some(num_gpu);
         self
     }
@@ -1257,7 +1257,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `num_batch` - Batch size
-    pub fn num_batch(mut self, num_batch: u32) -> Self {
+    pub const fn num_batch(mut self, num_batch: u32) -> Self {
         self.ollama_params.num_batch = Some(num_batch);
         self
     }
@@ -1266,7 +1266,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `main_gpu` - Main GPU index
-    pub fn main_gpu(mut self, main_gpu: u32) -> Self {
+    pub const fn main_gpu(mut self, main_gpu: u32) -> Self {
         self.ollama_params.main_gpu = Some(main_gpu);
         self
     }
@@ -1275,7 +1275,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `use_mmap` - Whether to use memory mapping
-    pub fn use_mmap(mut self, use_mmap: bool) -> Self {
+    pub const fn use_mmap(mut self, use_mmap: bool) -> Self {
         self.ollama_params.use_mmap = Some(use_mmap);
         self
     }
@@ -1284,7 +1284,7 @@ impl OllamaBuilder {
     ///
     /// # Arguments
     /// * `num_thread` - Number of threads
-    pub fn num_thread(mut self, num_thread: u32) -> Self {
+    pub const fn num_thread(mut self, num_thread: u32) -> Self {
         self.ollama_params.num_thread = Some(num_thread);
         self
     }
@@ -1316,7 +1316,7 @@ pub struct GenericProviderBuilder {
 }
 
 impl GenericProviderBuilder {
-    fn new(base: LlmBuilder, provider_type: ProviderType) -> Self {
+    const fn new(base: LlmBuilder, provider_type: ProviderType) -> Self {
         Self {
             _base: base,
             _provider_type: provider_type,

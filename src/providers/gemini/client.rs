@@ -17,7 +17,7 @@ use super::files::GeminiFiles;
 use super::models::GeminiModels;
 use super::types::{GeminiConfig, GenerationConfig, SafetySetting};
 
-/// Gemini client that implements the LlmClient trait
+/// Gemini client that implements the `LlmClient` trait
 #[derive(Debug, Clone)]
 pub struct GeminiClient {
     /// HTTP client for making requests
@@ -41,7 +41,7 @@ impl GeminiClient {
             .timeout(timeout)
             .build()
             .map_err(|e| {
-                LlmError::ConfigurationError(format!("Failed to create HTTP client: {}", e))
+                LlmError::ConfigurationError(format!("Failed to create HTTP client: {e}"))
             })?;
 
         let chat_capability = GeminiChatCapability::new(config.clone(), http_client.clone());
@@ -90,7 +90,7 @@ impl GeminiClient {
     }
 
     /// Set HTTP timeout
-    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+    pub const fn with_timeout(mut self, timeout: Duration) -> Self {
         self.config.timeout = Some(timeout.as_secs());
         self
     }
@@ -170,12 +170,12 @@ impl GeminiClient {
     }
 
     /// Get the generation configuration
-    pub fn generation_config(&self) -> Option<&GenerationConfig> {
+    pub const fn generation_config(&self) -> Option<&GenerationConfig> {
         self.config.generation_config.as_ref()
     }
 
     /// Get the safety settings
-    pub fn safety_settings(&self) -> Option<&Vec<SafetySetting>> {
+    pub const fn safety_settings(&self) -> Option<&Vec<SafetySetting>> {
         self.config.safety_settings.as_ref()
     }
 }

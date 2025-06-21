@@ -24,14 +24,13 @@ impl ParameterValidator {
     ) -> Result<(), LlmError> {
         if temp < min || temp > max {
             return Err(LlmError::InvalidParameter(format!(
-                "temperature must be between {} and {} for {}",
-                min, max, provider
+                "temperature must be between {min} and {max} for {provider}"
             )));
         }
         Ok(())
     }
 
-    /// Validates top_p parameter
+    /// Validates `top_p` parameter
     pub fn validate_top_p(top_p: f64) -> Result<(), LlmError> {
         if !(0.0..=1.0).contains(&top_p) {
             return Err(LlmError::InvalidParameter(
@@ -41,7 +40,7 @@ impl ParameterValidator {
         Ok(())
     }
 
-    /// Validates max_tokens parameter
+    /// Validates `max_tokens` parameter
     pub fn validate_max_tokens(
         max_tokens: u64,
         min: u64,
@@ -50,8 +49,7 @@ impl ParameterValidator {
     ) -> Result<(), LlmError> {
         if max_tokens < min || max_tokens > max {
             return Err(LlmError::InvalidParameter(format!(
-                "max_tokens must be between {} and {} for {}",
-                min, max, provider
+                "max_tokens must be between {min} and {max} for {provider}"
             )));
         }
         Ok(())
@@ -67,8 +65,7 @@ impl ParameterValidator {
     ) -> Result<(), LlmError> {
         if value < min || value > max {
             return Err(LlmError::InvalidParameter(format!(
-                "{} must be between {} and {} for {}",
-                param_name, min, max, provider
+                "{param_name} must be between {min} and {max} for {provider}"
             )));
         }
         Ok(())
@@ -170,8 +167,8 @@ mod tests {
         assert!(ParameterValidator::validate_top_p(1.5).is_err());
 
         // Test max_tokens validation
-        assert!(ParameterValidator::validate_max_tokens(1000, 1, 200000, "test").is_ok());
-        assert!(ParameterValidator::validate_max_tokens(0, 1, 200000, "test").is_err());
+        assert!(ParameterValidator::validate_max_tokens(1000, 1, 200_000, "test").is_ok());
+        assert!(ParameterValidator::validate_max_tokens(0, 1, 200_000, "test").is_err());
     }
 
     #[test]

@@ -263,7 +263,7 @@ impl BenchmarkRunner {
         for handle in handles {
             match handle.await {
                 Ok(worker_results) => results.extend(worker_results),
-                Err(e) => eprintln!("Worker failed: {}", e),
+                Err(e) => eprintln!("Worker failed: {e}"),
             }
         }
 
@@ -321,7 +321,7 @@ impl BenchmarkRunner {
                         success: true,
                         duration,
                         error: None,
-                        response_length: response.content.text().map(|s| s.len()),
+                        response_length: response.content.text().map(str::len),
                         validation,
                     });
                 }

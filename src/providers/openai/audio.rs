@@ -1,6 +1,6 @@
-//! OpenAI Audio Implementation
+//! `OpenAI` Audio Implementation
 //!
-//! This module provides the OpenAI implementation of the AudioCapability trait,
+//! This module provides the `OpenAI` implementation of the `AudioCapability` trait,
 //! including text-to-speech and speech-to-text functionality.
 
 use async_trait::async_trait;
@@ -16,7 +16,7 @@ use crate::types::{
 
 use super::config::OpenAiConfig;
 
-/// OpenAI TTS API request structure
+/// `OpenAI` TTS API request structure
 #[derive(Debug, Clone, Serialize)]
 struct OpenAiTtsRequest {
     /// Model to use
@@ -36,7 +36,7 @@ struct OpenAiTtsRequest {
     instructions: Option<String>,
 }
 
-/// OpenAI STT API request structure (multipart form data)
+/// `OpenAI` STT API request structure (multipart form data)
 #[derive(Debug, Clone)]
 struct OpenAiSttRequest {
     /// Audio file data
@@ -57,7 +57,7 @@ struct OpenAiSttRequest {
     timestamp_granularities: Option<Vec<String>>,
 }
 
-/// OpenAI STT API response structure
+/// `OpenAI` STT API response structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiSttResponse {
     /// Transcribed text
@@ -73,7 +73,7 @@ struct OpenAiSttResponse {
     words: Option<Vec<OpenAiWordTimestamp>>,
 }
 
-/// OpenAI word timestamp structure
+/// `OpenAI` word timestamp structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiWordTimestamp {
     /// The word
@@ -84,7 +84,7 @@ struct OpenAiWordTimestamp {
     end: f32,
 }
 
-/// OpenAI audio capability implementation.
+/// `OpenAI` audio capability implementation.
 ///
 /// This struct provides the OpenAI-specific implementation of audio processing
 /// capabilities including text-to-speech and speech-to-text.
@@ -96,11 +96,11 @@ struct OpenAiWordTimestamp {
 /// - Multiple audio formats
 ///
 /// # API References
-/// - TTS: https://platform.openai.com/docs/api-reference/audio/createSpeech
-/// - STT: https://platform.openai.com/docs/api-reference/audio/createTranscription
+/// - TTS: <https://platform.openai.com/docs/api-reference/audio/createSpeech>
+/// - STT: <https://platform.openai.com/docs/api-reference/audio/createTranscription>
 #[derive(Debug, Clone)]
 pub struct OpenAiAudio {
-    /// OpenAI configuration
+    /// `OpenAI` configuration
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
@@ -109,10 +109,10 @@ pub struct OpenAiAudio {
 }
 
 impl OpenAiAudio {
-    /// Create a new OpenAI audio instance.
+    /// Create a new `OpenAI` audio instance.
     ///
     /// # Arguments
-    /// * `config` - OpenAI configuration
+    /// * `config` - `OpenAI` configuration
     /// * `http_client` - HTTP client for making requests
     pub fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         let features = vec![
@@ -230,9 +230,9 @@ impl OpenAiAudio {
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -243,7 +243,7 @@ impl OpenAiAudio {
             .json(&request)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("TTS request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("TTS request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -253,7 +253,7 @@ impl OpenAiAudio {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI TTS API error {}: {}", status, error_text),
+                message: format!("OpenAI TTS API error {status}: {error_text}"),
                 details: None,
             });
         }
@@ -261,7 +261,7 @@ impl OpenAiAudio {
         let audio_data = response
             .bytes()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Failed to read audio data: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Failed to read audio data: {e}")))?;
 
         Ok(audio_data.to_vec())
     }
@@ -280,7 +280,7 @@ impl OpenAiAudio {
         let file_part = reqwest::multipart::Part::bytes(request.file_data)
             .file_name(request.filename)
             .mime_str("audio/mpeg")
-            .map_err(|e| LlmError::HttpError(format!("Failed to create file part: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Failed to create file part: {e}")))?;
         form = form.part("file", file_part);
 
         // Add other fields
@@ -315,9 +315,9 @@ impl OpenAiAudio {
                 continue;
             }
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -328,7 +328,7 @@ impl OpenAiAudio {
             .multipart(form)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("STT request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("STT request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -338,7 +338,7 @@ impl OpenAiAudio {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI STT API error {}: {}", status, error_text),
+                message: format!("OpenAI STT API error {status}: {error_text}"),
                 details: None,
             });
         }
@@ -346,12 +346,12 @@ impl OpenAiAudio {
         let openai_response: OpenAiSttResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse STT response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse STT response: {e}")))?;
 
         Ok(openai_response)
     }
 
-    /// Convert OpenAI STT response to our standard format.
+    /// Convert `OpenAI` STT response to our standard format.
     fn convert_stt_response(&self, openai_response: OpenAiSttResponse) -> SttResponse {
         let words = openai_response.words.map(|words| {
             words
@@ -443,7 +443,7 @@ impl AudioCapability for OpenAiAudio {
             .extra_params
             .get("instructions")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
         // Validate voice
         if !self.is_voice_supported(&voice) {
@@ -487,7 +487,7 @@ impl AudioCapability for OpenAiAudio {
             (data, "audio.mp3".to_string())
         } else if let Some(path) = request.file_path {
             let data = std::fs::read(&path)
-                .map_err(|e| LlmError::IoError(format!("Failed to read audio file: {}", e)))?;
+                .map_err(|e| LlmError::IoError(format!("Failed to read audio file: {e}")))?;
             let filename = std::path::Path::new(&path)
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -528,7 +528,7 @@ impl AudioCapability for OpenAiAudio {
             (data, "audio.mp3".to_string())
         } else if let Some(path) = request.file_path {
             let data = std::fs::read(&path)
-                .map_err(|e| LlmError::IoError(format!("Failed to read audio file: {}", e)))?;
+                .map_err(|e| LlmError::IoError(format!("Failed to read audio file: {e}")))?;
             let filename = std::path::Path::new(&path)
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -547,7 +547,7 @@ impl AudioCapability for OpenAiAudio {
         let file_part = reqwest::multipart::Part::bytes(file_data)
             .file_name(filename)
             .mime_str("audio/mpeg")
-            .map_err(|e| LlmError::HttpError(format!("Failed to create file part: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Failed to create file part: {e}")))?;
         form = form.part("file", file_part);
 
         let model = request.model.unwrap_or_else(|| "whisper-1".to_string());
@@ -560,9 +560,9 @@ impl AudioCapability for OpenAiAudio {
                 continue;
             }
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -573,7 +573,7 @@ impl AudioCapability for OpenAiAudio {
             .multipart(form)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Translation request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Translation request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -583,13 +583,13 @@ impl AudioCapability for OpenAiAudio {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI Translation API error {}: {}", status, error_text),
+                message: format!("OpenAI Translation API error {status}: {error_text}"),
                 details: None,
             });
         }
 
         let openai_response: OpenAiSttResponse = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse translation response: {}", e))
+            LlmError::ParseError(format!("Failed to parse translation response: {e}"))
         })?;
 
         Ok(self.convert_stt_response(openai_response))

@@ -46,7 +46,7 @@ async fn demonstrate_error_types() {
     match test_invalid_api_key().await {
         Ok(_) => println!("      ❌ Expected error but got success"),
         Err(e) => {
-            println!("      ✅ Got expected error: {}", e);
+            println!("      ✅ Got expected error: {e}");
             demonstrate_error_handling(&e);
         }
     }
@@ -55,7 +55,7 @@ async fn demonstrate_error_types() {
     match test_invalid_model().await {
         Ok(_) => println!("      ❌ Expected error but got success"),
         Err(e) => {
-            println!("      ✅ Got expected error: {}", e);
+            println!("      ✅ Got expected error: {e}");
             demonstrate_error_handling(&e);
         }
     }
@@ -64,7 +64,7 @@ async fn demonstrate_error_types() {
     match test_network_timeout().await {
         Ok(_) => println!("      ❌ Expected error but got success"),
         Err(e) => {
-            println!("      ✅ Got expected error: {}", e);
+            println!("      ✅ Got expected error: {e}");
             demonstrate_error_handling(&e);
         }
     }
@@ -73,7 +73,7 @@ async fn demonstrate_error_types() {
     match test_rate_limit().await {
         Ok(_) => println!("      ❌ Expected error but got success"),
         Err(e) => {
-            println!("      ✅ Got expected error: {}", e);
+            println!("      ✅ Got expected error: {e}");
             demonstrate_error_handling(&e);
         }
     }
@@ -82,7 +82,7 @@ async fn demonstrate_error_types() {
     match test_invalid_request().await {
         Ok(_) => println!("      ❌ Expected error but got success"),
         Err(e) => {
-            println!("      ✅ Got expected error: {}", e);
+            println!("      ✅ Got expected error: {e}");
             demonstrate_error_handling(&e);
         }
     }
@@ -106,7 +106,7 @@ async fn demonstrate_retry_strategies() {
             }
         }
         Err(e) => {
-            println!("      ❌ Failed after all retries: {}", e);
+            println!("      ❌ Failed after all retries: {e}");
         }
     }
 
@@ -120,7 +120,7 @@ async fn demonstrate_retry_strategies() {
             }
         }
         Err(e) => {
-            println!("      ❌ Failed with jitter strategy: {}", e);
+            println!("      ❌ Failed with jitter strategy: {e}");
         }
     }
 
@@ -142,7 +142,7 @@ async fn demonstrate_rate_limit_handling() {
             }
         }
         Err(e) => {
-            println!("   ❌ Rate limit handling failed: {}", e);
+            println!("   ❌ Rate limit handling failed: {e}");
         }
     }
 
@@ -157,13 +157,13 @@ async fn demonstrate_graceful_degradation() {
 
     match chat_with_graceful_degradation(user_message).await {
         Ok((provider, response)) => {
-            println!("   ✅ Successfully used provider: {}", provider);
+            println!("   ✅ Successfully used provider: {provider}");
             if let Some(text) = response.content_text() {
                 println!("   Response: {}", &text[..text.len().min(100)]);
             }
         }
         Err(e) => {
-            println!("   ❌ All degradation strategies failed: {}", e);
+            println!("   ❌ All degradation strategies failed: {e}");
             println!("   💡 In production, you might return a cached response or error message");
         }
     }
@@ -185,10 +185,10 @@ async fn demonstrate_error_classification() {
     ];
 
     for error in test_errors {
-        println!("   Error: {}", error);
+        println!("   Error: {error}");
         
         let classification = classify_error_for_monitoring(&error);
-        println!("      Classification: {:?}", classification);
+        println!("      Classification: {classification:?}");
         println!("      Action: {}", get_recommended_action(&classification));
         println!();
     }
@@ -250,16 +250,16 @@ async fn retry_with_exponential_backoff(message: &str, max_retries: u32) -> Resu
     for attempt in 1..=max_retries {
         match try_chat_request(message).await {
             Ok(response) => {
-                println!("      ✅ Success on attempt {}", attempt);
+                println!("      ✅ Success on attempt {attempt}");
                 return Ok(response);
             }
             Err(e) if is_retryable_error(&e) && attempt < max_retries => {
-                println!("      ⏳ Attempt {} failed, retrying in {:?}", attempt, delay);
+                println!("      ⏳ Attempt {attempt} failed, retrying in {delay:?}");
                 sleep(delay).await;
                 delay *= 2; // Exponential backoff
             }
             Err(e) => {
-                println!("      ❌ Non-retryable error or max retries reached: {}", e);
+                println!("      ❌ Non-retryable error or max retries reached: {e}");
                 return Err(e);
             }
         }
@@ -276,7 +276,7 @@ async fn retry_with_jitter(message: &str, max_retries: u32) -> Result<ChatRespon
     for attempt in 1..=max_retries {
         match try_chat_request(message).await {
             Ok(response) => {
-                println!("      ✅ Success on attempt {} with jitter", attempt);
+                println!("      ✅ Success on attempt {attempt} with jitter");
                 return Ok(response);
             }
             Err(e) if is_retryable_error(&e) && attempt < max_retries => {
@@ -284,7 +284,7 @@ async fn retry_with_jitter(message: &str, max_retries: u32) -> Result<ChatRespon
                 let jitter = rng.gen_range(0..=base_delay / 2); // Add jitter
                 let delay = Duration::from_millis(base_delay + jitter);
                 
-                println!("      ⏳ Attempt {} failed, retrying in {:?} (with jitter)", attempt, delay);
+                println!("      ⏳ Attempt {attempt} failed, retrying in {delay:?} (with jitter)");
                 sleep(delay).await;
             }
             Err(e) => {
@@ -354,7 +354,7 @@ async fn try_chat_request(message: &str) -> Result<ChatResponse, LlmError> {
 }
 
 /// Check if an error is retryable
-fn is_retryable_error(error: &LlmError) -> bool {
+const fn is_retryable_error(error: &LlmError) -> bool {
     matches!(error, 
         LlmError::TimeoutError(_) | 
         LlmError::RateLimitError(_) |
@@ -363,17 +363,17 @@ fn is_retryable_error(error: &LlmError) -> bool {
 }
 
 /// Check if an error is authentication-related
-fn is_auth_error(error: &LlmError) -> bool {
+const fn is_auth_error(error: &LlmError) -> bool {
     matches!(error, LlmError::AuthenticationError(_))
 }
 
 /// Check if an error is rate limit-related
-fn is_rate_limit_error(error: &LlmError) -> bool {
+const fn is_rate_limit_error(error: &LlmError) -> bool {
     matches!(error, LlmError::RateLimitError(_))
 }
 
 /// Check if an error is a client error (4xx)
-fn is_client_error(error: &LlmError) -> bool {
+const fn is_client_error(error: &LlmError) -> bool {
     matches!(error, 
         LlmError::AuthenticationError(_) |
         LlmError::ModelNotSupported(_)
@@ -391,7 +391,7 @@ enum ErrorClassification {
 }
 
 /// Classify error for monitoring and alerting
-fn classify_error_for_monitoring(error: &LlmError) -> ErrorClassification {
+const fn classify_error_for_monitoring(error: &LlmError) -> ErrorClassification {
     match error {
         LlmError::AuthenticationError(_) => ErrorClassification::Authentication,
         LlmError::RateLimitError(_) => ErrorClassification::RateLimit,
@@ -403,7 +403,7 @@ fn classify_error_for_monitoring(error: &LlmError) -> ErrorClassification {
 }
 
 /// Get recommended action for error classification
-fn get_recommended_action(classification: &ErrorClassification) -> &'static str {
+const fn get_recommended_action(classification: &ErrorClassification) -> &'static str {
     match classification {
         ErrorClassification::Transient => "Retry with exponential backoff",
         ErrorClassification::Authentication => "Check API credentials",
@@ -422,7 +422,7 @@ fn demonstrate_error_handling(error: &LlmError) {
     println!("         - Client error: {}", is_client_error(error));
 
     let classification = classify_error_for_monitoring(error);
-    println!("         - Classification: {:?}", classification);
+    println!("         - Classification: {classification:?}");
     println!("         - Recommended action: {}", get_recommended_action(&classification));
 }
 

@@ -154,7 +154,7 @@ impl ErrorClassifier {
     }
 
     /// Assess error severity
-    fn assess_severity(error: &LlmError, category: &ErrorCategory) -> ErrorSeverity {
+    const fn assess_severity(error: &LlmError, category: &ErrorCategory) -> ErrorSeverity {
         match category {
             ErrorCategory::Authentication => ErrorSeverity::High,
             ErrorCategory::Configuration => ErrorSeverity::High,
@@ -203,7 +203,7 @@ impl ErrorClassifier {
                 if let LlmError::InvalidParameter(param) = error {
                     vec![RecoveryAction::UpdateConfiguration {
                         parameter: "parameters".to_string(),
-                        suggestion: format!("Check parameter: {}", param),
+                        suggestion: format!("Check parameter: {param}"),
                     }]
                 } else {
                     vec![RecoveryAction::ReduceComplexity {
@@ -288,7 +288,7 @@ impl ErrorReporter {
 
         // Update provider stats
         if let Some(provider) = &classified_error.context.provider {
-            let provider_key = format!("{:?}", provider);
+            let provider_key = format!("{provider:?}");
             *self
                 .stats
                 .errors_by_provider
@@ -342,7 +342,7 @@ impl ErrorReporter {
     }
 
     /// Get error statistics
-    pub fn get_stats(&self) -> &ErrorStats {
+    pub const fn get_stats(&self) -> &ErrorStats {
         &self.stats
     }
 

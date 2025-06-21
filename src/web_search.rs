@@ -2,11 +2,11 @@
 //!
 //! This module provides unified web search capabilities across different AI providers.
 //! Each provider implements web search differently:
-//! - OpenAI: Built-in web search tools via Responses API
-//! - Anthropic: web_search tool
-//! - xAI: Live Search with search_parameters
+//! - `OpenAI`: Built-in web search tools via Responses API
+//! - Anthropic: `web_search` tool
+//! - xAI: Live Search with `search_parameters`
 //! - Gemini: Search-augmented generation
-//! - OpenRouter: search_prompt parameter
+//! - `OpenRouter`: `search_prompt` parameter
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -42,11 +42,11 @@ pub struct WebSearchProvider {
 
 impl WebSearchProvider {
     /// Create a new web search provider
-    pub fn new(provider: String, config: WebSearchConfig) -> Self {
+    pub const fn new(provider: String, config: WebSearchConfig) -> Self {
         Self { provider, config }
     }
 
-    /// Build search parameters for OpenAI
+    /// Build search parameters for `OpenAI`
     pub fn build_openai_params(&self, _query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
 
@@ -149,7 +149,7 @@ impl WebSearchProvider {
         params
     }
 
-    /// Build search parameters for OpenRouter
+    /// Build search parameters for `OpenRouter`
     pub fn build_openrouter_params(&self, query: &str) -> HashMap<String, serde_json::Value> {
         let mut params = HashMap::new();
 
@@ -162,7 +162,7 @@ impl WebSearchProvider {
             // Default search prompt
             params.insert(
                 "search_prompt".to_string(),
-                serde_json::Value::String(format!("Search for information about: {}", query)),
+                serde_json::Value::String(format!("Search for information about: {query}")),
             );
         }
 
@@ -186,7 +186,7 @@ pub struct AnthropicWebSearchTool {
 
 impl AnthropicWebSearchTool {
     /// Create a new web search tool
-    pub fn new(query: String) -> Self {
+    pub const fn new(query: String) -> Self {
         Self {
             query,
             max_results: None,
@@ -194,7 +194,7 @@ impl AnthropicWebSearchTool {
     }
 
     /// Set maximum results
-    pub fn with_max_results(mut self, max_results: u32) -> Self {
+    pub const fn with_max_results(mut self, max_results: u32) -> Self {
         self.max_results = Some(max_results);
         self
     }
@@ -252,13 +252,13 @@ impl XaiLiveSearchConfig {
     }
 
     /// Enable live search
-    pub fn enable(mut self) -> Self {
+    pub const fn enable(mut self) -> Self {
         self.enabled = true;
         self
     }
 
     /// Disable live search
-    pub fn disable(mut self) -> Self {
+    pub const fn disable(mut self) -> Self {
         self.enabled = false;
         self
     }
@@ -308,13 +308,13 @@ impl GeminiSearchConfig {
     }
 
     /// Enable search
-    pub fn enable(mut self) -> Self {
+    pub const fn enable(mut self) -> Self {
         self.enabled = true;
         self
     }
 
     /// Disable search
-    pub fn disable(mut self) -> Self {
+    pub const fn disable(mut self) -> Self {
         self.enabled = false;
         self
     }

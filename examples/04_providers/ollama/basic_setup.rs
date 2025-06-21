@@ -69,17 +69,17 @@ async fn test_ollama_connection() {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
                         println!("   ✅ Connection test successful");
-                        println!("   🤖 Response: {}", text);
+                        println!("   🤖 Response: {text}");
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Connection test failed: {}", e);
+                    println!("   ❌ Connection test failed: {e}");
                     print_ollama_troubleshooting();
                 }
             }
         }
         Err(e) => {
-            println!("   ❌ Failed to create Ollama client: {}", e);
+            println!("   ❌ Failed to create Ollama client: {e}");
             print_ollama_troubleshooting();
         }
     }
@@ -101,7 +101,7 @@ async fn demonstrate_basic_chat() {
                 Ok(response) => {
                     println!("   User: Explain what Ollama is in 2-3 sentences.");
                     if let Some(text) = response.content_text() {
-                        println!("   🦙 Ollama: {}", text);
+                        println!("   🦙 Ollama: {text}");
                     }
                     
                     if let Some(usage) = response.usage {
@@ -111,12 +111,12 @@ async fn demonstrate_basic_chat() {
                     println!("   ✅ Basic chat successful");
                 }
                 Err(e) => {
-                    println!("   ❌ Chat failed: {}", e);
+                    println!("   ❌ Chat failed: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("   ❌ Failed to create client: {}", e);
+            println!("   ❌ Failed to create client: {e}");
         }
     }
     
@@ -141,7 +141,7 @@ async fn demonstrate_streaming_chat() {
                     while let Some(event) = stream.next().await {
                         match event {
                             Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
-                                print!("{}", delta);
+                                print!("{delta}");
                                 io::stdout().flush().unwrap();
                             }
                             Ok(ChatStreamEvent::Done { .. }) => {
@@ -149,7 +149,7 @@ async fn demonstrate_streaming_chat() {
                                 break;
                             }
                             Err(e) => {
-                                println!("\n   ❌ Stream error: {}", e);
+                                println!("\n   ❌ Stream error: {e}");
                                 break;
                             }
                             _ => {}
@@ -157,12 +157,12 @@ async fn demonstrate_streaming_chat() {
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Streaming failed: {}", e);
+                    println!("   ❌ Streaming failed: {e}");
                 }
             }
         }
         Err(e) => {
-            println!("   ❌ Failed to create client: {}", e);
+            println!("   ❌ Failed to create client: {e}");
         }
     }
     
@@ -183,27 +183,24 @@ async fn demonstrate_model_management() {
 
     println!("   📋 Available Model Options:");
     for (model, description) in &models_to_try {
-        println!("      • {}: {}", model, description);
+        println!("      • {model}: {description}");
     }
 
     println!("\n   🧪 Testing Model Availability:");
     
     // Test the primary model
     match test_model("llama3.2").await {
-        Ok(_) => println!("      ✅ llama3.2 is available and working"),
+        Ok(()) => println!("      ✅ llama3.2 is available and working"),
         Err(e) => {
-            println!("      ❌ llama3.2 failed: {}", e);
+            println!("      ❌ llama3.2 failed: {e}");
             println!("      💡 Try: ollama pull llama3.2");
         }
     }
 
     // Test smaller model
-    match test_model("llama3.2:1b").await {
-        Ok(_) => println!("      ✅ llama3.2:1b is available (faster option)"),
-        Err(_) => {
-            println!("      ⚠️  llama3.2:1b not available");
-            println!("      💡 Try: ollama pull llama3.2:1b");
-        }
+    if let Ok(()) = test_model("llama3.2:1b").await { println!("      ✅ llama3.2:1b is available (faster option)") } else {
+        println!("      ⚠️  llama3.2:1b not available");
+        println!("      💡 Try: ollama pull llama3.2:1b");
     }
 
     println!("\n   💡 Model Selection Tips:");
@@ -295,9 +292,9 @@ fn print_ollama_troubleshooting() {
 /// - Sufficient system resources
 ///
 /// Configuration:
-/// - base_url: Ollama server URL (default: localhost:11434)
+/// - `base_url`: Ollama server URL (default: localhost:11434)
 /// - model: Model name (e.g., llama3.2, codellama)
-/// - Standard parameters: temperature, max_tokens, etc.
+/// - Standard parameters: temperature, `max_tokens`, etc.
 ///
 /// Model Management:
 /// - ollama pull <model>: Download models
@@ -313,7 +310,7 @@ fn print_ollama_troubleshooting() {
 /// 5. Plan storage requirements
 ///
 /// Next Steps:
-/// - advanced_features.rs: Advanced Ollama configurations
-/// - ../../02_core_features/: Core functionality with any provider
-/// - ../../05_use_cases/: Real-world applications
-fn _documentation() {}
+/// - `advanced_features.rs`: Advanced Ollama configurations
+/// - ../../`02_core_features/`: Core functionality with any provider
+/// - ../../`05_use_cases/`: Real-world applications
+const fn _documentation() {}

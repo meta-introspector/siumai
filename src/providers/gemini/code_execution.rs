@@ -3,7 +3,7 @@
 //! This module implements Google Gemini's code execution feature which allows
 //! the model to write and execute Python code to solve problems.
 //!
-//! API Reference: https://ai.google.dev/gemini-api/docs/code-execution
+//! API Reference: <https://ai.google.dev/gemini-api/docs/code-execution>
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -45,19 +45,19 @@ impl CodeExecutionConfig {
     }
 
     /// Enable code execution
-    pub fn enable(mut self) -> Self {
+    pub const fn enable(mut self) -> Self {
         self.enabled = true;
         self
     }
 
     /// Disable code execution
-    pub fn disable(mut self) -> Self {
+    pub const fn disable(mut self) -> Self {
         self.enabled = false;
         self
     }
 
     /// Set execution timeout
-    pub fn with_timeout(mut self, timeout_seconds: u32) -> Self {
+    pub const fn with_timeout(mut self, timeout_seconds: u32) -> Self {
         self.timeout = Some(timeout_seconds);
         self
     }
@@ -69,13 +69,13 @@ impl CodeExecutionConfig {
     }
 
     /// Set execution environment
-    pub fn with_environment(mut self, environment: CodeExecutionEnvironment) -> Self {
+    pub const fn with_environment(mut self, environment: CodeExecutionEnvironment) -> Self {
         self.environment = environment;
         self
     }
 
     /// Set whether to include output
-    pub fn include_output(mut self, include: bool) -> Self {
+    pub const fn include_output(mut self, include: bool) -> Self {
         self.include_output = include;
         self
     }
@@ -205,14 +205,14 @@ impl CodeExecutionParser {
         let output = data
             .get("output")
             .and_then(|o| o.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
         let error = data
             .get("error")
             .and_then(|e| e.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
-        let execution_time = data.get("execution_time").and_then(|t| t.as_u64());
+        let execution_time = data.get("execution_time").and_then(serde_json::Value::as_u64);
 
         let artifacts = data
             .get("artifacts")
@@ -289,15 +289,15 @@ impl CodeExecutionParser {
             formatted.push_str(&format!("```python\n{}\n```\n\n", result.code));
 
             if let Some(ref output) = result.output {
-                formatted.push_str(&format!("📤 **Output:**\n```\n{}\n```\n\n", output));
+                formatted.push_str(&format!("📤 **Output:**\n```\n{output}\n```\n\n"));
             }
 
             if let Some(ref error) = result.error {
-                formatted.push_str(&format!("❌ **Error:**\n```\n{}\n```\n\n", error));
+                formatted.push_str(&format!("❌ **Error:**\n```\n{error}\n```\n\n"));
             }
 
             if let Some(time) = result.execution_time {
-                formatted.push_str(&format!("⏱️ **Execution Time:** {}ms\n\n", time));
+                formatted.push_str(&format!("⏱️ **Execution Time:** {time}ms\n\n"));
             }
 
             if !result.artifacts.is_empty() {

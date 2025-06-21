@@ -1,6 +1,6 @@
-//! OpenAI Client Implementation
+//! `OpenAI` Client Implementation
 //!
-//! Main client structure that aggregates all OpenAI capabilities.
+//! Main client structure that aggregates all `OpenAI` capabilities.
 
 use async_trait::async_trait;
 
@@ -16,7 +16,7 @@ use super::models::OpenAiModels;
 use super::types::OpenAiSpecificParams;
 use super::utils::get_default_models;
 
-/// OpenAI Client
+/// `OpenAI` Client
 #[allow(dead_code)]
 pub struct OpenAiClient {
     /// Chat capability implementation
@@ -34,7 +34,7 @@ pub struct OpenAiClient {
 }
 
 impl OpenAiClient {
-    /// Creates a new OpenAI client with configuration and HTTP client
+    /// Creates a new `OpenAI` client with configuration and HTTP client
     pub fn new(config: super::OpenAiConfig, http_client: reqwest::Client) -> Self {
         let specific_params = OpenAiSpecificParams {
             organization: config.organization.clone(),
@@ -70,13 +70,13 @@ impl OpenAiClient {
         }
     }
 
-    /// Creates a new OpenAI client with configuration (for OpenAI-compatible providers)
+    /// Creates a new `OpenAI` client with configuration (for OpenAI-compatible providers)
     pub fn new_with_config(config: super::OpenAiConfig) -> Self {
         let http_client = reqwest::Client::new();
         Self::new(config, http_client)
     }
 
-    /// Creates a new OpenAI client (legacy constructor for backward compatibility)
+    /// Creates a new `OpenAI` client (legacy constructor for backward compatibility)
     #[allow(clippy::too_many_arguments)]
     pub fn new_legacy(
         api_key: String,
@@ -103,7 +103,7 @@ impl OpenAiClient {
     }
 
     /// Get OpenAI-specific parameters
-    pub fn specific_params(&self) -> &OpenAiSpecificParams {
+    pub const fn specific_params(&self) -> &OpenAiSpecificParams {
         &self.specific_params
     }
 
@@ -138,20 +138,20 @@ impl OpenAiClient {
     }
 
     /// Enable logprobs
-    pub fn with_logprobs(mut self, enabled: bool, top_logprobs: Option<u32>) -> Self {
+    pub const fn with_logprobs(mut self, enabled: bool, top_logprobs: Option<u32>) -> Self {
         self.specific_params.logprobs = Some(enabled);
         self.specific_params.top_logprobs = top_logprobs;
         self
     }
 
     /// Set presence penalty
-    pub fn with_presence_penalty(mut self, penalty: f32) -> Self {
+    pub const fn with_presence_penalty(mut self, penalty: f32) -> Self {
         self.specific_params.presence_penalty = Some(penalty);
         self
     }
 
     /// Set frequency penalty
-    pub fn with_frequency_penalty(mut self, penalty: f32) -> Self {
+    pub const fn with_frequency_penalty(mut self, penalty: f32) -> Self {
         self.specific_params.frequency_penalty = Some(penalty);
         self
     }

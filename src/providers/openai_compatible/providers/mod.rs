@@ -38,7 +38,7 @@ pub trait OpenAiCompatibleProvider: Send + Sync + 'static {
     fn supported_capabilities() -> ProviderCapabilities;
 }
 
-/// DeepSeek provider implementation
+/// `DeepSeek` provider implementation
 pub struct DeepSeekProvider;
 
 impl OpenAiCompatibleProvider for DeepSeekProvider {
@@ -110,7 +110,7 @@ impl OpenAiCompatibleProvider for DeepSeekProvider {
     }
 }
 
-/// OpenRouter provider implementation
+/// `OpenRouter` provider implementation
 pub struct OpenRouterProvider;
 
 impl OpenAiCompatibleProvider for OpenRouterProvider {
@@ -160,7 +160,7 @@ impl OpenAiCompatibleProvider for OpenRouterProvider {
             if let Some(models_array) = fallback_models.as_array() {
                 let models: Vec<String> = models_array
                     .iter()
-                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .filter_map(|v| v.as_str().map(std::string::ToString::to_string))
                     .collect();
                 params.insert("fallback_models".to_string(), serde_json::Value::Array(
                     models.into_iter().map(serde_json::Value::String).collect()

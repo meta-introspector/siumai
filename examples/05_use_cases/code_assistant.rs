@@ -157,27 +157,25 @@ impl CodeAssistant {
 
     /// Explain code in a file
     async fn explain_code(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🔍 Analyzing code in: {}", file_path);
+        println!("🔍 Analyzing code in: {file_path}");
         
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
         
         let system_prompt = format!(
-            "You are an expert {} programmer and code educator. \
+            "You are an expert {language} programmer and code educator. \
             Explain the provided code in a clear, educational manner. \
             Break down complex concepts and explain the purpose, \
-            structure, and key components.",
-            language
+            structure, and key components."
         );
 
         let user_prompt = format!(
-            "Please explain this {} code:\n\n```{}\n{}\n```\n\n\
+            "Please explain this {language} code:\n\n```{language}\n{code}\n```\n\n\
             Provide:\n\
             1. Overall purpose and functionality\n\
             2. Key components and their roles\n\
             3. Important algorithms or patterns used\n\
-            4. Any notable design decisions",
-            language, language, code
+            4. Any notable design decisions"
         );
 
         let messages = vec![
@@ -189,7 +187,7 @@ impl CodeAssistant {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📝 Code Explanation:\n{}", text);
+            println!("📝 Code Explanation:\n{text}");
         }
 
         Ok(())
@@ -197,21 +195,20 @@ impl CodeAssistant {
 
     /// Review code for potential issues
     async fn review_code(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🔍 Reviewing code in: {}", file_path);
+        println!("🔍 Reviewing code in: {file_path}");
 
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
 
         let system_prompt = format!(
-            "You are an expert {} code reviewer with years of experience. \
+            "You are an expert {language} code reviewer with years of experience. \
             Review the provided code for potential issues, bugs, security vulnerabilities, \
             performance problems, and code quality issues. \
-            Provide constructive feedback and specific suggestions.",
-            language
+            Provide constructive feedback and specific suggestions."
         );
 
         let user_prompt = format!(
-            "Please review this {} code for issues:\n\n```{}\n{}\n```\n\n\
+            "Please review this {language} code for issues:\n\n```{language}\n{code}\n```\n\n\
             Focus on:\n\
             1. Potential bugs and logic errors\n\
             2. Security vulnerabilities\n\
@@ -223,8 +220,7 @@ impl CodeAssistant {
             - Description of the problem\n\
             - Severity level (Critical/High/Medium/Low)\n\
             - Specific line numbers if possible\n\
-            - Suggested fix",
-            language, language, code
+            - Suggested fix"
         );
 
         let messages = vec![
@@ -236,7 +232,7 @@ impl CodeAssistant {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📋 Code Review Results:\n{}", text);
+            println!("📋 Code Review Results:\n{text}");
         }
 
         Ok(())
@@ -244,21 +240,20 @@ impl CodeAssistant {
 
     /// Suggest code optimizations
     async fn optimize_code(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("⚡ Analyzing code for optimizations: {}", file_path);
+        println!("⚡ Analyzing code for optimizations: {file_path}");
 
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
 
         let system_prompt = format!(
-            "You are a performance optimization expert for {}. \
+            "You are a performance optimization expert for {language}. \
             Analyze the provided code and suggest specific optimizations \
             for better performance, memory usage, and efficiency. \
-            Focus on practical, measurable improvements.",
-            language
+            Focus on practical, measurable improvements."
         );
 
         let user_prompt = format!(
-            "Please analyze this {} code for optimization opportunities:\n\n```{}\n{}\n```\n\n\
+            "Please analyze this {language} code for optimization opportunities:\n\n```{language}\n{code}\n```\n\n\
             Suggest optimizations for:\n\
             1. Performance improvements\n\
             2. Memory usage reduction\n\
@@ -269,8 +264,7 @@ impl CodeAssistant {
             - Explain the current inefficiency\n\
             - Provide the optimized code\n\
             - Estimate the performance impact\n\
-            - Mention any trade-offs",
-            language, language, code
+            - Mention any trade-offs"
         );
 
         let messages = vec![
@@ -282,7 +276,7 @@ impl CodeAssistant {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("🚀 Optimization Suggestions:\n{}", text);
+            println!("🚀 Optimization Suggestions:\n{text}");
         }
 
         Ok(())
@@ -290,29 +284,27 @@ impl CodeAssistant {
 
     /// Generate documentation for code
     async fn generate_documentation(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("📚 Generating documentation for: {}", file_path);
+        println!("📚 Generating documentation for: {file_path}");
 
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
 
         let system_prompt = format!(
-            "You are a technical documentation expert for {}. \
+            "You are a technical documentation expert for {language}. \
             Generate comprehensive, clear, and useful documentation \
             for the provided code. Follow the language's documentation \
-            conventions and best practices.",
-            language
+            conventions and best practices."
         );
 
         let user_prompt = format!(
-            "Please generate documentation for this {} code:\n\n```{}\n{}\n```\n\n\
+            "Please generate documentation for this {language} code:\n\n```{language}\n{code}\n```\n\n\
             Include:\n\
             1. Module/file overview\n\
             2. Function/method documentation with parameters and return values\n\
             3. Usage examples\n\
             4. Important notes and warnings\n\
             5. Related functions or dependencies\n\n\
-            Use proper {} documentation format and conventions.",
-            language, language, code, language
+            Use proper {language} documentation format and conventions."
         );
 
         let messages = vec![
@@ -324,7 +316,7 @@ impl CodeAssistant {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("📖 Generated Documentation:\n{}", text);
+            println!("📖 Generated Documentation:\n{text}");
         }
 
         Ok(())
@@ -332,21 +324,20 @@ impl CodeAssistant {
 
     /// Suggest bug fixes
     async fn suggest_fixes(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🐛 Analyzing code for potential bugs: {}", file_path);
+        println!("🐛 Analyzing code for potential bugs: {file_path}");
 
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
 
         let system_prompt = format!(
-            "You are an expert {} debugger and bug hunter. \
+            "You are an expert {language} debugger and bug hunter. \
             Analyze the provided code to identify potential bugs, \
             logic errors, and provide specific fixes. \
-            Focus on common bug patterns and edge cases.",
-            language
+            Focus on common bug patterns and edge cases."
         );
 
         let user_prompt = format!(
-            "Please analyze this {} code for bugs and suggest fixes:\n\n```{}\n{}\n```\n\n\
+            "Please analyze this {language} code for bugs and suggest fixes:\n\n```{language}\n{code}\n```\n\n\
             Look for:\n\
             1. Logic errors and edge cases\n\
             2. Null pointer/reference issues\n\
@@ -358,8 +349,7 @@ impl CodeAssistant {
             - Describe the bug and its impact\n\
             - Show the problematic code\n\
             - Provide the corrected code\n\
-            - Explain why the fix works",
-            language, language, code
+            - Explain why the fix works"
         );
 
         let messages = vec![
@@ -371,7 +361,7 @@ impl CodeAssistant {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("🐛 Bug Analysis and Fixes:\n{}", text);
+            println!("🐛 Bug Analysis and Fixes:\n{text}");
         }
 
         Ok(())
@@ -379,21 +369,20 @@ impl CodeAssistant {
 
     /// Suggest code refactoring
     async fn suggest_refactoring(&self, file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("🔄 Analyzing code for refactoring opportunities: {}", file_path);
+        println!("🔄 Analyzing code for refactoring opportunities: {file_path}");
 
         let code = self.read_file(file_path)?;
         let language = self.detect_language(file_path);
 
         let system_prompt = format!(
-            "You are an expert {} software architect and refactoring specialist. \
+            "You are an expert {language} software architect and refactoring specialist. \
             Analyze the provided code and suggest refactoring improvements \
             for better maintainability, readability, and design. \
-            Follow SOLID principles and best practices.",
-            language
+            Follow SOLID principles and best practices."
         );
 
         let user_prompt = format!(
-            "Please analyze this {} code for refactoring opportunities:\n\n```{}\n{}\n```\n\n\
+            "Please analyze this {language} code for refactoring opportunities:\n\n```{language}\n{code}\n```\n\n\
             Suggest refactoring for:\n\
             1. Code structure and organization\n\
             2. Function/method decomposition\n\
@@ -405,8 +394,7 @@ impl CodeAssistant {
             - Explain the current issue\n\
             - Show the refactored code\n\
             - Explain the benefits\n\
-            - Mention any considerations",
-            language, language, code
+            - Mention any considerations"
         );
 
         let messages = vec![
@@ -418,7 +406,7 @@ impl CodeAssistant {
 
         let response = self.ai.chat(messages).await?;
         if let Some(text) = response.text() {
-            println!("♻️ Refactoring Suggestions:\n{}", text);
+            println!("♻️ Refactoring Suggestions:\n{text}");
         }
 
         Ok(())
@@ -437,7 +425,7 @@ impl CodeAssistant {
                 }
             }
             Err(e) => {
-                println!("❌ Error reading file '{}': {}", file_path, e);
+                println!("❌ Error reading file '{file_path}': {e}");
                 Err(Box::new(e))
             }
         }
@@ -547,4 +535,4 @@ impl CodeAssistant {
 /// - Create IDE plugins and extensions
 /// - Add collaborative code review features
 /// - Implement automated fix application
-fn _documentation() {}
+const fn _documentation() {}

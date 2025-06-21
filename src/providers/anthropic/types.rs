@@ -28,7 +28,7 @@ pub struct AnthropicChatResponse {
 }
 
 /// Anthropic Content Block according to official API documentation
-/// https://docs.anthropic.com/en/api/messages
+/// <https://docs.anthropic.com/en/api/messages>
 #[derive(Debug, Deserialize)]
 pub struct AnthropicContentBlock {
     pub r#type: String,
@@ -69,7 +69,7 @@ pub struct AnthropicSpecificParams {
 }
 
 /// Anthropic Models List Response according to official API documentation
-/// https://docs.anthropic.com/en/api/models-list
+/// <https://docs.anthropic.com/en/api/models-list>
 #[derive(Debug, Deserialize)]
 pub struct AnthropicModelsResponse {
     pub data: Vec<AnthropicModelInfo>,

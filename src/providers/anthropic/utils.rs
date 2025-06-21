@@ -8,7 +8,7 @@ use crate::types::*;
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 
 /// Build HTTP headers for Anthropic API requests according to official documentation
-/// https://docs.anthropic.com/en/api/messages
+/// <https://docs.anthropic.com/en/api/messages>
 pub fn build_headers(
     api_key: &str,
     custom_headers: &std::collections::HashMap<String, String>,
@@ -19,7 +19,7 @@ pub fn build_headers(
     headers.insert(
         "x-api-key",
         HeaderValue::from_str(api_key)
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key: {}", e)))?,
+            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key: {e}")))?,
     );
 
     // Set the content type
@@ -45,7 +45,7 @@ pub fn build_headers(
         headers.insert(
             "anthropic-beta",
             HeaderValue::from_str(&beta_features.join(","))
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid beta header: {}", e)))?,
+                .map_err(|e| LlmError::ConfigurationError(format!("Invalid beta header: {e}")))?,
         );
     }
 
@@ -55,12 +55,12 @@ pub fn build_headers(
             continue; // Already handled above
         }
         let header_name: reqwest::header::HeaderName = key.parse().map_err(|e| {
-            LlmError::ConfigurationError(format!("Invalid header key '{}': {}", key, e))
+            LlmError::ConfigurationError(format!("Invalid header key '{key}': {e}"))
         })?;
         headers.insert(
             header_name,
             HeaderValue::from_str(value).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid header value '{}': {}", value, e))
+                LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
             })?,
         );
     }
@@ -146,9 +146,9 @@ pub fn convert_messages(
                 // Developer messages are treated as system-level instructions in Anthropic
                 // Since Anthropic handles system messages separately, we'll add it to the system message
                 if let MessageContent::Text(text) = &message.content {
-                    let developer_text = format!("Developer instructions: {}", text);
+                    let developer_text = format!("Developer instructions: {text}");
                     system_message = Some(match system_message {
-                        Some(existing) => format!("{}\n\n{}", existing, developer_text),
+                        Some(existing) => format!("{existing}\n\n{developer_text}"),
                         None => developer_text,
                     });
                 }
@@ -167,7 +167,7 @@ pub fn convert_messages(
 }
 
 /// Parse Anthropic finish reason according to official API documentation
-/// https://docs.anthropic.com/en/api/handling-stop-reasons
+/// <https://docs.anthropic.com/en/api/handling-stop-reasons>
 pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
     match reason {
         Some("end_turn") => Some(FinishReason::Stop),
@@ -204,10 +204,7 @@ pub fn get_default_models() -> Vec<String> {
 pub fn parse_response_content(content_blocks: &[AnthropicContentBlock]) -> MessageContent {
     // Find the first text block (skip thinking blocks for main content)
     for content_block in content_blocks {
-        match content_block.r#type.as_str() {
-            "text" => return MessageContent::Text(content_block.text.clone().unwrap_or_default()),
-            _ => continue,
-        }
+        if content_block.r#type.as_str() == "text" { return MessageContent::Text(content_block.text.clone().unwrap_or_default()) }
     }
     MessageContent::Text(String::new())
 }
@@ -239,7 +236,7 @@ pub fn parse_response_content_and_tools(content_blocks: &[AnthropicContentBlock]
                     });
                 }
             }
-            _ => continue,
+            _ => {}
         }
     }
 
@@ -274,8 +271,8 @@ pub fn create_usage_from_response(usage: Option<AnthropicUsage>) -> Option<Usage
     })
 }
 
-/// Map Anthropic error types to LlmError according to official documentation
-/// https://docs.anthropic.com/en/api/errors
+/// Map Anthropic error types to `LlmError` according to official documentation
+/// <https://docs.anthropic.com/en/api/errors>
 pub fn map_anthropic_error(
     status_code: u16,
     error_type: &str,
@@ -285,27 +282,27 @@ pub fn map_anthropic_error(
     match error_type {
         "authentication_error" => LlmError::AuthenticationError(error_message.to_string()),
         "permission_error" => {
-            LlmError::AuthenticationError(format!("Permission denied: {}", error_message))
+            LlmError::AuthenticationError(format!("Permission denied: {error_message}"))
         }
         "invalid_request_error" => LlmError::InvalidInput(error_message.to_string()),
         "not_found_error" => LlmError::NotFound(error_message.to_string()),
         "request_too_large" => {
-            LlmError::InvalidInput(format!("Request too large: {}", error_message))
+            LlmError::InvalidInput(format!("Request too large: {error_message}"))
         }
         "rate_limit_error" => LlmError::RateLimitError(error_message.to_string()),
         "api_error" => LlmError::ProviderError {
             provider: "anthropic".to_string(),
-            message: format!("Internal API error: {}", error_message),
+            message: format!("Internal API error: {error_message}"),
             error_code: Some("api_error".to_string()),
         },
         "overloaded_error" => LlmError::ProviderError {
             provider: "anthropic".to_string(),
-            message: format!("API temporarily overloaded: {}", error_message),
+            message: format!("API temporarily overloaded: {error_message}"),
             error_code: Some("overloaded_error".to_string()),
         },
         _ => LlmError::ApiError {
             code: status_code,
-            message: format!("Anthropic API error ({}): {}", error_type, error_message),
+            message: format!("Anthropic API error ({error_type}): {error_message}"),
             details: Some(error_details),
         },
     }

@@ -26,7 +26,7 @@ impl std::fmt::Display for ProviderType {
             Self::Gemini => write!(f, "gemini"),
             Self::Ollama => write!(f, "ollama"),
             Self::XAI => write!(f, "xai"),
-            Self::Custom(name) => write!(f, "{}", name),
+            Self::Custom(name) => write!(f, "{name}"),
         }
     }
 }
@@ -40,7 +40,7 @@ pub struct CommonParams {
     pub temperature: Option<f32>,
     /// Maximum output tokens
     pub max_tokens: Option<u32>,
-    /// top_p parameter
+    /// `top_p` parameter
     pub top_p: Option<f32>,
     /// Stop sequences
     pub stop_sequences: Option<Vec<String>>,
@@ -51,8 +51,8 @@ pub struct CommonParams {
 
 
 impl CommonParams {
-    /// Create CommonParams with pre-allocated model string capacity
-    pub fn with_model_capacity(model: String, _capacity_hint: usize) -> Self {
+    /// Create `CommonParams` with pre-allocated model string capacity
+    pub const fn with_model_capacity(model: String, _capacity_hint: usize) -> Self {
         Self {
             model,
             temperature: None,
@@ -64,7 +64,7 @@ impl CommonParams {
     }
 
     /// Check if parameters are effectively empty (for optimization)
-    pub fn is_minimal(&self) -> bool {
+    pub const fn is_minimal(&self) -> bool {
         self.model.is_empty()
             && self.temperature.is_none()
             && self.max_tokens.is_none()
@@ -78,7 +78,7 @@ impl CommonParams {
         let mut size = std::mem::size_of::<Self>();
         size += self.model.capacity();
         if let Some(ref stop_seqs) = self.stop_sequences {
-            size += stop_seqs.iter().map(|s| s.capacity()).sum::<usize>();
+            size += stop_seqs.iter().map(std::string::String::capacity).sum::<usize>();
         }
         size
     }
@@ -126,7 +126,7 @@ impl ProviderParams {
             .and_then(|v| serde_json::from_value(v.clone()).ok())
     }
 
-    /// Creates provider parameters from OpenAI parameters
+    /// Creates provider parameters from `OpenAI` parameters
     pub fn from_openai(openai_params: crate::params::OpenAiParams) -> Self {
         let mut params = HashMap::new();
 
@@ -413,7 +413,7 @@ impl ChatMessage {
     }
 
     /// Check if message is empty (optimization for filtering)
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         match &self.content {
             MessageContent::Text(text) => text.is_empty(),
             MessageContent::MultiModal(parts) => parts.is_empty(),
@@ -515,7 +515,7 @@ impl ChatMessageBuilder {
     }
 
     /// Sets cache control
-    pub fn cache_control(mut self, cache: CacheControl) -> Self {
+    pub const fn cache_control(mut self, cache: CacheControl) -> Self {
         self.metadata.cache_control = Some(cache);
         self
     }
@@ -617,9 +617,9 @@ pub enum WebSearchContextSize {
 pub enum WebSearchStrategy {
     /// Automatically choose the best strategy for the provider
     Auto,
-    /// Use provider's built-in search tools (OpenAI Responses API, xAI Live Search)
+    /// Use provider's built-in search tools (`OpenAI` Responses API, xAI Live Search)
     BuiltIn,
-    /// Use provider's web search tool (Anthropic web_search tool)
+    /// Use provider's web search tool (Anthropic `web_search` tool)
     Tool,
     /// Use external search API and inject results into context
     External,
@@ -684,7 +684,7 @@ impl ChatRequest {
     }
 
     /// Enable streaming
-    pub fn with_streaming(mut self, stream: bool) -> Self {
+    pub const fn with_streaming(mut self, stream: bool) -> Self {
         self.stream = stream;
         self
     }
@@ -695,7 +695,7 @@ impl ChatRequest {
         self
     }
 
-    /// Set model parameters (alias for common_params)
+    /// Set model parameters (alias for `common_params`)
     pub fn with_model_params(mut self, params: CommonParams) -> Self {
         self.common_params = params;
         self
@@ -765,7 +765,7 @@ impl ChatRequestBuilder {
     }
 
     /// Enable streaming
-    pub fn stream(mut self, stream: bool) -> Self {
+    pub const fn stream(mut self, stream: bool) -> Self {
         self.stream = stream;
         self
     }
@@ -776,7 +776,7 @@ impl ChatRequestBuilder {
         self
     }
 
-    /// Set model parameters (alias for common_params)
+    /// Set model parameters (alias for `common_params`)
     pub fn model_params(mut self, params: CommonParams) -> Self {
         self.common_params = params;
         self
@@ -872,7 +872,7 @@ impl ChatResponse {
     }
 
     /// Get tool calls
-    pub fn get_tool_calls(&self) -> Option<&Vec<ToolCall>> {
+    pub const fn get_tool_calls(&self) -> Option<&Vec<ToolCall>> {
         self.tool_calls.as_ref()
     }
 
@@ -911,7 +911,7 @@ pub struct Usage {
 
 impl Usage {
     /// Create new usage statistics
-    pub fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
+    pub const fn new(prompt_tokens: u32, completion_tokens: u32) -> Self {
         Self {
             prompt_tokens,
             completion_tokens,
@@ -984,7 +984,7 @@ pub enum ChatStreamEvent {
         /// The incremental thinking content
         delta: String,
     },
-    /// Reasoning content delta (for models like OpenAI o1)
+    /// Reasoning content delta (for models like `OpenAI` o1)
     ReasoningDelta {
         /// The incremental reasoning content
         delta: String,
@@ -1246,7 +1246,7 @@ impl TtsRequest {
     }
 
     /// Set the speech speed
-    pub fn with_speed(mut self, speed: f32) -> Self {
+    pub const fn with_speed(mut self, speed: f32) -> Self {
         self.speed = Some(speed);
         self
     }
@@ -1272,7 +1272,7 @@ pub struct TtsResponse {
 pub struct SttRequest {
     /// Audio data
     pub audio_data: Option<Vec<u8>>,
-    /// File path (alternative to audio_data)
+    /// File path (alternative to `audio_data`)
     pub file_path: Option<String>,
     /// Audio format
     pub format: Option<String>,
@@ -1349,7 +1349,7 @@ pub struct WordTimestamp {
 pub struct AudioTranslationRequest {
     /// Audio data
     pub audio_data: Option<Vec<u8>>,
-    /// File path (alternative to audio_data)
+    /// File path (alternative to `audio_data`)
     pub file_path: Option<String>,
     /// Audio format
     pub format: Option<String>,
@@ -1475,7 +1475,7 @@ pub struct ImageGenerationRequest {
     pub guidance_scale: Option<f32>,
     /// Whether to enhance the prompt
     pub enhance_prompt: Option<bool>,
-    /// Response format (url or b64_json)
+    /// Response format (url or `b64_json`)
     pub response_format: Option<String>,
     /// Additional provider-specific parameters
     pub extra_params: HashMap<String, serde_json::Value>,
@@ -1527,9 +1527,9 @@ pub struct ImageGenerationResponse {
 /// A single generated image
 #[derive(Debug, Clone)]
 pub struct GeneratedImage {
-    /// Image URL (if response_format is "url")
+    /// Image URL (if `response_format` is "url")
     pub url: Option<String>,
-    /// Base64 encoded image data (if response_format is "b64_json")
+    /// Base64 encoded image data (if `response_format` is "`b64_json`")
     pub b64_json: Option<String>,
     /// Image format
     pub format: Option<String>,

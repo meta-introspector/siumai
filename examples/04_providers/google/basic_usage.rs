@@ -76,7 +76,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
     ];
 
     for (model_name, description) in models {
-        println!("   Testing {}: {}", model_name, description);
+        println!("   Testing {model_name}: {description}");
         
         let ai = Siumai::builder()
             .anthropic()
@@ -103,7 +103,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
                     }
                 }
             }
-            Err(e) => println!("   ❌ Error with {}: {}", model_name, e),
+            Err(e) => println!("   ❌ Error with {model_name}: {e}"),
         }
         println!();
     }
@@ -139,7 +139,7 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
                 println!("   📝 Text response: {}", &text[..text.len().min(120)]);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Simulated multimodal interaction (image + text)
@@ -158,7 +158,7 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
                 println!("   🖼️ Multimodal guidance: {}", &text[..text.len().min(120)]);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Code understanding
@@ -181,7 +181,7 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
                 println!("   💻 Code analysis: {}", &text[..text.len().min(120)]);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -215,7 +215,7 @@ async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::E
                 println!("   🛡️ Safety guidance provided: {}", &text[..text.len().min(100)]);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Test educational content about sensitive topics
@@ -233,7 +233,7 @@ async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::E
                 println!("   📚 Educational content: {}", &text[..text.len().min(100)]);
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     println!("   💡 Safety Features:");
@@ -270,7 +270,7 @@ async fn demo_performance_optimization(api_key: &str) -> Result<(), Box<dyn std:
                 println!("   ⚡ Fast model result: {}", text.trim());
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Optimization 2: Batch processing
@@ -295,7 +295,7 @@ async fn demo_performance_optimization(api_key: &str) -> Result<(), Box<dyn std:
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Optimization 3: Token management
@@ -354,7 +354,7 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
                 );
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Feature 2: Reasoning and analysis
@@ -381,7 +381,7 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
                 );
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Feature 3: Integration capabilities
@@ -407,7 +407,7 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
                 );
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     println!("   🌟 Google Gemini Unique Strengths:");
@@ -475,4 +475,4 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
 /// - Implement safety configurations
 /// - Optimize for specific use cases
 /// - Integrate with Google services
-fn _documentation() {}
+const fn _documentation() {}

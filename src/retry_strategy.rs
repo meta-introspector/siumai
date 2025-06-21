@@ -51,31 +51,31 @@ impl RetryStrategy {
     }
 
     /// Set maximum attempts
-    pub fn with_max_attempts(mut self, max_attempts: u32) -> Self {
+    pub const fn with_max_attempts(mut self, max_attempts: u32) -> Self {
         self.max_attempts = max_attempts;
         self
     }
 
     /// Set base delay
-    pub fn with_base_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_base_delay(mut self, delay: Duration) -> Self {
         self.base_delay = delay;
         self
     }
 
     /// Set maximum delay
-    pub fn with_max_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_max_delay(mut self, delay: Duration) -> Self {
         self.max_delay = delay;
         self
     }
 
     /// Set backoff strategy
-    pub fn with_backoff(mut self, backoff: BackoffStrategy) -> Self {
+    pub const fn with_backoff(mut self, backoff: BackoffStrategy) -> Self {
         self.backoff = backoff;
         self
     }
 
     /// Set jitter configuration
-    pub fn with_jitter(mut self, jitter: JitterConfig) -> Self {
+    pub const fn with_jitter(mut self, jitter: JitterConfig) -> Self {
         self.jitter = jitter;
         self
     }
@@ -180,8 +180,8 @@ pub enum RetryableErrorType {
 }
 
 impl RetryableErrorType {
-    /// Determine error type from LlmError
-    pub fn from_error(error: &LlmError) -> Self {
+    /// Determine error type from `LlmError`
+    pub const fn from_error(error: &LlmError) -> Self {
         match error {
             LlmError::HttpError(_) | LlmError::ConnectionError(_) => Self::NetworkError,
             LlmError::RateLimitError(_) => Self::RateLimitError,
@@ -271,7 +271,7 @@ impl RateLimitHandler {
     }
 
     /// Reset rate limit state on successful request
-    pub fn reset_on_success(&mut self) {
+    pub const fn reset_on_success(&mut self) {
         self.state.consecutive_rate_limits = 0;
     }
 }
@@ -316,7 +316,7 @@ pub struct RetryExecutor {
 
 impl RetryExecutor {
     /// Create a new retry executor
-    pub fn new(strategy: RetryStrategy) -> Self {
+    pub const fn new(strategy: RetryStrategy) -> Self {
         Self {
             strategy,
             rate_limit_handler: None,
@@ -417,7 +417,7 @@ pub struct ProviderHealth {
 }
 
 impl ProviderHealth {
-    pub fn new(name: String) -> Self {
+    pub const fn new(name: String) -> Self {
         Self {
             name,
             failure_count: 0,
@@ -539,7 +539,7 @@ impl FailoverManager {
     }
 
     /// Get all provider health statuses
-    pub fn get_all_health(&self) -> &std::collections::HashMap<String, ProviderHealth> {
+    pub const fn get_all_health(&self) -> &std::collections::HashMap<String, ProviderHealth> {
         &self.provider_health
     }
 }

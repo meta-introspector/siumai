@@ -1,9 +1,9 @@
-//! OpenAI Structured Output Support
+//! `OpenAI` Structured Output Support
 //!
-//! This module implements OpenAI's structured output feature which ensures
+//! This module implements `OpenAI`'s structured output feature which ensures
 //! the model's output conforms to a specified JSON schema.
 //!
-//! API Reference: https://platform.openai.com/docs/guides/structured-outputs
+//! API Reference: <https://platform.openai.com/docs/guides/structured-outputs>
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -42,13 +42,13 @@ impl StructuredOutputConfig {
     }
 
     /// Enable structured output
-    pub fn enable(mut self) -> Self {
+    pub const fn enable(mut self) -> Self {
         self.enabled = true;
         self
     }
 
     /// Disable structured output
-    pub fn disable(mut self) -> Self {
+    pub const fn disable(mut self) -> Self {
         self.enabled = false;
         self
     }
@@ -66,7 +66,7 @@ impl StructuredOutputConfig {
     }
 
     /// Enable or disable strict mode
-    pub fn with_strict(mut self, strict: bool) -> Self {
+    pub const fn with_strict(mut self, strict: bool) -> Self {
         self.strict = strict;
         self
     }
@@ -117,7 +117,7 @@ pub enum ResponseFormat {
 
 impl ResponseFormat {
     /// Create a JSON object format
-    pub fn json_object(schema: serde_json::Value) -> Self {
+    pub const fn json_object(schema: serde_json::Value) -> Self {
         Self::JsonObject {
             schema,
             strict: true,
@@ -197,7 +197,7 @@ impl StructuredOutputValidator {
     ) -> Result<serde_json::Value, LlmError> {
         // Parse JSON
         let parsed_json: serde_json::Value = serde_json::from_str(json_str)
-            .map_err(|e| LlmError::ParseError(format!("Invalid JSON: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Invalid JSON: {e}")))?;
 
         // Basic schema validation (in a real implementation, you'd use a proper JSON schema validator)
         Self::basic_schema_validation(&parsed_json, schema)?;
@@ -225,8 +225,7 @@ impl StructuredOutputValidator {
                             if let Some(prop_name) = req_prop.as_str() {
                                 if !obj.contains_key(prop_name) {
                                     return Err(LlmError::ParseError(format!(
-                                        "Missing required property: {}",
-                                        prop_name
+                                        "Missing required property: {prop_name}"
                                     )));
                                 }
                             }

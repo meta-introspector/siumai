@@ -1,6 +1,6 @@
-//! OpenAI Moderation API Implementation
+//! `OpenAI` Moderation API Implementation
 //!
-//! This module provides the OpenAI implementation of the ModerationCapability trait,
+//! This module provides the `OpenAI` implementation of the `ModerationCapability` trait,
 //! including content moderation for text and image content.
 
 use async_trait::async_trait;
@@ -13,7 +13,7 @@ use crate::types::{ModerationRequest, ModerationResponse, ModerationResult};
 
 use super::config::OpenAiConfig;
 
-/// OpenAI moderation API request structure
+/// `OpenAI` moderation API request structure
 #[derive(Debug, Clone, Serialize)]
 struct OpenAiModerationRequest {
     /// Input text or array of texts to moderate
@@ -23,7 +23,7 @@ struct OpenAiModerationRequest {
     model: Option<String>,
 }
 
-/// OpenAI moderation API response structure
+/// `OpenAI` moderation API response structure
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiModerationResponse {
     /// Unique identifier for the moderation request
@@ -35,7 +35,7 @@ struct OpenAiModerationResponse {
     results: Vec<OpenAiModerationResult>,
 }
 
-/// Individual moderation result from OpenAI
+/// Individual moderation result from `OpenAI`
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiModerationResult {
     /// Whether the content was flagged
@@ -46,7 +46,7 @@ struct OpenAiModerationResult {
     category_scores: OpenAiModerationCategoryScores,
 }
 
-/// OpenAI moderation categories (boolean flags)
+/// `OpenAI` moderation categories (boolean flags)
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiModerationCategories {
     /// Hate speech
@@ -80,7 +80,7 @@ struct OpenAiModerationCategories {
     violence_graphic: bool,
 }
 
-/// OpenAI moderation category scores (confidence values)
+/// `OpenAI` moderation category scores (confidence values)
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiModerationCategoryScores {
     /// Hate speech score
@@ -114,10 +114,10 @@ struct OpenAiModerationCategoryScores {
     violence_graphic: f32,
 }
 
-/// OpenAI moderation capability implementation.
+/// `OpenAI` moderation capability implementation.
 ///
 /// This struct provides the OpenAI-specific implementation of content moderation
-/// using the OpenAI Moderation API.
+/// using the `OpenAI` Moderation API.
 ///
 /// # Supported Features
 /// - Text content moderation
@@ -127,22 +127,22 @@ struct OpenAiModerationCategoryScores {
 /// - Batch processing support
 ///
 /// # API Reference
-/// https://platform.openai.com/docs/api-reference/moderations
+/// <https://platform.openai.com/docs/api-reference/moderations>
 #[derive(Debug, Clone)]
 pub struct OpenAiModeration {
-    /// OpenAI configuration
+    /// `OpenAI` configuration
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
 }
 
 impl OpenAiModeration {
-    /// Create a new OpenAI moderation instance.
+    /// Create a new `OpenAI` moderation instance.
     ///
     /// # Arguments
-    /// * `config` - OpenAI configuration
+    /// * `config` - `OpenAI` configuration
     /// * `http_client` - HTTP client for making requests
-    pub fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
+    pub const fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         Self {
             config,
             http_client,
@@ -192,7 +192,7 @@ impl OpenAiModeration {
         Ok(())
     }
 
-    /// Convert OpenAI categories to our standard format.
+    /// Convert `OpenAI` categories to our standard format.
     fn convert_categories(&self, categories: &OpenAiModerationCategories) -> HashMap<String, bool> {
         let mut result = HashMap::new();
         result.insert("hate".to_string(), categories.hate);
@@ -215,7 +215,7 @@ impl OpenAiModeration {
         result
     }
 
-    /// Convert OpenAI category scores to our standard format.
+    /// Convert `OpenAI` category scores to our standard format.
     fn convert_category_scores(
         &self,
         scores: &OpenAiModerationCategoryScores,
@@ -241,7 +241,7 @@ impl OpenAiModeration {
         result
     }
 
-    /// Convert OpenAI moderation result to our standard format.
+    /// Convert `OpenAI` moderation result to our standard format.
     fn convert_result(&self, openai_result: OpenAiModerationResult) -> ModerationResult {
         ModerationResult {
             flagged: openai_result.flagged,
@@ -257,9 +257,9 @@ impl OpenAiModeration {
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -275,12 +275,12 @@ impl OpenAiModeration {
             .unwrap_or_else(|_| "Unknown error".to_string());
 
         match status.as_u16() {
-            400 => LlmError::InvalidInput(format!("Bad request: {}", error_text)),
+            400 => LlmError::InvalidInput(format!("Bad request: {error_text}")),
             401 => LlmError::AuthenticationError("Invalid API key".to_string()),
             429 => LlmError::RateLimitError("Rate limit exceeded".to_string()),
             _ => LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI Moderation API error {}: {}", status, error_text),
+                message: format!("OpenAI Moderation API error {status}: {error_text}"),
                 details: None,
             },
         }
@@ -306,7 +306,7 @@ impl ModerationCapability for OpenAiModeration {
             .json(&openai_request)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -315,7 +315,7 @@ impl ModerationCapability for OpenAiModeration {
         let openai_response: OpenAiModerationResponse = response
             .json()
             .await
-            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {}", e)))?;
+            .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
 
         // Convert to our standard format
         let results: Vec<ModerationResult> = openai_response

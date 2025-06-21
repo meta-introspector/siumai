@@ -105,10 +105,10 @@ async fn demo_basic_image_analysis(api_key: &str) -> Result<(), Box<dyn std::err
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   📊 Analysis Result:");
-                println!("   {}", text);
+                println!("   {text}");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -147,10 +147,10 @@ async fn demo_detailed_description(api_key: &str) -> Result<(), Box<dyn std::err
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   📝 Detailed Description:");
-                println!("   {}", text);
+                println!("   {text}");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -188,10 +188,10 @@ async fn demo_object_detection(api_key: &str) -> Result<(), Box<dyn std::error::
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🎯 Object Detection Results:");
-                println!("   {}", text);
+                println!("   {text}");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -229,10 +229,10 @@ async fn demo_text_extraction(api_key: &str) -> Result<(), Box<dyn std::error::E
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   📝 Extracted Text:");
-                println!("   {}", text);
+                println!("   {text}");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -270,10 +270,10 @@ async fn demo_image_comparison(api_key: &str) -> Result<(), Box<dyn std::error::
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   ⚖️ Comparison Results:");
-                println!("   {}", text);
+                println!("   {text}");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -307,7 +307,7 @@ async fn demo_cost_optimization(api_key: &str) -> Result<(), Box<dyn std::error:
                 println!("   💰 Low-cost analysis: {}", text.trim());
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Strategy 2: Batch processing
@@ -332,7 +332,7 @@ async fn demo_cost_optimization(api_key: &str) -> Result<(), Box<dyn std::error:
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     // Strategy 3: Preprocessing recommendations
@@ -398,4 +398,4 @@ async fn demo_cost_optimization(api_key: &str) -> Result<(), Box<dyn std::error:
 /// - Add result caching
 /// - Create vision workflows
 /// - Optimize for specific use cases
-fn _documentation() {}
+const fn _documentation() {}

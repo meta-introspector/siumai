@@ -1,4 +1,4 @@
-//! OpenAI Streaming Implementation
+//! `OpenAI` Streaming Implementation
 //!
 //! This module provides OpenAI-specific streaming functionality for chat completions.
 
@@ -11,7 +11,7 @@ use crate::types::{ChatRequest, ResponseMetadata, Usage};
 
 use super::config::OpenAiConfig;
 
-/// OpenAI Server-Sent Events (SSE) response structure
+/// `OpenAI` Server-Sent Events (SSE) response structure
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiStreamResponse {
@@ -31,7 +31,7 @@ struct OpenAiStreamResponse {
     usage: Option<OpenAiUsage>,
 }
 
-/// OpenAI stream choice
+/// `OpenAI` stream choice
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiStreamChoice {
@@ -45,7 +45,7 @@ struct OpenAiStreamChoice {
     finish_reason: Option<String>,
 }
 
-/// OpenAI stream delta
+/// `OpenAI` stream delta
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiStreamDelta {
@@ -59,7 +59,7 @@ struct OpenAiStreamDelta {
     reasoning: Option<String>,
 }
 
-/// OpenAI tool call delta
+/// `OpenAI` tool call delta
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiToolCallDelta {
@@ -73,7 +73,7 @@ struct OpenAiToolCallDelta {
     function: Option<OpenAiFunctionCallDelta>,
 }
 
-/// OpenAI function call delta
+/// `OpenAI` function call delta
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiFunctionCallDelta {
     /// Function name
@@ -82,7 +82,7 @@ struct OpenAiFunctionCallDelta {
     arguments: Option<String>,
 }
 
-/// OpenAI usage information
+/// `OpenAI` usage information
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiUsage {
     /// Prompt tokens
@@ -97,7 +97,7 @@ struct OpenAiUsage {
     prompt_tokens_details: Option<OpenAiPromptTokensDetails>,
 }
 
-/// OpenAI completion tokens details
+/// `OpenAI` completion tokens details
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct OpenAiCompletionTokensDetails {
@@ -109,7 +109,7 @@ struct OpenAiCompletionTokensDetails {
     rejected_prediction_tokens: Option<u32>,
 }
 
-/// OpenAI prompt tokens details
+/// `OpenAI` prompt tokens details
 #[derive(Debug, Clone, Deserialize)]
 struct OpenAiPromptTokensDetails {
     /// Cached tokens
@@ -119,18 +119,18 @@ struct OpenAiPromptTokensDetails {
     audio_tokens: Option<u32>,
 }
 
-/// OpenAI streaming client
+/// `OpenAI` streaming client
 #[derive(Clone)]
 pub struct OpenAiStreaming {
-    /// OpenAI configuration
+    /// `OpenAI` configuration
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
 }
 
 impl OpenAiStreaming {
-    /// Create a new OpenAI streaming client
-    pub fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
+    /// Create a new `OpenAI` streaming client
+    pub const fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         Self {
             config,
             http_client,
@@ -177,12 +177,12 @@ impl OpenAiStreaming {
         if let Some(response_format) = &self.config.openai_params.response_format {
             request_body["response_format"] =
                 serde_json::to_value(response_format).map_err(|e| {
-                    LlmError::JsonError(format!("Failed to serialize response_format: {}", e))
+                    LlmError::JsonError(format!("Failed to serialize response_format: {e}"))
                 })?;
         }
         if let Some(tool_choice) = &self.config.openai_params.tool_choice {
             request_body["tool_choice"] = serde_json::to_value(tool_choice).map_err(|e| {
-                LlmError::JsonError(format!("Failed to serialize tool_choice: {}", e))
+                LlmError::JsonError(format!("Failed to serialize tool_choice: {e}"))
             })?;
         }
         if let Some(parallel_tool_calls) = self.config.openai_params.parallel_tool_calls {
@@ -202,9 +202,9 @@ impl OpenAiStreaming {
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {
             let header_name = reqwest::header::HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header name: {e}")))?;
             let header_value = reqwest::header::HeaderValue::from_str(&value)
-                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {}", e)))?;
+                .map_err(|e| LlmError::HttpError(format!("Invalid header value: {e}")))?;
             headers.insert(header_name, header_value);
         }
 
@@ -216,7 +216,7 @@ impl OpenAiStreaming {
             .json(&request_body)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
@@ -226,7 +226,7 @@ impl OpenAiStreaming {
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
-                message: format!("OpenAI API error {}: {}", status, error_text),
+                message: format!("OpenAI API error {status}: {error_text}"),
                 details: None,
             });
         }
@@ -243,7 +243,7 @@ impl OpenAiStreaming {
     ) -> Result<impl Stream<Item = Result<ChatStreamEvent, LlmError>>, LlmError> {
         let stream = response
             .bytes_stream()
-            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {}", e))));
+            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
 
         Ok(stream.filter_map(move |chunk_result| {
             let streaming = self.clone();
@@ -283,8 +283,7 @@ impl OpenAiStreaming {
                     }
                     Err(e) => {
                         return Some(Err(LlmError::ParseError(format!(
-                            "Failed to parse SSE data: {}",
-                            e
+                            "Failed to parse SSE data: {e}"
                         ))));
                     }
                 }
@@ -294,7 +293,7 @@ impl OpenAiStreaming {
         None
     }
 
-    /// Convert OpenAI stream response to our ChatStreamEvent
+    /// Convert `OpenAI` stream response to our `ChatStreamEvent`
     fn convert_openai_response(&self, response: OpenAiStreamResponse) -> ChatStreamEvent {
         // Handle usage information (final chunk)
         if let Some(usage) = response.usage {
@@ -356,7 +355,7 @@ impl OpenAiStreaming {
         }
     }
 
-    /// Convert messages to OpenAI format
+    /// Convert messages to `OpenAI` format
     fn convert_messages(
         &self,
         messages: &[crate::types::ChatMessage],
@@ -376,7 +375,7 @@ impl OpenAiStreaming {
         Ok(serde_json::Value::Array(openai_messages))
     }
 
-    /// Convert tools to OpenAI format
+    /// Convert tools to `OpenAI` format
     fn convert_tools(&self, tools: &[crate::types::Tool]) -> Result<serde_json::Value, LlmError> {
         // This is a simplified conversion - in a real implementation,
         // you'd need to handle the full tool specification

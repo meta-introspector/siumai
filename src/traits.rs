@@ -102,7 +102,7 @@ pub trait ChatExtensions: ChatCapability {
         response
             .content_text()
             .ok_or_else(|| LlmError::InternalError("No text in summary response".to_string()))
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
     }
 
     /// Simple text completion - just send a prompt and get a response.
@@ -130,7 +130,7 @@ pub trait ChatExtensions: ChatCapability {
         response
             .content_text()
             .ok_or_else(|| LlmError::InternalError("No text in response".to_string()))
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
     }
 
     /// Simple system-prompted completion.
@@ -168,7 +168,7 @@ pub trait ChatExtensions: ChatCapability {
         response
             .content_text()
             .ok_or_else(|| LlmError::InternalError("No text in response".to_string()))
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
     }
 
     /// Continue a conversation with a new user message.
@@ -228,9 +228,7 @@ pub trait ChatExtensions: ChatCapability {
         target_language: String,
     ) -> Result<String, LlmError> {
         let prompt = format!(
-            "Translate the following text to {}: {}",
-            target_language,
-            text
+            "Translate the following text to {target_language}: {text}"
         );
         self.ask(prompt).await
     }
@@ -249,10 +247,10 @@ pub trait ChatExtensions: ChatCapability {
         audience: Option<String>,
     ) -> Result<String, LlmError> {
         let audience_str = audience
-            .map(|a| format!(" to {}", a))
+            .map(|a| format!(" to {a}"))
             .unwrap_or_else(|| " in simple terms".to_string());
 
-        let prompt = format!("Explain {}{}", concept, audience_str);
+        let prompt = format!("Explain {concept}{audience_str}");
         self.ask(prompt).await
     }
 
@@ -270,14 +268,13 @@ pub trait ChatExtensions: ChatCapability {
         prompt: String,
     ) -> Result<String, LlmError> {
         let system_prompt = format!(
-            "You are a creative writer. Generate a {} based on the user's prompt.",
-            content_type
+            "You are a creative writer. Generate a {content_type} based on the user's prompt."
         );
         self.ask_with_system(system_prompt, prompt).await
     }
 }
 
-/// Automatic implementation of ChatExtensions for all types that implement ChatCapability
+/// Automatic implementation of `ChatExtensions` for all types that implement `ChatCapability`
 impl<T: ChatCapability> ChatExtensions for T {}
 
 /// Unified audio processing capability interface.
@@ -933,43 +930,43 @@ impl ProviderCapabilities {
     }
 
     /// Enables chat capability.
-    pub fn with_chat(mut self) -> Self {
+    pub const fn with_chat(mut self) -> Self {
         self.chat = true;
         self
     }
 
     /// Enables audio capability.
-    pub fn with_audio(mut self) -> Self {
+    pub const fn with_audio(mut self) -> Self {
         self.audio = true;
         self
     }
 
     /// Enables vision capability.
-    pub fn with_vision(mut self) -> Self {
+    pub const fn with_vision(mut self) -> Self {
         self.vision = true;
         self
     }
 
     /// Enables tool capability.
-    pub fn with_tools(mut self) -> Self {
+    pub const fn with_tools(mut self) -> Self {
         self.tools = true;
         self
     }
 
     /// Enables embedding capability.
-    pub fn with_embedding(mut self) -> Self {
+    pub const fn with_embedding(mut self) -> Self {
         self.embedding = true;
         self
     }
 
     /// Enables streaming.
-    pub fn with_streaming(mut self) -> Self {
+    pub const fn with_streaming(mut self) -> Self {
         self.streaming = true;
         self
     }
 
     /// Enables file management capability.
-    pub fn with_file_management(mut self) -> Self {
+    pub const fn with_file_management(mut self) -> Self {
         self.file_management = true;
         self
     }

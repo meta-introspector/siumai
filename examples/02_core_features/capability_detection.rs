@@ -43,14 +43,14 @@ async fn demonstrate_basic_capability_detection() {
     let providers = create_test_providers().await;
     
     for (name, client) in providers {
-        println!("   Provider: {}", name);
+        println!("   Provider: {name}");
         
         let capabilities = detect_capabilities(client.as_ref(), &name).await;
         
         println!("      📋 Detected Capabilities:");
         for (feature, supported) in capabilities {
             let status = if supported { "✅" } else { "❌" };
-            println!("         {} {}", status, feature);
+            println!("         {status} {feature}");
         }
         println!();
     }
@@ -72,12 +72,12 @@ async fn demonstrate_feature_availability() {
     ];
 
     for feature in features_to_test {
-        println!("   Feature: {}", feature);
+        println!("   Feature: {feature}");
         
         for (name, client) in &providers {
             let available = check_feature_availability(client.as_ref(), name, feature).await;
             let status = if available { "✅" } else { "❌" };
-            println!("      {} {}", status, name);
+            println!("      {status} {name}");
         }
         println!();
     }
@@ -90,7 +90,7 @@ async fn demonstrate_graceful_feature_degradation() {
     let providers = create_test_providers().await;
     
     if let Some((name, client)) = providers.into_iter().next() {
-        println!("   Using provider: {}", name);
+        println!("   Using provider: {name}");
         
         // Test streaming with fallback
         println!("   Testing streaming with fallback:");
@@ -99,7 +99,7 @@ async fn demonstrate_graceful_feature_degradation() {
                 println!("      ✅ Got response: {}", &response[..response.len().min(100)]);
             }
             Err(e) => {
-                println!("      ❌ Failed: {}", e);
+                println!("      ❌ Failed: {e}");
             }
         }
         
@@ -110,7 +110,7 @@ async fn demonstrate_graceful_feature_degradation() {
                 println!("      ✅ Got response: {}", &response[..response.len().min(100)]);
             }
             Err(e) => {
-                println!("      ❌ Failed: {}", e);
+                println!("      ❌ Failed: {e}");
             }
         }
     } else {
@@ -127,7 +127,7 @@ async fn demonstrate_provider_metadata() {
     let providers = create_test_providers().await;
     
     for (name, client) in providers {
-        println!("   Provider: {}", name);
+        println!("   Provider: {name}");
         
         let metadata = get_provider_metadata(client.as_ref(), &name).await;
         
@@ -150,7 +150,7 @@ async fn demonstrate_adaptive_behavior() {
     let providers = create_test_providers().await;
     
     if let Some((name, client)) = providers.into_iter().next() {
-        println!("   Using provider: {}", name);
+        println!("   Using provider: {name}");
         
         // Adapt behavior based on capabilities
         let message = "Explain machine learning in simple terms";
@@ -161,7 +161,7 @@ async fn demonstrate_adaptive_behavior() {
                 println!("   Response: {}", &response[..response.len().min(150)]);
             }
             Err(e) => {
-                println!("   ❌ Adaptive chat failed: {}", e);
+                println!("   ❌ Adaptive chat failed: {e}");
             }
         }
     } else {
@@ -297,28 +297,25 @@ async fn try_streaming_with_fallback(client: &dyn ChatCapability) -> Result<Stri
     let messages = vec![user!("Count from 1 to 5")];
     
     // Try streaming first
-    match client.chat_stream(messages.clone(), None).await {
-        Ok(mut stream) => {
-            use futures_util::StreamExt;
-            let mut result = String::new();
-            
-            while let Some(event) = stream.next().await {
-                match event? {
-                    ChatStreamEvent::ContentDelta { delta, .. } => {
-                        result.push_str(&delta);
-                    }
-                    ChatStreamEvent::Done { .. } => break,
-                    _ => {}
+    if let Ok(mut stream) = client.chat_stream(messages.clone(), None).await {
+        use futures_util::StreamExt;
+        let mut result = String::new();
+        
+        while let Some(event) = stream.next().await {
+            match event? {
+                ChatStreamEvent::ContentDelta { delta, .. } => {
+                    result.push_str(&delta);
                 }
+                ChatStreamEvent::Done { .. } => break,
+                _ => {}
             }
-            
-            Ok(format!("Streaming: {}", result))
         }
-        Err(_) => {
-            // Fallback to regular chat
-            let response = client.chat(messages).await?;
-            Ok(format!("Fallback: {}", response.content_text().unwrap_or_default()))
-        }
+        
+        Ok(format!("Streaming: {result}"))
+    } else {
+        // Fallback to regular chat
+        let response = client.chat(messages).await?;
+        Ok(format!("Fallback: {}", response.content_text().unwrap_or_default()))
     }
 }
 
@@ -327,16 +324,13 @@ async fn try_vision_with_fallback(client: &dyn ChatCapability) -> Result<String,
     // Try vision request (simplified)
     let messages = vec![user!("Describe what you see in this image: [image would be here]")];
     
-    match client.chat(messages.clone()).await {
-        Ok(response) => {
-            Ok(format!("Vision: {}", response.content_text().unwrap_or_default()))
-        }
-        Err(_) => {
-            // Fallback to text-only
-            let fallback_messages = vec![user!("Explain how image analysis works")];
-            let response = client.chat(fallback_messages).await?;
-            Ok(format!("Text fallback: {}", response.content_text().unwrap_or_default()))
-        }
+    if let Ok(response) = client.chat(messages.clone()).await {
+        Ok(format!("Vision: {}", response.content_text().unwrap_or_default()))
+    } else {
+        // Fallback to text-only
+        let fallback_messages = vec![user!("Explain how image analysis works")];
+        let response = client.chat(fallback_messages).await?;
+        Ok(format!("Text fallback: {}", response.content_text().unwrap_or_default()))
     }
 }
 
@@ -359,7 +353,7 @@ async fn get_provider_metadata(_client: &dyn ChatCapability, provider_name: &str
             provider_type: "Cloud API".to_string(),
             model: "gpt-4o-mini".to_string(),
             max_tokens: Some(4096),
-            context_window: 128000,
+            context_window: 128_000,
             supports_streaming: true,
             supports_vision: true,
             cost_per_1k_tokens: 0.15,
@@ -368,7 +362,7 @@ async fn get_provider_metadata(_client: &dyn ChatCapability, provider_name: &str
             provider_type: "Cloud API".to_string(),
             model: "claude-3-5-haiku".to_string(),
             max_tokens: Some(4096),
-            context_window: 200000,
+            context_window: 200_000,
             supports_streaming: true,
             supports_vision: true,
             cost_per_1k_tokens: 0.25,
@@ -400,7 +394,7 @@ async fn adaptive_chat(client: &dyn ChatCapability, provider_name: &str, message
     
     // Adjust message based on capabilities
     let adjusted_message = if metadata.supports_vision {
-        format!("{} (Note: This provider supports vision)", message)
+        format!("{message} (Note: This provider supports vision)")
     } else {
         message.to_string()
     };
@@ -410,28 +404,25 @@ async fn adaptive_chat(client: &dyn ChatCapability, provider_name: &str, message
     // Use streaming if supported, otherwise regular chat
     if metadata.supports_streaming {
         // Try streaming
-        match client.chat_stream(messages.clone(), None).await {
-            Ok(mut stream) => {
-                use futures_util::StreamExt;
-                let mut result = String::new();
-                
-                while let Some(event) = stream.next().await {
-                    match event? {
-                        ChatStreamEvent::ContentDelta { delta, .. } => {
-                            result.push_str(&delta);
-                        }
-                        ChatStreamEvent::Done { .. } => break,
-                        _ => {}
+        if let Ok(mut stream) = client.chat_stream(messages.clone(), None).await {
+            use futures_util::StreamExt;
+            let mut result = String::new();
+            
+            while let Some(event) = stream.next().await {
+                match event? {
+                    ChatStreamEvent::ContentDelta { delta, .. } => {
+                        result.push_str(&delta);
                     }
+                    ChatStreamEvent::Done { .. } => break,
+                    _ => {}
                 }
-                
-                Ok(result)
             }
-            Err(_) => {
-                // Fallback to regular chat
-                let response = client.chat(messages).await?;
-                Ok(response.content_text().unwrap_or_default().to_string())
-            }
+            
+            Ok(result)
+        } else {
+            // Fallback to regular chat
+            let response = client.chat(messages).await?;
+            Ok(response.content_text().unwrap_or_default().to_string())
         }
     } else {
         // Use regular chat

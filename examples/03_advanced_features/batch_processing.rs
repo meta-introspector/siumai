@@ -74,9 +74,9 @@ async fn demonstrate_basic_batch_processing() {
         let failed = results.len() - successful;
 
         println!("   📊 Results:");
-        println!("      ✅ Successful: {}", successful);
-        println!("      ❌ Failed: {}", failed);
-        println!("      ⏱️  Total time: {:?}", duration);
+        println!("      ✅ Successful: {successful}");
+        println!("      ❌ Failed: {failed}");
+        println!("      ⏱️  Total time: {duration:?}");
         println!("      📈 Throughput: {:.2} tasks/second", 
             results.len() as f64 / duration.as_secs_f64());
 
@@ -111,9 +111,9 @@ async fn demonstrate_rate_limited_processing() {
         let failed = results.len() - successful;
 
         println!("   📊 Rate-Limited Results:");
-        println!("      ✅ Successful: {}", successful);
-        println!("      ❌ Failed: {}", failed);
-        println!("      ⏱️  Total time: {:?}", duration);
+        println!("      ✅ Successful: {successful}");
+        println!("      ❌ Failed: {failed}");
+        println!("      ⏱️  Total time: {duration:?}");
         println!("      🐌 Controlled throughput: {:.2} tasks/second", 
             results.len() as f64 / duration.as_secs_f64());
 
@@ -140,8 +140,8 @@ async fn demonstrate_progress_tracking() {
         let failed = results.len() - successful;
 
         println!("\n   📊 Final Results:");
-        println!("      ✅ Successful: {}", successful);
-        println!("      ❌ Failed: {}", failed);
+        println!("      ✅ Successful: {successful}");
+        println!("      ❌ Failed: {failed}");
         println!("      📈 Success rate: {:.1}%", 
             (successful as f64 / results.len() as f64) * 100.0);
 
@@ -180,9 +180,9 @@ async fn demonstrate_error_handling_at_scale() {
         }
 
         println!("   📊 Error Handling Results:");
-        println!("      ✅ Successful: {}", successful);
-        println!("      🔄 Retried and succeeded: {}", retried);
-        println!("      ❌ Permanently failed: {}", failed);
+        println!("      ✅ Successful: {successful}");
+        println!("      🔄 Retried and succeeded: {retried}");
+        println!("      ❌ Permanently failed: {failed}");
 
         println!("   ✅ Error handling at scale completed");
     } else {
@@ -200,7 +200,7 @@ async fn demonstrate_memory_efficient_processing() {
         let total_tasks = 50;
         let chunk_size = 10;
 
-        println!("   Processing {} tasks in chunks of {}...", total_tasks, chunk_size);
+        println!("   Processing {total_tasks} tasks in chunks of {chunk_size}...");
 
         let mut total_successful = 0;
         let mut total_failed = 0;
@@ -221,7 +221,7 @@ async fn demonstrate_memory_efficient_processing() {
             total_successful += chunk_successful;
             total_failed += chunk_failed;
 
-            println!("      Chunk results: {} ✅, {} ❌", chunk_successful, chunk_failed);
+            println!("      Chunk results: {chunk_successful} ✅, {chunk_failed} ❌");
 
             // Small delay between chunks to be respectful
             sleep(Duration::from_millis(100)).await;
@@ -230,9 +230,9 @@ async fn demonstrate_memory_efficient_processing() {
         let duration = start_time.elapsed();
 
         println!("\n   📊 Memory-Efficient Results:");
-        println!("      ✅ Total successful: {}", total_successful);
-        println!("      ❌ Total failed: {}", total_failed);
-        println!("      ⏱️  Total time: {:?}", duration);
+        println!("      ✅ Total successful: {total_successful}");
+        println!("      ❌ Total failed: {total_failed}");
+        println!("      ⏱️  Total time: {duration:?}");
         println!("      💾 Memory usage: Constant (chunked processing)");
 
         println!("   ✅ Memory-efficient processing completed");
@@ -338,7 +338,7 @@ async fn process_with_progress_tracking(
         completed += 1;
         
         let progress = (completed as f64 / total as f64) * 100.0;
-        print!("\r   Progress: {:.1}% ({}/{})", progress, completed, total);
+        print!("\r   Progress: {progress:.1}% ({completed}/{total})");
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
         
         results.push(result);
@@ -364,7 +364,6 @@ async fn process_with_error_handling(
                         Err(e) if attempt < 3 => {
                             // Wait before retry
                             sleep(Duration::from_millis(100 * attempt as u64)).await;
-                            continue;
                         }
                         Err(e) => return Err(e),
                     }

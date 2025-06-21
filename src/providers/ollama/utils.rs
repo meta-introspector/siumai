@@ -22,22 +22,22 @@ pub fn build_headers(additional_headers: &HashMap<String, String>) -> Result<Hea
     headers.insert(
         USER_AGENT,
         HeaderValue::from_str(&format!("siumai/{}", env!("CARGO_PKG_VERSION")))
-            .map_err(|e| LlmError::HttpError(format!("Invalid user agent: {}", e)))?,
+            .map_err(|e| LlmError::HttpError(format!("Invalid user agent: {e}")))?,
     );
     
     // Add additional headers
     for (key, value) in additional_headers {
         let header_name: reqwest::header::HeaderName = key.parse()
-            .map_err(|e| LlmError::HttpError(format!("Invalid header name '{}': {}", key, e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Invalid header name '{key}': {e}")))?;
         let header_value = HeaderValue::from_str(value)
-            .map_err(|e| LlmError::HttpError(format!("Invalid header value for '{}': {}", key, e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Invalid header value for '{key}': {e}")))?;
         headers.insert(header_name, header_value);
     }
     
     Ok(headers)
 }
 
-/// Convert common ChatMessage to Ollama format
+/// Convert common `ChatMessage` to Ollama format
 pub fn convert_chat_message(message: &ChatMessage) -> OllamaChatMessage {
     let role_str = match message.role {
         crate::types::MessageRole::System => "system",
@@ -110,7 +110,7 @@ pub fn convert_tool(tool: &Tool) -> OllamaTool {
     }
 }
 
-/// Convert common ToolCall to Ollama format
+/// Convert common `ToolCall` to Ollama format
 pub fn convert_tool_call(tool_call: &ToolCall) -> OllamaToolCall {
     OllamaToolCall {
         function: OllamaFunctionCall {
@@ -200,7 +200,7 @@ pub fn parse_streaming_line(line: &str) -> Result<Option<serde_json::Value>, Llm
     // Parse JSON
     serde_json::from_str(json_str)
         .map(Some)
-        .map_err(|e| LlmError::ParseError(format!("Failed to parse streaming response: {}", e)))
+        .map_err(|e| LlmError::ParseError(format!("Failed to parse streaming response: {e}")))
 }
 
 /// Extract model name from model string (handles model:tag format)

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 /// OpenAI-compatible provider configuration.
 ///
 /// This struct holds the configuration for any OpenAI-compatible provider.
-/// It uses the OpenAI client internally but with provider-specific settings.
+/// It uses the `OpenAI` client internally but with provider-specific settings.
 #[derive(Debug, Clone)]
 pub struct OpenAiCompatibleConfig {
     /// Provider identifier
@@ -64,12 +64,12 @@ impl OpenAiCompatibleConfig {
         value: T
     ) -> Result<Self, LlmError> {
         let json_value = serde_json::to_value(value)
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid parameter value: {}", e)))?;
+            .map_err(|e| LlmError::ConfigurationError(format!("Invalid parameter value: {e}")))?;
         self.provider_params.insert(key, json_value);
         Ok(self)
     }
 
-    /// Convert to OpenAI configuration
+    /// Convert to `OpenAI` configuration
     pub fn to_openai_config(
         self,
         default_base_url: &str,

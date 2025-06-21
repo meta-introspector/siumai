@@ -197,7 +197,7 @@ pub fn is_model_supported(provider_type: &ProviderType, model: &str) -> bool {
 }
 
 /// Get the default model for a provider
-pub fn get_default_model(provider_type: &ProviderType) -> Option<&'static str> {
+pub const fn get_default_model(provider_type: &ProviderType) -> Option<&'static str> {
     match provider_type {
         ProviderType::OpenAi => Some("gpt-4o"),
         ProviderType::Anthropic => Some("claude-3-5-sonnet-20241022"),
@@ -221,16 +221,14 @@ impl ProviderFactory {
         // Check API key
         if api_key.is_empty() {
             return Err(crate::error::LlmError::MissingApiKey(format!(
-                "API key is required for {}",
-                provider_type
+                "API key is required for {provider_type}"
             )));
         }
 
         // Check model support
         if !is_model_supported(provider_type, model) {
             return Err(crate::error::LlmError::ModelNotSupported(format!(
-                "Model '{}' is not supported by {}",
-                model, provider_type
+                "Model '{model}' is not supported by {provider_type}"
             )));
         }
 

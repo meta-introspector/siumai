@@ -1,4 +1,4 @@
-//! OpenAI Provider Builder
+//! `OpenAI` Provider Builder
 //!
 //! This module provides the OpenAI-specific builder implementation that follows
 //! the design pattern established in the main builder module.
@@ -10,10 +10,10 @@ use crate::types::*;
 
 use super::{OpenAiClient, OpenAiConfig};
 
-/// OpenAI-specific builder for configuring OpenAI clients.
+/// OpenAI-specific builder for configuring `OpenAI` clients.
 ///
 /// This builder provides OpenAI-specific configuration options while
-/// inheriting common HTTP and timeout settings from the base LlmBuilder.
+/// inheriting common HTTP and timeout settings from the base `LlmBuilder`.
 ///
 /// # Example
 /// ```rust,no_run
@@ -37,9 +37,9 @@ use super::{OpenAiClient, OpenAiConfig};
 pub struct OpenAiBuilder {
     /// Base builder with HTTP configuration
     base: LlmBuilder,
-    /// OpenAI API key
+    /// `OpenAI` API key
     api_key: Option<String>,
-    /// Base URL for OpenAI API
+    /// Base URL for `OpenAI` API
     base_url: Option<String>,
     /// Organization ID
     organization: Option<String>,
@@ -56,7 +56,7 @@ pub struct OpenAiBuilder {
 }
 
 impl OpenAiBuilder {
-    /// Create a new OpenAI builder from the base LLM builder.
+    /// Create a new `OpenAI` builder from the base LLM builder.
     ///
     /// # Arguments
     /// * `base` - The base LLM builder with HTTP configuration
@@ -76,30 +76,30 @@ impl OpenAiBuilder {
 
     // === Authentication and Connection ===
 
-    /// Set the OpenAI API key.
+    /// Set the `OpenAI` API key.
     ///
     /// If not provided, the builder will attempt to read from the
     /// `OPENAI_API_KEY` environment variable.
     ///
     /// # Arguments
-    /// * `key` - The OpenAI API key
+    /// * `key` - The `OpenAI` API key
     pub fn api_key<S: Into<String>>(mut self, key: S) -> Self {
         self.api_key = Some(key.into());
         self
     }
 
-    /// Set a custom base URL for the OpenAI API.
+    /// Set a custom base URL for the `OpenAI` API.
     ///
     /// This is useful for using OpenAI-compatible APIs or proxies.
     ///
     /// # Arguments
-    /// * `url` - The base URL (e.g., "https://api.openai.com/v1")
+    /// * `url` - The base URL (e.g., "<https://api.openai.com/v1>")
     pub fn base_url<S: Into<String>>(mut self, url: S) -> Self {
         self.base_url = Some(url.into());
         self
     }
 
-    /// Set the OpenAI organization ID.
+    /// Set the `OpenAI` organization ID.
     ///
     /// # Arguments
     /// * `org` - The organization ID
@@ -108,7 +108,7 @@ impl OpenAiBuilder {
         self
     }
 
-    /// Set the OpenAI project ID.
+    /// Set the `OpenAI` project ID.
     ///
     /// # Arguments
     /// * `project` - The project ID
@@ -134,7 +134,7 @@ impl OpenAiBuilder {
     ///
     /// # Arguments
     /// * `temp` - Temperature value (0.0 to 2.0)
-    pub fn temperature(mut self, temp: f32) -> Self {
+    pub const fn temperature(mut self, temp: f32) -> Self {
         self.common_params.temperature = Some(temp);
         self
     }
@@ -143,16 +143,16 @@ impl OpenAiBuilder {
     ///
     /// # Arguments
     /// * `tokens` - Maximum number of tokens
-    pub fn max_tokens(mut self, tokens: u32) -> Self {
+    pub const fn max_tokens(mut self, tokens: u32) -> Self {
         self.common_params.max_tokens = Some(tokens);
         self
     }
 
-    /// Set the top_p parameter for nucleus sampling.
+    /// Set the `top_p` parameter for nucleus sampling.
     ///
     /// # Arguments
     /// * `top_p` - Top-p value (0.0 to 1.0)
-    pub fn top_p(mut self, top_p: f32) -> Self {
+    pub const fn top_p(mut self, top_p: f32) -> Self {
         self.common_params.top_p = Some(top_p);
         self
     }
@@ -170,7 +170,7 @@ impl OpenAiBuilder {
     ///
     /// # Arguments
     /// * `seed` - Random seed value
-    pub fn seed(mut self, seed: u64) -> Self {
+    pub const fn seed(mut self, seed: u64) -> Self {
         self.common_params.seed = Some(seed);
         self
     }
@@ -180,7 +180,7 @@ impl OpenAiBuilder {
     /// Set the response format.
     ///
     /// # Arguments
-    /// * `format` - The response format (text, json_object, etc.)
+    /// * `format` - The response format (text, `json_object`, etc.)
     pub fn response_format(mut self, format: ResponseFormat) -> Self {
         self.openai_params.response_format = Some(format);
         self
@@ -199,7 +199,7 @@ impl OpenAiBuilder {
     ///
     /// # Arguments
     /// * `penalty` - Frequency penalty (-2.0 to 2.0)
-    pub fn frequency_penalty(mut self, penalty: f32) -> Self {
+    pub const fn frequency_penalty(mut self, penalty: f32) -> Self {
         self.openai_params.frequency_penalty = Some(penalty);
         self
     }
@@ -208,7 +208,7 @@ impl OpenAiBuilder {
     ///
     /// # Arguments
     /// * `penalty` - Presence penalty (-2.0 to 2.0)
-    pub fn presence_penalty(mut self, penalty: f32) -> Self {
+    pub const fn presence_penalty(mut self, penalty: f32) -> Self {
         self.openai_params.presence_penalty = Some(penalty);
         self
     }
@@ -226,7 +226,7 @@ impl OpenAiBuilder {
     ///
     /// # Arguments
     /// * `enabled` - Whether to enable parallel tool calls
-    pub fn parallel_tool_calls(mut self, enabled: bool) -> Self {
+    pub const fn parallel_tool_calls(mut self, enabled: bool) -> Self {
         self.openai_params.parallel_tool_calls = Some(enabled);
         self
     }
@@ -244,10 +244,10 @@ impl OpenAiBuilder {
 
     // === Build Method ===
 
-    /// Build the OpenAI client with the configured settings.
+    /// Build the `OpenAI` client with the configured settings.
     ///
     /// # Returns
-    /// A configured OpenAI client ready for use
+    /// A configured `OpenAI` client ready for use
     ///
     /// # Errors
     /// Returns an error if:

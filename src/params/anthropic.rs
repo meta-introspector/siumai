@@ -78,16 +78,16 @@ impl ParameterMapper for AnthropicParameterMapper {
 
         if let Some(max_tokens) = params.get("max_tokens") {
             if let Some(max_tokens_val) = max_tokens.as_u64() {
-                ParameterValidator::validate_max_tokens(max_tokens_val, 1, 200000, "Anthropic")?;
+                ParameterValidator::validate_max_tokens(max_tokens_val, 1, 200_000, "Anthropic")?;
             }
         }
 
         // Validate Anthropic-specific parameters
         if let Some(thinking_budget) = params.get("thinking_budget") {
             if let Some(budget_val) = thinking_budget.as_u64() {
-                if budget_val > 60000 {
+                if budget_val > 60_000 {
                     return Err(LlmError::InvalidParameter(
-                        "thinking_budget must not exceed 60000 for Anthropic".to_string(),
+                        "thinking_budget must not exceed 60_000 for Anthropic".to_string(),
                     ));
                 }
             }
@@ -120,7 +120,7 @@ impl ParameterMapper for AnthropicParameterMapper {
             temperature_min: 0.0,
             temperature_max: 1.0,
             max_tokens_min: 1,
-            max_tokens_max: 200000,
+            max_tokens_max: 200_000,
             top_p_min: 0.0,
             top_p_max: 1.0,
         }
@@ -174,7 +174,7 @@ impl AnthropicParamsBuilder {
         self
     }
 
-    pub fn thinking_budget(mut self, budget: u32) -> Self {
+    pub const fn thinking_budget(mut self, budget: u32) -> Self {
         self.params.thinking_budget = Some(budget);
         self
     }
@@ -197,7 +197,7 @@ impl AnthropicParamsBuilder {
         self
     }
 
-    pub fn stream(mut self, enabled: bool) -> Self {
+    pub const fn stream(mut self, enabled: bool) -> Self {
         self.params.stream = Some(enabled);
         self
     }
@@ -250,12 +250,12 @@ mod tests {
             seed: Some(42), // Should be removed for Anthropic
         };
 
-        let mapped = mapper.map_common_params(&params);
-        assert_eq!(mapped["model"], "claude-3-5-sonnet-20241022");
-        assert_eq!(mapped["max_tokens"], 1000);
-        assert_eq!(mapped["stop_sequences"], serde_json::json!(["STOP"]));
+        let mapped_params = mapper.map_common_params(&params);
+        assert_eq!(mapped_params["model"], "claude-3-5-sonnet-20241022");
+        assert_eq!(mapped_params["max_tokens"], 1000);
+        assert_eq!(mapped_params["stop_sequences"], serde_json::json!(["STOP"]));
         // Seed should not be present for Anthropic
-        assert!(mapped.get("seed").is_none());
+        assert!(mapped_params.get("seed").is_none());
     }
 
     #[test]
@@ -267,7 +267,7 @@ mod tests {
             "temperature": 0.7,
             "top_p": 0.9,
             "max_tokens": 1000,
-            "thinking_budget": 30000
+            "thinking_budget": 30_000
         });
         assert!(mapper.validate_params(&valid_params).is_ok());
 
@@ -279,7 +279,7 @@ mod tests {
 
         // Invalid thinking budget
         let invalid_budget = serde_json::json!({
-            "thinking_budget": 70000
+            "thinking_budget": 70_000
         });
         assert!(mapper.validate_params(&invalid_budget).is_err());
     }
@@ -291,7 +291,7 @@ mod tests {
 
         let params = AnthropicParamsBuilder::new()
             .cache_control(CacheControl::ephemeral())
-            .thinking_budget(30000)
+            .thinking_budget(30_000)
             .system("You are a helpful assistant".to_string())
             .metadata(metadata)
             .add_metadata("session_id".to_string(), "abc123".to_string())
@@ -301,7 +301,7 @@ mod tests {
             .build();
 
         assert!(params.cache_control.is_some());
-        assert_eq!(params.thinking_budget, Some(30000));
+        assert_eq!(params.thinking_budget, Some(30_000));
         assert_eq!(
             params.system,
             Some("You are a helpful assistant".to_string())

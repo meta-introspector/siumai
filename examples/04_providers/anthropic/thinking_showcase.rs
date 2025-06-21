@@ -115,7 +115,7 @@ async fn demo_step_by_step_solving(api_key: &str) -> Result<(), Box<dyn std::err
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -169,14 +169,14 @@ async fn demo_complex_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
                 
                 for (section, keyword) in analysis_sections {
                     if text.to_lowercase().contains(keyword) {
-                        println!("   ✅ Includes {} analysis", section);
+                        println!("   ✅ Includes {section} analysis");
                     }
                 }
                 
                 println!("   📊 Analysis length: {} words", text.split_whitespace().count());
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -230,7 +230,7 @@ async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::e
                         text.to_lowercase().contains(keyword)
                     );
                     if found {
-                        println!("   ✅ Contains {} reasoning", element);
+                        println!("   ✅ Contains {element} reasoning");
                     }
                 }
                 
@@ -243,7 +243,7 @@ async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::e
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -307,7 +307,7 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
                         text.to_lowercase().contains(keyword)
                     );
                     if found {
-                        println!("   ✅ Uses {} reasoning", pattern);
+                        println!("   ✅ Uses {pattern} reasoning");
                     }
                 }
                 
@@ -318,11 +318,11 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
                                 text.matches("2.").count();
                 
                 if step_count > 0 {
-                    println!("   📊 Identified {} logical steps", step_count);
+                    println!("   📊 Identified {step_count} logical steps");
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -379,7 +379,7 @@ async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error
                         text.to_lowercase().contains(keyword)
                     );
                     if found {
-                        println!("   ✅ Shows {} thinking", indicator);
+                        println!("   ✅ Shows {indicator} thinking");
                     }
                 }
                 
@@ -390,14 +390,14 @@ async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error
                     .sum::<usize>();
                 
                 if idea_count > 0 {
-                    println!("   💡 Generated {} creative concepts", idea_count);
+                    println!("   💡 Generated {idea_count} creative concepts");
                 }
                 
                 // Show creativity in action
                 println!("   🌟 Creative elements identified in response");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -452,4 +452,4 @@ async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error
 /// - Implement thinking process analysis
 /// - Create reasoning templates
 /// - Build problem-solving workflows
-fn _documentation() {}
+const fn _documentation() {}

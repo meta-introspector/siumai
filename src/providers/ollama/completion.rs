@@ -22,7 +22,7 @@ pub struct OllamaCompletionCapability {
 
 impl OllamaCompletionCapability {
     /// Creates a new Ollama completion capability
-    pub fn new(
+    pub const fn new(
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
@@ -117,9 +117,7 @@ impl OllamaCompletionCapability {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Generate request failed: {} - {}",
-                status,
-                error_text
+                "Generate request failed: {status} - {error_text}"
             )));
         }
 
@@ -145,9 +143,7 @@ impl OllamaCompletionCapability {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Generate stream request failed: {} - {}",
-                status,
-                error_text
+                "Generate stream request failed: {status} - {error_text}"
             )));
         }
 
@@ -175,7 +171,7 @@ impl OllamaCompletionCapability {
                         index: Some(0),
                     })
                 }
-                Err(e) => Err(LlmError::StreamError(format!("Stream error: {}", e))),
+                Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
             }
         });
 
@@ -200,9 +196,7 @@ impl OllamaCompletionCapability {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Generate request failed: {} - {}",
-                status,
-                error_text
+                "Generate request failed: {status} - {error_text}"
             )));
         }
 
@@ -234,9 +228,7 @@ impl OllamaCompletionCapability {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Generate request failed: {} - {}",
-                status,
-                error_text
+                "Generate request failed: {status} - {error_text}"
             )));
         }
 

@@ -78,7 +78,7 @@ async fn demonstrate_basic_streaming(provider: &dyn ChatCapability) {
             match event? {
                 ChatStreamEvent::ContentDelta { delta, .. } => {
                     // Print each text chunk as it arrives
-                    print!("{}", delta);
+                    print!("{delta}");
                     io::stdout().flush().unwrap();
                 }
                 ChatStreamEvent::Done { .. } => {
@@ -94,9 +94,9 @@ async fn demonstrate_basic_streaming(provider: &dyn ChatCapability) {
         
         Ok::<_, LlmError>(())
     }.await {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(e) => {
-            println!("\n   ❌ Basic streaming failed: {}\n", e);
+            println!("\n   ❌ Basic streaming failed: {e}\n");
         }
     }
 }
@@ -122,12 +122,12 @@ async fn demonstrate_stream_event_types(provider: &dyn ChatCapability) {
                 ChatStreamEvent::ContentDelta { delta, index } => {
                     text_chunks += 1;
                     total_text.push_str(&delta);
-                    println!("   📝 Text chunk {} (index: {:?}): \"{}\"", text_chunks, index, delta);
+                    println!("   📝 Text chunk {text_chunks} (index: {index:?}): \"{delta}\"");
                 }
                 ChatStreamEvent::Done { finish_reason, usage } => {
                     println!("\n   🏁 Completion event received");
                     if let Some(reason) = finish_reason {
-                        println!("   🏁 Finish reason: {:?}", reason);
+                        println!("   🏁 Finish reason: {reason:?}");
                     }
                     if let Some(usage) = usage {
                         println!("   📊 Usage: {} total tokens", usage.total_tokens);
@@ -144,15 +144,15 @@ async fn demonstrate_stream_event_types(provider: &dyn ChatCapability) {
         }
 
         println!("\n   📈 Stream Statistics:");
-        println!("      • Total text chunks: {}", text_chunks);
+        println!("      • Total text chunks: {text_chunks}");
         println!("      • Final text length: {} characters", total_text.len());
         println!("   ✅ Event types demonstration successful\n");
         
         Ok::<_, LlmError>(())
     }.await {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(e) => {
-            println!("   ❌ Event types demonstration failed: {}\n", e);
+            println!("   ❌ Event types demonstration failed: {e}\n");
         }
     }
 }
@@ -181,14 +181,14 @@ async fn demonstrate_stream_error_handling(_provider: &dyn ChatCapability) {
         while let Some(event) = stream.next().await {
             match event {
                 Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
-                    println!("   📝 Unexpected text: {}", delta);
+                    println!("   📝 Unexpected text: {delta}");
                 }
                 Ok(ChatStreamEvent::Done { .. }) => {
                     println!("   ❌ Unexpected completion");
                     break;
                 }
                 Err(e) => {
-                    println!("   ✅ Caught error in stream: {}", e);
+                    println!("   ✅ Caught error in stream: {e}");
                     break;
                 }
                 _ => {}
@@ -197,9 +197,9 @@ async fn demonstrate_stream_error_handling(_provider: &dyn ChatCapability) {
         
         Ok::<_, LlmError>(())
     }.await {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(e) => {
-            println!("   ✅ Caught exception: {}", e);
+            println!("   ✅ Caught exception: {e}");
         }
     }
 
@@ -261,11 +261,11 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
         };
 
         println!("\n   📊 Performance Metrics:");
-        println!("      • Time to first chunk: {}ms", first_chunk_ms);
+        println!("      • Time to first chunk: {first_chunk_ms}ms");
         println!("      • Total response time: {}ms", total_time.as_millis());
-        println!("      • Total chunks: {}", chunk_count);
-        println!("      • Total characters: {}", total_chars);
-        println!("      • Average chunk interval: {}ms", avg_chunk_interval);
+        println!("      • Total chunks: {chunk_count}");
+        println!("      • Total characters: {total_chars}");
+        println!("      • Average chunk interval: {avg_chunk_interval}ms");
         if total_time.as_millis() > 0 {
             println!("      • Characters per second: {:.1}", 
                 (total_chars as f64 * 1000.0) / total_time.as_millis() as f64);
@@ -281,9 +281,9 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
         
         Ok::<_, LlmError>(())
     }.await {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(e) => {
-            println!("   ❌ Performance demonstration failed: {}\n", e);
+            println!("   ❌ Performance demonstration failed: {e}\n");
         }
     }
 }
@@ -291,9 +291,9 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
 /// 🎯 Key Streaming Concepts Summary:
 ///
 /// Stream Events:
-/// - ContentDelta: Incremental text content as it's generated
+/// - `ContentDelta`: Incremental text content as it's generated
 /// - Done: Stream completion with final response metadata
-/// - UsageUpdate: Token usage information during streaming
+/// - `UsageUpdate`: Token usage information during streaming
 ///
 /// Benefits:
 /// - Reduced perceived latency
@@ -309,7 +309,7 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
 /// 5. Consider buffering for UI updates
 ///
 /// Next Steps:
-/// - error_handling.rs: Production-ready error management
-/// - ../03_advanced_features/: Advanced streaming patterns
-/// - ../04_providers/: Provider-specific streaming features
-fn _documentation() {}
+/// - `error_handling.rs`: Production-ready error management
+/// - ../`03_advanced_features/`: Advanced streaming patterns
+/// - ../`04_providers/`: Provider-specific streaming features
+const fn _documentation() {}

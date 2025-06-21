@@ -1,8 +1,8 @@
-//! 🚀 OpenAI Enhanced Features
+//! 🚀 `OpenAI` Enhanced Features
 
 #![allow(clippy::needless_borrows_for_generic_args)]
 //! 
-//! This example demonstrates advanced OpenAI features including:
+//! This example demonstrates advanced `OpenAI` features including:
 //! - JSON mode and structured outputs
 //! - Function calling and tools
 //! - System fingerprints for consistency
@@ -101,7 +101,7 @@ async fn demo_json_mode(api_key: &str) -> Result<(), Box<dyn std::error::Error>>
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   📄 JSON Response:");
-                println!("   {}", text);
+                println!("   {text}");
                 
                 // Try to parse as JSON to validate structure
                 match serde_json::from_str::<serde_json::Value>(&text) {
@@ -110,7 +110,7 @@ async fn demo_json_mode(api_key: &str) -> Result<(), Box<dyn std::error::Error>>
                 }
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -149,10 +149,10 @@ async fn demo_function_calling(api_key: &str) -> Result<(), Box<dyn std::error::
         Ok(response) => {
             if let Some(text) = response.text() {
                 println!("   🔧 Function Call Response:");
-                println!("   {}", text);
+                println!("   {text}");
             }
         }
-        Err(e) => println!("   ❌ Error: {}", e),
+        Err(e) => println!("   ❌ Error: {e}"),
     }
 
     Ok(())
@@ -181,14 +181,14 @@ async fn demo_system_fingerprints(api_key: &str) -> Result<(), Box<dyn std::erro
     println!("   Making multiple requests to test consistency...");
     
     for i in 1..=3 {
-        println!("   Request {}:", i);
+        println!("   Request {i}:");
         match ai.chat(messages.clone()).await {
             Ok(response) => {
                 if let Some(text) = response.text() {
                     println!("   📝 Response: {}", text.lines().next().unwrap_or(""));
                 }
             }
-            Err(e) => println!("   ❌ Error: {}", e),
+            Err(e) => println!("   ❌ Error: {e}"),
         }
     }
 
@@ -216,12 +216,11 @@ async fn demo_response_formats(api_key: &str) -> Result<(), Box<dyn std::error::
     ];
 
     for (format_name, format_instruction) in formats {
-        println!("   Testing {} format:", format_name);
+        println!("   Testing {format_name} format:");
         
         let messages = vec![
             ChatMessage::system(&format!(
-                "{}. Be concise and follow the format exactly.",
-                format_instruction
+                "{format_instruction}. Be concise and follow the format exactly."
             )).build(),
             ChatMessage::user("Explain the benefits of using Rust programming language").build(),
         ];
@@ -233,7 +232,7 @@ async fn demo_response_formats(api_key: &str) -> Result<(), Box<dyn std::error::
                     println!("   📄 {}: {}...", format_name, &preview[..preview.len().min(60)]);
                 }
             }
-            Err(e) => println!("   ❌ Error: {}", e),
+            Err(e) => println!("   ❌ Error: {e}"),
         }
     }
 
@@ -251,9 +250,8 @@ async fn demo_advanced_parameters(api_key: &str) -> Result<(), Box<dyn std::erro
     ];
 
     for (config_name, temperature, top_p, presence_penalty) in configs {
-        println!("   Testing {} configuration:", config_name);
-        println!("     Temperature: {}, Top-p: {}, Presence: {}", 
-                temperature, top_p, presence_penalty);
+        println!("   Testing {config_name} configuration:");
+        println!("     Temperature: {temperature}, Top-p: {top_p}, Presence: {presence_penalty}");
         
         let ai = Siumai::builder()
             .openai()
@@ -274,7 +272,7 @@ async fn demo_advanced_parameters(api_key: &str) -> Result<(), Box<dyn std::erro
                     println!("   📝 {}: {}", config_name, text.trim());
                 }
             }
-            Err(e) => println!("   ❌ Error: {}", e),
+            Err(e) => println!("   ❌ Error: {e}"),
         }
     }
 
@@ -297,7 +295,7 @@ struct FunctionCall {
     description: String,
 }
 
-/// 🎯 Key OpenAI Enhanced Features Summary:
+/// 🎯 Key `OpenAI` Enhanced Features Summary:
 ///
 /// JSON Mode & Structured Outputs:
 /// - Guaranteed JSON response format
@@ -340,4 +338,4 @@ struct FunctionCall {
 /// - Add response validation
 /// - Create format templates
 /// - Optimize for specific use cases
-fn _documentation() {}
+const fn _documentation() {}

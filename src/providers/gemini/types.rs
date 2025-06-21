@@ -1,7 +1,7 @@
 //! Google Gemini Types
 //!
 //! This module contains type definitions for Google Gemini API requests and responses.
-//! Based on the Gemini OpenAPI specification.
+//! Based on the Gemini `OpenAPI` specification.
 
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ pub struct GenerateContentRequest {
     /// Optional. Tool configuration for any Tool specified in the request.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_config: Option<ToolConfig>,
-    /// Optional. A list of unique SafetySetting instances for blocking unsafe content.
+    /// Optional. A list of unique `SafetySetting` instances for blocking unsafe content.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub safety_settings: Option<Vec<SafetySetting>>,
     /// Optional. Configuration options for model generation and outputs.
@@ -47,7 +47,7 @@ pub struct GenerateContentResponse {
     /// Output only. The model version used to generate the response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model_version: Option<String>,
-    /// Output only. response_id is used to identify each response.
+    /// Output only. `response_id` is used to identify each response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_id: Option<String>,
 }
@@ -108,7 +108,7 @@ pub struct FileData {
     pub mime_type: Option<String>,
 }
 
-/// A predicted FunctionCall returned from the model.
+/// A predicted `FunctionCall` returned from the model.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FunctionCall {
     /// Required. The name of the function to call.
@@ -118,7 +118,7 @@ pub struct FunctionCall {
     pub args: Option<serde_json::Value>,
 }
 
-/// The result output from a FunctionCall.
+/// The result output from a `FunctionCall`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FunctionResponse {
     /// Required. The name of the function to call.
@@ -145,7 +145,7 @@ pub enum CodeLanguage {
     Python,
 }
 
-/// Result of executing the ExecutableCode.
+/// Result of executing the `ExecutableCode`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeExecutionResult {
     /// Required. Outcome of the code execution.
@@ -556,7 +556,7 @@ impl GeminiConfig {
     }
 
     /// Set HTTP timeout
-    pub fn with_timeout(mut self, timeout: u64) -> Self {
+    pub const fn with_timeout(mut self, timeout: u64) -> Self {
         self.timeout = Some(timeout);
         self
     }
@@ -564,7 +564,7 @@ impl GeminiConfig {
 
 impl GenerationConfig {
     /// Create a new generation configuration
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             candidate_count: None,
             stop_sequences: None,
@@ -579,7 +579,7 @@ impl GenerationConfig {
     }
 
     /// Set the number of candidates to generate
-    pub fn with_candidate_count(mut self, count: i32) -> Self {
+    pub const fn with_candidate_count(mut self, count: i32) -> Self {
         self.candidate_count = Some(count);
         self
     }
@@ -591,25 +591,25 @@ impl GenerationConfig {
     }
 
     /// Set maximum output tokens
-    pub fn with_max_output_tokens(mut self, tokens: i32) -> Self {
+    pub const fn with_max_output_tokens(mut self, tokens: i32) -> Self {
         self.max_output_tokens = Some(tokens);
         self
     }
 
     /// Set temperature
-    pub fn with_temperature(mut self, temperature: f32) -> Self {
+    pub const fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
 
     /// Set top-p
-    pub fn with_top_p(mut self, top_p: f32) -> Self {
+    pub const fn with_top_p(mut self, top_p: f32) -> Self {
         self.top_p = Some(top_p);
         self
     }
 
     /// Set top-k
-    pub fn with_top_k(mut self, top_k: i32) -> Self {
+    pub const fn with_top_k(mut self, top_k: i32) -> Self {
         self.top_k = Some(top_k);
         self
     }
@@ -627,7 +627,7 @@ impl GenerationConfig {
     }
 
     /// Set thinking configuration
-    pub fn with_thinking_config(mut self, config: ThinkingConfig) -> Self {
+    pub const fn with_thinking_config(mut self, config: ThinkingConfig) -> Self {
         self.thinking_config = Some(config);
         self
     }
@@ -641,7 +641,7 @@ impl Default for GenerationConfig {
 
 impl ThinkingConfig {
     /// Create a new thinking configuration
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             thinking_budget: None,
             include_thoughts: None,
@@ -649,7 +649,7 @@ impl ThinkingConfig {
     }
 
     /// Create thinking configuration with specific budget
-    pub fn with_budget(budget: i32) -> Self {
+    pub const fn with_budget(budget: i32) -> Self {
         Self {
             thinking_budget: Some(budget),
             include_thoughts: None,
@@ -657,7 +657,7 @@ impl ThinkingConfig {
     }
 
     /// Create thinking configuration with thought summaries enabled
-    pub fn with_thoughts() -> Self {
+    pub const fn with_thoughts() -> Self {
         Self {
             thinking_budget: None,
             include_thoughts: Some(true),
@@ -665,7 +665,7 @@ impl ThinkingConfig {
     }
 
     /// Create dynamic thinking configuration (model decides budget)
-    pub fn dynamic() -> Self {
+    pub const fn dynamic() -> Self {
         Self {
             thinking_budget: Some(-1),
             include_thoughts: Some(true),
@@ -674,7 +674,7 @@ impl ThinkingConfig {
 
     /// Create configuration that attempts to disable thinking
     /// Note: Not all models support disabling thinking
-    pub fn disabled() -> Self {
+    pub const fn disabled() -> Self {
         Self {
             thinking_budget: Some(0),
             include_thoughts: Some(false),
@@ -700,7 +700,7 @@ impl Default for ThinkingConfig {
 
 impl SafetySetting {
     /// Create a new safety setting
-    pub fn new(category: HarmCategory, threshold: HarmBlockThreshold) -> Self {
+    pub const fn new(category: HarmCategory, threshold: HarmBlockThreshold) -> Self {
         Self {
             category,
             threshold,
@@ -708,29 +708,29 @@ impl SafetySetting {
     }
 
     /// Create a safety setting that blocks low and above
-    pub fn block_low_and_above(category: HarmCategory) -> Self {
+    pub const fn block_low_and_above(category: HarmCategory) -> Self {
         Self::new(category, HarmBlockThreshold::BlockLowAndAbove)
     }
 
     /// Create a safety setting that blocks medium and above
-    pub fn block_medium_and_above(category: HarmCategory) -> Self {
+    pub const fn block_medium_and_above(category: HarmCategory) -> Self {
         Self::new(category, HarmBlockThreshold::BlockMediumAndAbove)
     }
 
     /// Create a safety setting that blocks only high
-    pub fn block_only_high(category: HarmCategory) -> Self {
+    pub const fn block_only_high(category: HarmCategory) -> Self {
         Self::new(category, HarmBlockThreshold::BlockOnlyHigh)
     }
 
     /// Create a safety setting that blocks none
-    pub fn block_none(category: HarmCategory) -> Self {
+    pub const fn block_none(category: HarmCategory) -> Self {
         Self::new(category, HarmBlockThreshold::BlockNone)
     }
 }
 
 impl Content {
     /// Create new content with the given role and parts
-    pub fn new(role: Option<String>, parts: Vec<Part>) -> Self {
+    pub const fn new(role: Option<String>, parts: Vec<Part>) -> Self {
         Self { role, parts }
     }
 
@@ -761,24 +761,24 @@ impl Content {
 
 impl Part {
     /// Create a text part
-    pub fn text(text: String) -> Self {
+    pub const fn text(text: String) -> Self {
         Self::Text { text, thought: None }
     }
 
     /// Create a thought summary part
-    pub fn thought_summary(text: String) -> Self {
+    pub const fn thought_summary(text: String) -> Self {
         Self::Text { text, thought: Some(true) }
     }
 
     /// Create an inline data part
-    pub fn inline_data(mime_type: String, data: String) -> Self {
+    pub const fn inline_data(mime_type: String, data: String) -> Self {
         Self::InlineData {
             inline_data: Blob { mime_type, data },
         }
     }
 
     /// Create a file data part
-    pub fn file_data(file_uri: String, mime_type: Option<String>) -> Self {
+    pub const fn file_data(file_uri: String, mime_type: Option<String>) -> Self {
         Self::FileData {
             file_data: FileData {
                 file_uri,
@@ -788,14 +788,14 @@ impl Part {
     }
 
     /// Create a function call part
-    pub fn function_call(name: String, args: Option<serde_json::Value>) -> Self {
+    pub const fn function_call(name: String, args: Option<serde_json::Value>) -> Self {
         Self::FunctionCall {
             function_call: FunctionCall { name, args },
         }
     }
 
     /// Create a function response part
-    pub fn function_response(name: String, response: serde_json::Value) -> Self {
+    pub const fn function_response(name: String, response: serde_json::Value) -> Self {
         Self::FunctionResponse {
             function_response: FunctionResponse { name, response },
         }
@@ -880,7 +880,7 @@ pub struct VideoFileMetadata {
     pub video_duration: Option<String>,
 }
 
-/// Request for CreateFile
+/// Request for `CreateFile`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateFileRequest {
     /// Optional. Metadata for the file to create.
@@ -888,7 +888,7 @@ pub struct CreateFileRequest {
     pub file: Option<GeminiFile>,
 }
 
-/// Response for CreateFile
+/// Response for `CreateFile`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateFileResponse {
     /// Metadata for the created file.
@@ -896,18 +896,18 @@ pub struct CreateFileResponse {
     pub file: Option<GeminiFile>,
 }
 
-/// Response for ListFiles
+/// Response for `ListFiles`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListFilesResponse {
     /// The list of Files.
     #[serde(default)]
     pub files: Vec<GeminiFile>,
-    /// A token that can be sent as page_token into a subsequent ListFiles call.
+    /// A token that can be sent as `page_token` into a subsequent `ListFiles` call.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_page_token: Option<String>,
 }
 
-/// Response for DownloadFile
+/// Response for `DownloadFile`
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadFileResponse {
     // This is typically just raw bytes, but we'll handle it in the implementation

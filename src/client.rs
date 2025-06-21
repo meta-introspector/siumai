@@ -31,7 +31,7 @@ pub enum ClientWrapper {
 }
 
 impl ClientWrapper {
-    /// Creates an OpenAI client wrapper
+    /// Creates an `OpenAI` client wrapper
     pub fn openai(client: Box<dyn LlmClient>) -> Self {
         Self::OpenAi(client)
     }
@@ -103,7 +103,7 @@ impl ChatCapability for ClientWrapper {
 
 /// Unified LLM client that provides dynamic dispatch to different providers
 ///
-/// This is similar to llm_dart's unified interface approach, allowing you to
+/// This is similar to `llm_dart`'s unified interface approach, allowing you to
 /// call different provider functionality through a single interface.
 pub struct UnifiedLlmClient {
     inner: ClientWrapper,
@@ -111,11 +111,11 @@ pub struct UnifiedLlmClient {
 
 impl UnifiedLlmClient {
     /// Create a new unified client from a provider-specific client
-    pub fn new(client: ClientWrapper) -> Self {
+    pub const fn new(client: ClientWrapper) -> Self {
         Self { inner: client }
     }
 
-    /// Create from an OpenAI client
+    /// Create from an `OpenAI` client
     pub fn from_openai(client: Box<dyn LlmClient>) -> Self {
         Self::new(ClientWrapper::openai(client))
     }

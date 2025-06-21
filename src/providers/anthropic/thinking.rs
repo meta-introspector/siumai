@@ -4,7 +4,7 @@
 //! which allows Claude to show its step-by-step reasoning process.
 //!
 //! Based on the official Anthropic API documentation:
-//! https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking
+//! <https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking>
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use crate::types::{ChatMessage, ChatResponse, MessageContent};
 
 /// Configuration for extended thinking according to official API documentation
-/// https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking
+/// <https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking>
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThinkingConfig {
     /// Type of thinking configuration (must be "enabled")
@@ -39,7 +39,7 @@ pub struct RedactedThinkingBlock {
 
 impl ThinkingConfig {
     /// Create an enabled thinking configuration with budget tokens
-    /// According to the API docs, budget_tokens must be >= 1024
+    /// According to the API docs, `budget_tokens` must be >= 1024
     pub fn enabled(budget_tokens: u32) -> Self {
         assert!(budget_tokens >= 1024, "budget_tokens must be >= 1024");
         Self {
@@ -102,11 +102,11 @@ impl ThinkingResponseParser {
                             let thinking_text = item
                                 .get("thinking")
                                 .and_then(|t| t.as_str())
-                                .map(|s| s.to_string());
+                                .map(std::string::ToString::to_string);
                             let signature = item
                                 .get("signature")
                                 .and_then(|s| s.as_str())
-                                .map(|s| s.to_string());
+                                .map(std::string::ToString::to_string);
 
                             if let Some(thinking) = thinking_text {
                                 return Some(ThinkingBlock {
@@ -134,7 +134,7 @@ impl ThinkingResponseParser {
                             let data = item
                                 .get("data")
                                 .and_then(|d| d.as_str())
-                                .map(|s| s.to_string());
+                                .map(std::string::ToString::to_string);
 
                             if let Some(data) = data {
                                 return Some(RedactedThinkingBlock { data });
@@ -152,7 +152,7 @@ impl ThinkingResponseParser {
         // Check for thinking delta in streaming response
         if let Some(delta) = chunk.get("delta") {
             if let Some(thinking) = delta.get("thinking") {
-                return thinking.as_str().map(|s| s.to_string());
+                return thinking.as_str().map(std::string::ToString::to_string);
             }
 
             // Check for thinking in content delta
@@ -162,7 +162,7 @@ impl ThinkingResponseParser {
                         if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
                             if item_type == "thinking" {
                                 if let Some(text_delta) = item.get("text") {
-                                    return text_delta.as_str().map(|s| s.to_string());
+                                    return text_delta.as_str().map(std::string::ToString::to_string);
                                 }
                             }
                         }
@@ -174,7 +174,7 @@ impl ThinkingResponseParser {
         None
     }
 
-    /// Enhance ChatResponse with thinking content
+    /// Enhance `ChatResponse` with thinking content
     pub fn enhance_response_with_thinking(
         mut response: ChatResponse,
         thinking_content: Option<String>,
@@ -259,7 +259,7 @@ impl ReasoningAnalyzer {
         let sentence_count = thinking_content.split('.').count() as f64;
         let unique_words = thinking_content
             .split_whitespace()
-            .map(|w| w.to_lowercase())
+            .map(str::to_lowercase)
             .collect::<std::collections::HashSet<_>>()
             .len() as f64;
 
@@ -402,7 +402,7 @@ pub mod helpers {
 
     /// Format thinking content for display
     pub fn format_thinking_for_display(thinking_content: &str, include_analysis: bool) -> String {
-        let mut formatted = format!("🤔 **Claude's Thinking Process:**\n\n{}", thinking_content);
+        let mut formatted = format!("🤔 **Claude's Thinking Process:**\n\n{thinking_content}");
 
         if include_analysis {
             let analysis = ReasoningAnalyzer::analyze_reasoning(thinking_content);

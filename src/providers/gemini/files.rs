@@ -1,6 +1,6 @@
 //! Gemini Files API Implementation
 //!
-//! This module provides the Gemini implementation of the FileManagementCapability trait,
+//! This module provides the Gemini implementation of the `FileManagementCapability` trait,
 //! including file upload, listing, retrieval, and deletion operations.
 
 use async_trait::async_trait;
@@ -32,7 +32,7 @@ use super::types::{
 /// - File content download
 ///
 /// # API Reference
-/// https://ai.google.dev/api/files
+/// <https://ai.google.dev/api/files>
 #[derive(Debug, Clone)]
 pub struct GeminiFiles {
     /// Gemini configuration
@@ -43,14 +43,14 @@ pub struct GeminiFiles {
 
 impl GeminiFiles {
     /// Create a new Gemini files capability
-    pub fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
+    pub const fn new(config: GeminiConfig, http_client: HttpClient) -> Self {
         Self {
             config,
             http_client,
         }
     }
 
-    /// Convert GeminiFile to FileObject
+    /// Convert `GeminiFile` to `FileObject`
     fn convert_gemini_file_to_file_object(&self, gemini_file: GeminiFile) -> FileObject {
         // Extract file ID from the full name (e.g., "files/abc123" -> "abc123")
         let id = gemini_file
@@ -86,7 +86,7 @@ impl GeminiFiles {
         // Extract filename from display_name or use ID as fallback
         let filename = gemini_file
             .display_name
-            .unwrap_or_else(|| format!("file_{}", id));
+            .unwrap_or_else(|| format!("file_{id}"));
 
         // Create metadata
         let mut metadata = HashMap::new();
@@ -113,7 +113,7 @@ impl GeminiFiles {
         }
     }
 
-    /// Convert FileUploadRequest to CreateFileRequest
+    /// Convert `FileUploadRequest` to `CreateFileRequest`
     #[allow(dead_code)]
     fn convert_upload_request_to_gemini(&self, request: &FileUploadRequest) -> CreateFileRequest {
         let gemini_file = GeminiFile {
@@ -160,7 +160,7 @@ impl GeminiFiles {
 
         LlmError::api_error(
             status_code,
-            format!("Gemini API error: {} - {}", status_code, error_text),
+            format!("Gemini API error: {status_code} - {error_text}"),
         )
     }
 
@@ -210,7 +210,7 @@ impl FileManagementCapability for GeminiFiles {
                             .as_deref()
                             .unwrap_or("application/octet-stream"),
                     )
-                    .map_err(|e| LlmError::HttpError(format!("Invalid MIME type: {}", e)))?,
+                    .map_err(|e| LlmError::HttpError(format!("Invalid MIME type: {e}")))?,
             );
 
         // Add metadata if provided
@@ -227,14 +227,14 @@ impl FileManagementCapability for GeminiFiles {
             .multipart(form)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
         }
 
         let create_response: CreateFileResponse = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse upload response: {}", e))
+            LlmError::ParseError(format!("Failed to parse upload response: {e}"))
         })?;
 
         let gemini_file = create_response
@@ -252,10 +252,10 @@ impl FileManagementCapability for GeminiFiles {
         let mut params = Vec::new();
         if let Some(q) = &query {
             if let Some(limit) = q.limit {
-                params.push(format!("pageSize={}", limit));
+                params.push(format!("pageSize={limit}"));
             }
             if let Some(after) = &q.after {
-                params.push(format!("pageToken={}", after));
+                params.push(format!("pageToken={after}"));
             }
         }
 
@@ -268,14 +268,14 @@ impl FileManagementCapability for GeminiFiles {
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
         }
 
         let list_response: ListFilesResponse = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse list response: {}", e))
+            LlmError::ParseError(format!("Failed to parse list response: {e}"))
         })?;
 
         let files: Vec<FileObject> = list_response
@@ -297,7 +297,7 @@ impl FileManagementCapability for GeminiFiles {
         let full_file_name = if file_id.starts_with("files/") {
             file_id
         } else {
-            format!("files/{}", file_id)
+            format!("files/{file_id}")
         };
 
         let endpoint = &full_file_name;
@@ -305,14 +305,14 @@ impl FileManagementCapability for GeminiFiles {
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
         }
 
         let gemini_file: GeminiFile = response.json().await.map_err(|e| {
-            LlmError::ParseError(format!("Failed to parse file response: {}", e))
+            LlmError::ParseError(format!("Failed to parse file response: {e}"))
         })?;
 
         Ok(self.convert_gemini_file_to_file_object(gemini_file))
@@ -324,7 +324,7 @@ impl FileManagementCapability for GeminiFiles {
         let full_file_name = if file_id.starts_with("files/") {
             file_id.clone()
         } else {
-            format!("files/{}", file_id)
+            format!("files/{file_id}")
         };
 
         let endpoint = &full_file_name;
@@ -332,7 +332,7 @@ impl FileManagementCapability for GeminiFiles {
         let response = request_builder
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -366,7 +366,7 @@ impl GeminiFiles {
         let full_file_name = if file_id.starts_with("files/") {
             file_id
         } else {
-            format!("files/{}", file_id)
+            format!("files/{file_id}")
         };
 
         // First get the file metadata to get the download URI
@@ -388,7 +388,7 @@ impl GeminiFiles {
             .header("x-goog-api-key", &self.config.api_key)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Download request failed: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Download request failed: {e}")))?;
 
         if !response.status().is_success() {
             return Err(self.handle_response_error(response).await);
@@ -397,7 +397,7 @@ impl GeminiFiles {
         let content = response
             .bytes()
             .await
-            .map_err(|e| LlmError::HttpError(format!("Failed to read response body: {}", e)))?;
+            .map_err(|e| LlmError::HttpError(format!("Failed to read response body: {e}")))?;
 
         Ok(content.to_vec())
     }
@@ -406,7 +406,7 @@ impl GeminiFiles {
     pub async fn get_file_content_as_string(&self, file_id: String) -> Result<String, LlmError> {
         let bytes = self.download_file_content(file_id).await?;
         String::from_utf8(bytes)
-            .map_err(|e| LlmError::ParseError(format!("File content is not valid UTF-8: {}", e)))
+            .map_err(|e| LlmError::ParseError(format!("File content is not valid UTF-8: {e}")))
     }
 
     /// Check if a file exists.
@@ -439,8 +439,7 @@ impl GeminiFiles {
                     // Continue waiting
                     if start_time.elapsed() >= max_duration {
                         return Err(LlmError::TimeoutError(format!(
-                            "File processing timeout after {} seconds",
-                            max_wait_seconds
+                            "File processing timeout after {max_wait_seconds} seconds"
                         )));
                     }
 

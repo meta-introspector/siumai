@@ -50,37 +50,37 @@ impl RetryPolicy {
     }
 
     /// Set maximum attempts
-    pub fn with_max_attempts(mut self, max_attempts: u32) -> Self {
+    pub const fn with_max_attempts(mut self, max_attempts: u32) -> Self {
         self.max_attempts = max_attempts;
         self
     }
 
     /// Set initial delay
-    pub fn with_initial_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_initial_delay(mut self, delay: Duration) -> Self {
         self.initial_delay = delay;
         self
     }
 
     /// Set maximum delay
-    pub fn with_max_delay(mut self, delay: Duration) -> Self {
+    pub const fn with_max_delay(mut self, delay: Duration) -> Self {
         self.max_delay = delay;
         self
     }
 
     /// Set backoff multiplier
-    pub fn with_backoff_multiplier(mut self, multiplier: f64) -> Self {
+    pub const fn with_backoff_multiplier(mut self, multiplier: f64) -> Self {
         self.backoff_multiplier = multiplier;
         self
     }
 
     /// Enable or disable jitter
-    pub fn with_jitter(mut self, use_jitter: bool) -> Self {
+    pub const fn with_jitter(mut self, use_jitter: bool) -> Self {
         self.use_jitter = use_jitter;
         self
     }
 
     /// Set jitter factor
-    pub fn with_jitter_factor(mut self, factor: f64) -> Self {
+    pub const fn with_jitter_factor(mut self, factor: f64) -> Self {
         self.jitter_factor = factor.clamp(0.0, 1.0);
         self
     }
@@ -250,7 +250,7 @@ pub struct RetryExecutor {
 
 impl RetryExecutor {
     /// Create a new retry executor
-    pub fn new(policy: RetryPolicy) -> Self {
+    pub const fn new(policy: RetryPolicy) -> Self {
         Self { policy }
     }
 

@@ -22,7 +22,7 @@ pub struct OllamaModelsCapability {
 
 impl OllamaModelsCapability {
     /// Creates a new Ollama models capability
-    pub fn new(
+    pub const fn new(
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
@@ -34,7 +34,7 @@ impl OllamaModelsCapability {
         }
     }
 
-    /// Convert Ollama model to common ModelInfo
+    /// Convert Ollama model to common `ModelInfo`
     fn convert_model_info(&self, model: &OllamaModel) -> ModelInfo {
         ModelInfo {
             id: model.name.clone(),
@@ -74,9 +74,7 @@ impl OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Pull model request failed: {} - {}",
-                status,
-                error_text
+                "Pull model request failed: {status} - {error_text}"
             )));
         }
 
@@ -107,9 +105,7 @@ impl OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Pull model stream request failed: {} - {}",
-                status,
-                error_text
+                "Pull model stream request failed: {status} - {error_text}"
             )));
         }
 
@@ -131,7 +127,7 @@ impl OllamaModelsCapability {
                         completed: None,
                     })
                 }
-                Err(e) => Err(LlmError::StreamError(format!("Stream error: {}", e))),
+                Err(e) => Err(LlmError::StreamError(format!("Stream error: {e}"))),
             }
         });
 
@@ -161,9 +157,7 @@ impl OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Delete model request failed: {} - {}",
-                status,
-                error_text
+                "Delete model request failed: {status} - {error_text}"
             )));
         }
 
@@ -195,9 +189,7 @@ impl OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Copy model request failed: {} - {}",
-                status,
-                error_text
+                "Copy model request failed: {status} - {error_text}"
             )));
         }
 
@@ -227,9 +219,7 @@ impl OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "Show model request failed: {} - {}",
-                status,
-                error_text
+                "Show model request failed: {status} - {error_text}"
             )));
         }
 
@@ -259,9 +249,7 @@ impl OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "List running models request failed: {} - {}",
-                status,
-                error_text
+                "List running models request failed: {status} - {error_text}"
             )));
         }
 
@@ -299,9 +287,7 @@ impl ModelListingCapability for OllamaModelsCapability {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::HttpError(format!(
-                "List models request failed: {} - {}",
-                status,
-                error_text
+                "List models request failed: {status} - {error_text}"
             )));
         }
 
@@ -325,7 +311,7 @@ impl ModelListingCapability for OllamaModelsCapability {
         }
 
         // If not found, return NotFound error
-        Err(LlmError::NotFound(format!("Model '{}' not found", model_id)))
+        Err(LlmError::NotFound(format!("Model '{model_id}' not found")))
     }
 }
 
@@ -377,7 +363,7 @@ mod tests {
             name: "llama3.2:latest".to_string(),
             model: "llama3.2:latest".to_string(),
             modified_at: "2023-01-01T00:00:00Z".to_string(),
-            size: 1000000,
+            size: 1_000_000,
             digest: "sha256:abc123".to_string(),
             details: OllamaModelDetails {
                 parent_model: "".to_string(),

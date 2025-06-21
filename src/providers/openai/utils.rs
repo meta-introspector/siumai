@@ -1,13 +1,13 @@
-//! OpenAI Utility Functions
+//! `OpenAI` Utility Functions
 //!
-//! Common utility functions for OpenAI API interactions.
+//! Common utility functions for `OpenAI` API interactions.
 
 use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 
-/// Build HTTP headers for OpenAI API requests
+/// Build HTTP headers for `OpenAI` API requests
 pub fn build_headers(
     api_key: &str,
     organization: Option<&str>,
@@ -17,11 +17,11 @@ pub fn build_headers(
     let mut headers = HeaderMap::new();
 
     // Set the authorization header
-    let auth_value = format!("Bearer {}", api_key);
+    let auth_value = format!("Bearer {api_key}");
     headers.insert(
         AUTHORIZATION,
         HeaderValue::from_str(&auth_value)
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key: {}", e)))?,
+            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key: {e}")))?,
     );
 
     // Set the content type
@@ -32,7 +32,7 @@ pub fn build_headers(
         headers.insert(
             "OpenAI-Organization",
             HeaderValue::from_str(org).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid organization: {}", e))
+                LlmError::ConfigurationError(format!("Invalid organization: {e}"))
             })?,
         );
     }
@@ -42,19 +42,19 @@ pub fn build_headers(
         headers.insert(
             "OpenAI-Project",
             HeaderValue::from_str(project)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid project: {}", e)))?,
+                .map_err(|e| LlmError::ConfigurationError(format!("Invalid project: {e}")))?,
         );
     }
 
     // Add custom headers
     for (key, value) in custom_headers {
         let header_name: reqwest::header::HeaderName = key.parse().map_err(|e| {
-            LlmError::ConfigurationError(format!("Invalid header key '{}': {}", key, e))
+            LlmError::ConfigurationError(format!("Invalid header key '{key}': {e}"))
         })?;
         headers.insert(
             header_name,
             HeaderValue::from_str(value).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid header value '{}': {}", value, e))
+                LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
             })?,
         );
     }
@@ -62,7 +62,7 @@ pub fn build_headers(
     Ok(headers)
 }
 
-/// Convert message content to OpenAI format
+/// Convert message content to `OpenAI` format
 pub fn convert_message_content(content: &MessageContent) -> Result<serde_json::Value, LlmError> {
     match content {
         MessageContent::Text(text) => Ok(serde_json::Value::String(text.clone())),
@@ -110,7 +110,7 @@ pub fn convert_message_content(content: &MessageContent) -> Result<serde_json::V
     }
 }
 
-/// Convert messages to OpenAI format
+/// Convert messages to `OpenAI` format
 pub fn convert_messages(messages: &[ChatMessage]) -> Result<Vec<OpenAiMessage>, LlmError> {
     let mut openai_messages = Vec::new();
 
@@ -166,7 +166,7 @@ pub fn convert_messages(messages: &[ChatMessage]) -> Result<Vec<OpenAiMessage>, 
     Ok(openai_messages)
 }
 
-/// Parse OpenAI finish reason
+/// Parse `OpenAI` finish reason
 pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
     match reason {
         Some("stop") => Some(FinishReason::Stop),
@@ -179,7 +179,7 @@ pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
     }
 }
 
-/// Get default models for OpenAI
+/// Get default models for `OpenAI`
 pub fn get_default_models() -> Vec<String> {
     vec![
         "gpt-4".to_string(),

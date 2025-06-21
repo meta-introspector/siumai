@@ -1,11 +1,11 @@
-//! OpenAI Provider Module
+//! `OpenAI` Provider Module
 //!
-//! Modular implementation of OpenAI API client with capability separation.
+//! Modular implementation of `OpenAI` API client with capability separation.
 //! This module follows the design pattern of separating different AI capabilities
 //! into distinct modules while providing a unified client interface.
 //!
 //! # Architecture
-//! - `client.rs` - Main OpenAI client that aggregates all capabilities
+//! - `client.rs` - Main `OpenAI` client that aggregates all capabilities
 //! - `config.rs` - Configuration structures and validation
 //! - `builder.rs` - Builder pattern implementation for client creation
 //! - `chat.rs` - Chat completion capability implementation

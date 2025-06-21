@@ -58,13 +58,13 @@ impl CachedChatbot {
         {
             let mut cache = self.cache.lock().unwrap();
             if let Some(cached_response) = cache.get(&cache_key) {
-                println!("💾 Cache hit for: \"{}\"", user_message);
+                println!("💾 Cache hit for: \"{user_message}\"");
                 return Ok(cached_response.text().unwrap_or_default());
             }
         }
 
         // Cache miss - make API call
-        println!("🌐 API call for: \"{}\"", user_message);
+        println!("🌐 API call for: \"{user_message}\"");
         let response = self.client.chat(messages).await?;
         let response_text = response.text().unwrap_or_default();
 
@@ -154,7 +154,7 @@ async fn demo_without_cache(client: &Siumai) -> Result<(), Box<dyn std::error::E
     let total_time = start_time.elapsed();
     println!("📈 Without Cache Summary:");
     println!("   Total time: {}ms", total_time.as_millis());
-    println!("   API calls made: {}", total_api_calls);
+    println!("   API calls made: {total_api_calls}");
     println!("   Average time per call: {}ms\n", total_time.as_millis() / total_api_calls);
 
     Ok(())
@@ -217,8 +217,8 @@ async fn demo_with_cache(client: &Siumai) -> Result<(), Box<dyn std::error::Erro
     
     println!("📈 With Cache Summary:");
     println!("   Total time: {}ms", total_time.as_millis());
-    println!("   API calls made: {}", api_calls);
-    println!("   Cache hits: {}", cache_hits);
+    println!("   API calls made: {api_calls}");
+    println!("   Cache hits: {cache_hits}");
     println!("   Cache hit rate: {:.1}%", cache_stats.hit_rate * 100.0);
     println!("   Average time per request: {}ms\n", total_time.as_millis() / questions.len() as u128);
 
@@ -300,7 +300,7 @@ async fn demo_cache_benefits(client: &Siumai) -> Result<(), Box<dyn std::error::
     println!("   ⏱️  Total time: {}ms", total_time.as_millis());
     println!("   💾 Cache hit rate: {:.1}%", stats.hit_rate * 100.0);
     println!("   🌐 API calls made: {}", stats.miss_count);
-    println!("   💰 Estimated cost: ${:.4}", total_cost_estimate);
+    println!("   💰 Estimated cost: ${total_cost_estimate:.4}");
     
     // Calculate savings
     let total_requests = user_queries.len() as u64;
@@ -309,7 +309,7 @@ async fn demo_cache_benefits(client: &Siumai) -> Result<(), Box<dyn std::error::
     let calls_saved = potential_api_calls - actual_api_calls;
     let cost_savings_percent = (calls_saved as f64 / potential_api_calls as f64) * 100.0;
     
-    println!("   💡 API calls saved: {} ({:.1}%)", calls_saved, cost_savings_percent);
+    println!("   💡 API calls saved: {calls_saved} ({cost_savings_percent:.1}%)");
     println!("   🚀 Performance improvement: ~{}x faster for cached responses",
         if stats.hit_rate > 0.0 { (1.0_f64 / (1.0 - stats.hit_rate)).round() as u32 } else { 1 });
     println!();

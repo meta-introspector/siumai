@@ -278,7 +278,7 @@ impl LlmError {
     }
 
     /// Checks if the error is an authentication-related error.
-    pub fn is_auth_error(&self) -> bool {
+    pub const fn is_auth_error(&self) -> bool {
         match self {
             Self::AuthenticationError(_) => true,
             Self::ApiError { code, .. } => *code == 401 || *code == 403,
@@ -287,7 +287,7 @@ impl LlmError {
     }
 
     /// Checks if the error is a rate limit error.
-    pub fn is_rate_limit_error(&self) -> bool {
+    pub const fn is_rate_limit_error(&self) -> bool {
         match self {
             Self::RateLimitError(_) => true,
             Self::ApiError { code, .. } => *code == 429,
@@ -296,7 +296,7 @@ impl LlmError {
     }
 
     /// Gets the HTTP status code of the error, if available.
-    pub fn status_code(&self) -> Option<u16> {
+    pub const fn status_code(&self) -> Option<u16> {
         match self {
             Self::ApiError { code, .. } => Some(*code),
             Self::HttpError(_) => None, // Cannot get status code directly from the string form.
@@ -342,7 +342,7 @@ impl LlmError {
                 "API quota exceeded. Please check your usage limits.".to_string()
             }
             Self::ModelNotSupported(model) => {
-                format!("The model '{}' is not supported by this provider.", model)
+                format!("The model '{model}' is not supported by this provider.")
             }
             Self::ConnectionError(_) | Self::TimeoutError(_) => {
                 "Network connection failed. Please check your internet connection and try again.".to_string()
@@ -432,7 +432,7 @@ impl LlmError {
     }
 
     /// Gets the recommended retry delay in seconds based on error type.
-    pub fn recommended_retry_delay(&self) -> Option<u64> {
+    pub const fn recommended_retry_delay(&self) -> Option<u64> {
         match self {
             Self::RateLimitError(_) => Some(60), // Wait 1 minute for rate limits
             Self::ApiError { code: 429, .. } => Some(30), // Wait 30 seconds for 429
@@ -444,7 +444,7 @@ impl LlmError {
     }
 
     /// Gets the maximum number of retry attempts recommended for this error.
-    pub fn max_retry_attempts(&self) -> u32 {
+    pub const fn max_retry_attempts(&self) -> u32 {
         match self {
             Self::RateLimitError(_) => 3,
             Self::ApiError { code: 429, .. } => 3,

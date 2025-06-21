@@ -3,7 +3,7 @@
 //! This module implements Anthropic's prompt caching feature which allows
 //! caching of frequently used prompts to reduce latency and costs.
 //!
-//! API Reference: https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
+//! API Reference: <https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching>
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -34,7 +34,7 @@ impl Default for CacheControl {
 
 impl CacheControl {
     /// Create a new ephemeral cache control
-    pub fn ephemeral() -> Self {
+    pub const fn ephemeral() -> Self {
         Self {
             r#type: CacheType::Ephemeral,
             ttl: None,
@@ -43,7 +43,7 @@ impl CacheControl {
     }
 
     /// Create a cache control with custom TTL
-    pub fn with_ttl(mut self, ttl_seconds: u32) -> Self {
+    pub const fn with_ttl(mut self, ttl_seconds: u32) -> Self {
         self.ttl = Some(ttl_seconds);
         self
     }
@@ -154,7 +154,7 @@ impl CacheAwareMessageBuilder {
         Ok(message_json)
     }
 
-    /// Convert ChatMessage to JSON format
+    /// Convert `ChatMessage` to JSON format
     fn convert_message_to_json(&self) -> Result<serde_json::Value, LlmError> {
         let mut message_json = serde_json::json!({
             "role": match self.message.role {
@@ -232,7 +232,7 @@ pub struct CacheStatistics {
 
 impl CacheStatistics {
     /// Create empty cache statistics
-    pub fn empty() -> Self {
+    pub const fn empty() -> Self {
         Self {
             cache_hits: 0,
             cache_misses: 0,
@@ -266,7 +266,7 @@ impl CacheStatistics {
     }
 
     /// Calculate token savings from caching
-    pub fn token_savings(&self) -> u32 {
+    pub const fn token_savings(&self) -> u32 {
         // Tokens that would have been processed without caching
         self.cache_read_tokens
     }

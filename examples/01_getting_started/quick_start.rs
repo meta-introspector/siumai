@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Method 1: OpenAI (most popular)
+/// Method 1: `OpenAI` (most popular)
 async fn quick_start_with_openai() {
     println!("Method 1: OpenAI");
 
@@ -51,17 +51,17 @@ async fn quick_start_with_openai() {
                     match client.chat(messages).await {
                         Ok(response) => {
                             if let Some(text) = response.content_text() {
-                                println!("   AI Reply: {}", text);
+                                println!("   AI Reply: {text}");
                                 println!("   ✅ Success\n");
                             }
                         }
                         Err(e) => {
-                            println!("   ❌ Chat failed: {}", e);
+                            println!("   ❌ Chat failed: {e}");
                         }
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Client creation failed: {}", e);
+                    println!("   ❌ Client creation failed: {e}");
                 }
             }
         }
@@ -93,17 +93,17 @@ async fn quick_start_with_anthropic() {
                     match client.chat(messages).await {
                         Ok(response) => {
                             if let Some(text) = response.content_text() {
-                                println!("   AI Reply: {}", text);
+                                println!("   AI Reply: {text}");
                                 println!("   ✅ Success\n");
                             }
                         }
                         Err(e) => {
-                            println!("   ❌ Chat failed: {}", e);
+                            println!("   ❌ Chat failed: {e}");
                         }
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Client creation failed: {}", e);
+                    println!("   ❌ Client creation failed: {e}");
                 }
             }
         }
@@ -133,19 +133,19 @@ async fn quick_start_with_ollama() {
             match client.chat(messages).await {
                 Ok(response) => {
                     if let Some(text) = response.content_text() {
-                        println!("   AI Reply: {}", text);
+                        println!("   AI Reply: {text}");
                         println!("   ✅ Success\n");
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Chat failed: {}", e);
+                    println!("   ❌ Chat failed: {e}");
                     println!("   💡 Ensure Ollama is running: ollama serve");
                     println!("   💡 Install model: ollama pull llama3.2\n");
                 }
             }
         }
         Err(e) => {
-            println!("   ❌ Client creation failed: {}", e);
+            println!("   ❌ Client creation failed: {e}");
             println!("   💡 Ensure Ollama is running: ollama serve\n");
         }
     }

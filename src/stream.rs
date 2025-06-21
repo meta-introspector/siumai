@@ -174,7 +174,7 @@ impl StreamProcessor {
             Some(
                 self.tool_calls
                     .values()
-                    .map(|builder| builder.build())
+                    .map(ToolCallBuilder::build)
                     .collect(),
             )
         } else {
@@ -251,7 +251,7 @@ impl Default for ToolCallBuilder {
 }
 
 impl ToolCallBuilder {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             id: String::new(),
             r#type: None,
@@ -266,7 +266,7 @@ impl ToolCallBuilder {
             r#type: self
                 .r#type
                 .as_ref()
-                .map(|t| format!("{:?}", t))
+                .map(|t| format!("{t:?}"))
                 .unwrap_or_else(|| "function".to_string()),
             function: Some(FunctionCall {
                 name: self.name.clone(),
@@ -287,7 +287,7 @@ impl Default for StreamProcessor {
 /// Utility functions for working with chat streams
 /// Collect all stream events into a single response
 ///
-/// This function consumes the entire stream and builds a final ChatResponse
+/// This function consumes the entire stream and builds a final `ChatResponse`
 pub async fn collect_stream_response(mut stream: ChatStream) -> Result<ChatResponse, LlmError> {
     use futures::StreamExt;
 

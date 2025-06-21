@@ -92,12 +92,12 @@ impl OllamaClient {
     }
 
     /// Get common parameters
-    pub fn common_params(&self) -> &CommonParams {
+    pub const fn common_params(&self) -> &CommonParams {
         &self.common_params
     }
 
     /// Get Ollama-specific parameters
-    pub fn ollama_params(&self) -> &OllamaParams {
+    pub const fn ollama_params(&self) -> &OllamaParams {
         &self.ollama_params
     }
 
@@ -120,13 +120,13 @@ impl OllamaClient {
     }
 
     /// Set temperature
-    pub fn with_temperature(mut self, temperature: f32) -> Self {
+    pub const fn with_temperature(mut self, temperature: f32) -> Self {
         self.common_params.temperature = Some(temperature);
         self
     }
 
     /// Set max tokens
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
+    pub const fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
         self
     }
@@ -138,7 +138,7 @@ impl OllamaClient {
     }
 
     /// Enable raw mode
-    pub fn with_raw(mut self, raw: bool) -> Self {
+    pub const fn with_raw(mut self, raw: bool) -> Self {
         self.ollama_params.raw = Some(raw);
         self
     }
@@ -253,9 +253,7 @@ impl ChatCapability for OllamaClient {
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(crate::error::LlmError::HttpError(format!(
-                "Chat request failed: {} - {}",
-                status,
-                error_text
+                "Chat request failed: {status} - {error_text}"
             )));
         }
 
@@ -282,7 +280,7 @@ impl ChatCapability for OllamaClient {
                         index: Some(0),
                     })
                 }
-                Err(e) => Err(crate::error::LlmError::StreamError(format!("Stream error: {}", e))),
+                Err(e) => Err(crate::error::LlmError::StreamError(format!("Stream error: {e}"))),
             }
         });
 

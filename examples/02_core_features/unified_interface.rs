@@ -51,18 +51,18 @@ async fn demonstrate_provider_abstraction() {
     let test_message = "Hello! Please introduce yourself in one sentence.";
     
     for (name, client) in providers {
-        println!("   Testing with {}:", name);
+        println!("   Testing with {name}:");
         
         let messages = vec![user!(test_message)];
         match client.chat(messages).await {
             Ok(response) => {
                 if let Some(text) = response.content_text() {
-                    println!("      Response: {}", text);
+                    println!("      Response: {text}");
                     println!("      ✅ Success");
                 }
             }
             Err(e) => {
-                println!("      ❌ Failed: {}", e);
+                println!("      ❌ Failed: {e}");
             }
         }
         println!();
@@ -80,11 +80,11 @@ async fn demonstrate_dynamic_provider_selection() {
     ];
 
     for (task_type, prompt) in tasks {
-        println!("   Task: {} - \"{}\"", task_type, prompt);
+        println!("   Task: {task_type} - \"{prompt}\"");
         
         match select_best_provider_for_task(task_type).await {
             Ok((provider_name, client)) => {
-                println!("      Selected provider: {}", provider_name);
+                println!("      Selected provider: {provider_name}");
                 
                 let messages = vec![user!(prompt)];
                 match client.chat(messages).await {
@@ -95,17 +95,17 @@ async fn demonstrate_dynamic_provider_selection() {
                             } else {
                                 text.to_string()
                             };
-                            println!("      Response: {}", preview);
+                            println!("      Response: {preview}");
                             println!("      ✅ Success");
                         }
                     }
                     Err(e) => {
-                        println!("      ❌ Failed: {}", e);
+                        println!("      ❌ Failed: {e}");
                     }
                 }
             }
             Err(e) => {
-                println!("      ❌ No suitable provider: {}", e);
+                println!("      ❌ No suitable provider: {e}");
             }
         }
         println!();
@@ -120,19 +120,19 @@ async fn demonstrate_fallback_strategies() {
     
     match chat_with_fallback(message).await {
         Ok((provider_name, response)) => {
-            println!("   Successfully used provider: {}", provider_name);
+            println!("   Successfully used provider: {provider_name}");
             if let Some(text) = response.content_text() {
                 let preview = if text.len() > 150 {
                     format!("{}...", &text[..150])
                 } else {
                     text.to_string()
                 };
-                println!("   Response: {}", preview);
+                println!("   Response: {preview}");
             }
             println!("   ✅ Fallback strategy successful");
         }
         Err(e) => {
-            println!("   ❌ All providers failed: {}", e);
+            println!("   ❌ All providers failed: {e}");
         }
     }
     println!();
@@ -145,7 +145,7 @@ async fn demonstrate_capability_detection() {
     let providers = create_available_providers().await;
     
     for (name, client) in providers {
-        println!("   Provider: {}", name);
+        println!("   Provider: {name}");
         
         // Test basic chat capability
         println!("      Chat: ✅ (all providers support this)");
@@ -169,17 +169,17 @@ async fn demonstrate_provider_independent_functions() {
     let providers = create_available_providers().await;
     
     if let Some((name, client)) = providers.into_iter().next() {
-        println!("   Using provider: {}", name);
+        println!("   Using provider: {name}");
         
         // Use the same function with any provider
         match ask_question(client.as_ref(), "What is the meaning of life?").await {
             Ok(answer) => {
                 println!("   Question: What is the meaning of life?");
-                println!("   Answer: {}", answer);
+                println!("   Answer: {answer}");
                 println!("   ✅ Provider-independent function successful");
             }
             Err(e) => {
-                println!("   ❌ Function failed: {}", e);
+                println!("   ❌ Function failed: {e}");
             }
         }
     } else {
@@ -300,14 +300,10 @@ async fn chat_with_fallback(message: &str) -> Result<(String, ChatResponse), Llm
     
     for (name, client) in providers {
         let messages = vec![user!(message)];
-        match client.chat(messages).await {
-            Ok(response) => {
-                return Ok((name, response));
-            }
-            Err(_) => {
-                // Continue to next provider
-                continue;
-            }
+        if let Ok(response) = client.chat(messages).await {
+            return Ok((name, response));
+        } else {
+            // Continue to next provider
         }
     }
     

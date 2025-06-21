@@ -2,41 +2,41 @@
 //!
 //! This module contains model definitions for various OpenAI-compatible providers.
 
-/// DeepSeek model constants
+/// `DeepSeek` model constants
 pub mod deepseek {
-    /// DeepSeek Chat model
+    /// `DeepSeek` Chat model
     pub const CHAT: &str = "deepseek-chat";
-    /// DeepSeek Coder model
+    /// `DeepSeek` Coder model
     pub const CODER: &str = "deepseek-coder";
-    /// DeepSeek Reasoner model (V3)
+    /// `DeepSeek` Reasoner model (V3)
     pub const REASONER: &str = "deepseek-reasoner";
-    /// DeepSeek V3 model
+    /// `DeepSeek` V3 model
     pub const DEEPSEEK_V3: &str = "deepseek-v3";
 
-    /// All DeepSeek models
+    /// All `DeepSeek` models
     pub const ALL: &[&str] = &[CHAT, CODER, REASONER, DEEPSEEK_V3];
 
-    /// Get all DeepSeek models
+    /// Get all `DeepSeek` models
     pub fn all_models() -> Vec<String> {
         ALL.iter().map(|&s| s.to_string()).collect()
     }
 }
 
-/// OpenRouter model constants
+/// `OpenRouter` model constants
 pub mod openrouter {
-    /// OpenAI models via OpenRouter
+    /// `OpenAI` models via `OpenRouter`
     pub mod openai {
         pub const GPT_4: &str = "openai/gpt-4";
         pub const GPT_4_TURBO: &str = "openai/gpt-4-turbo";
         pub const GPT_4O: &str = "openai/gpt-4o";
     }
 
-    /// Anthropic models via OpenRouter
+    /// Anthropic models via `OpenRouter`
     pub mod anthropic {
         pub const CLAUDE_3_5_SONNET: &str = "anthropic/claude-3.5-sonnet";
     }
 
-    /// Google models via OpenRouter
+    /// Google models via `OpenRouter`
     pub mod google {
         pub const GEMINI_PRO: &str = "google/gemini-pro";
         pub const GEMINI_1_5_PRO: &str = "google/gemini-1.5-pro";
@@ -50,7 +50,7 @@ pub mod openrouter {
         pub const GEMINI_PRO: &str = super::google::GEMINI_PRO;
     }
 
-    /// Get all OpenRouter models
+    /// Get all `OpenRouter` models
     pub fn all_models() -> Vec<String> {
         vec![
             openai::GPT_4_TURBO.to_string(),
@@ -118,32 +118,32 @@ pub mod recommendations {
     use super::*;
 
     /// Recommended model for general chat
-    pub fn for_chat() -> &'static str {
+    pub const fn for_chat() -> &'static str {
         openrouter::openai::GPT_4O
     }
 
     /// Recommended model for coding tasks
-    pub fn for_coding() -> &'static str {
+    pub const fn for_coding() -> &'static str {
         deepseek::CODER
     }
 
     /// Recommended model for reasoning tasks
-    pub fn for_reasoning() -> &'static str {
+    pub const fn for_reasoning() -> &'static str {
         deepseek::REASONER
     }
 
     /// Recommended model for fast responses
-    pub fn for_fast_response() -> &'static str {
+    pub const fn for_fast_response() -> &'static str {
         groq::LLAMA_3_1_8B
     }
 
     /// Recommended model for cost-effective usage
-    pub fn for_cost_effective() -> &'static str {
+    pub const fn for_cost_effective() -> &'static str {
         deepseek::CHAT
     }
 
     /// Recommended model for vision tasks
-    pub fn for_vision() -> &'static str {
+    pub const fn for_vision() -> &'static str {
         openrouter::openai::GPT_4O
     }
 }

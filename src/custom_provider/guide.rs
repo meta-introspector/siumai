@@ -16,7 +16,7 @@ use serde_json;
 ///
 /// This guide shows you how to implement a custom AI provider for the siumai library.
 ///
-/// ## Step 1: Implement the CustomProvider trait
+/// ## Step 1: Implement the `CustomProvider` trait
 ///
 /// ```rust,no_run
 /// use siumai::prelude::*;
@@ -167,22 +167,22 @@ impl HuggingFaceProvider {
             .and_then(|arr| arr.first())
             .and_then(|choice| choice.get("finish_reason"))
             .and_then(|reason| reason.as_str())
-            .map(|s| s.to_string());
+            .map(std::string::ToString::to_string);
 
         let usage = response_data.get("usage").map(|usage_data| Usage {
             prompt_tokens: usage_data
                 .get("prompt_tokens")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|v| v as u32)
                 .unwrap_or(0),
             completion_tokens: usage_data
                 .get("completion_tokens")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|v| v as u32)
                 .unwrap_or(0),
             total_tokens: usage_data
                 .get("total_tokens")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|v| v as u32)
                 .unwrap_or(0),
             reasoning_tokens: None,
@@ -248,7 +248,7 @@ impl CustomProvider for HuggingFaceProvider {
             let error_text = response.text().await.unwrap_or_default();
             return Err(LlmError::api_error(
                 status_code,
-                format!("Hugging Face API error: {}", error_text),
+                format!("Hugging Face API error: {error_text}"),
             ));
         }
 
@@ -280,7 +280,7 @@ impl CustomProvider for HuggingFaceProvider {
                 let delta = if i == 0 {
                     word.to_string()
                 } else {
-                    format!(" {}", word)
+                    format!(" {word}")
                 };
                 Ok(ChatStreamEvent::ContentDelta { delta, index: None })
             })
@@ -331,7 +331,7 @@ impl Default for HuggingFaceProviderBuilder {
 }
 
 impl HuggingFaceProviderBuilder {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { config: None }
     }
 
@@ -365,7 +365,7 @@ impl CustomProviderBuilder for HuggingFaceProviderBuilder {
 pub mod utils {
     use super::*;
 
-    /// Convert standard ChatMessage to a generic JSON format
+    /// Convert standard `ChatMessage` to a generic JSON format
     pub fn message_to_json(message: &ChatMessage) -> serde_json::Value {
         serde_json::json!({
             "role": match message.role {
@@ -406,7 +406,7 @@ pub mod utils {
 
     /// Create a simple error response
     pub fn create_error_response(error_message: &str) -> CustomChatResponse {
-        CustomChatResponse::new(format!("Error: {}", error_message))
+        CustomChatResponse::new(format!("Error: {error_message}"))
             .with_finish_reason("error")
             .with_metadata("error", true)
     }

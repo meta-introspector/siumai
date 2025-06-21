@@ -4,7 +4,7 @@
 //!
 //! # Architecture
 //! - `client.rs` - Main Gemini client that aggregates all capabilities
-//! - `types.rs` - Gemini-specific type definitions based on OpenAPI spec
+//! - `types.rs` - Gemini-specific type definitions based on `OpenAPI` spec
 //! - `chat.rs` - Chat completion capability implementation
 //! - `models.rs` - Model listing capability implementation
 //! - `files.rs` - File management capability implementation

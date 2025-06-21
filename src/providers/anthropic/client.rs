@@ -63,7 +63,7 @@ impl AnthropicClient {
     }
 
     /// Get Anthropic-specific parameters
-    pub fn specific_params(&self) -> &AnthropicSpecificParams {
+    pub const fn specific_params(&self) -> &AnthropicSpecificParams {
         &self.specific_params
     }
 
