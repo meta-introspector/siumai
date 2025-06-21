@@ -257,8 +257,7 @@ impl ChatCapability for AnthropicChatCapability {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             return Err(LlmError::HttpError(format!(
-                "HTTP {}: {}",
-                status, error_text
+                "HTTP {status}: {error_text}"
             )));
         }
 
