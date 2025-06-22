@@ -227,10 +227,10 @@ impl OpenAiResponses {
             let mut params = Vec::new();
 
             if let Some(limit) = q.limit {
-                params.push(format!("limit={}", limit));
+                params.push(format!("limit={limit}"));
             }
             if let Some(after) = q.after {
-                params.push(format!("after={}", after));
+                params.push(format!("after={after}"));
             }
             if let Some(status) = q.status {
                 let status_str = match status {
@@ -239,10 +239,10 @@ impl OpenAiResponses {
                     ResponseStatus::Failed => "failed",
                     ResponseStatus::Cancelled => "cancelled",
                 };
-                params.push(format!("status={}", status_str));
+                params.push(format!("status={status_str}"));
             }
             if let Some(order) = q.order {
-                params.push(format!("order={}", order));
+                params.push(format!("order={order}"));
             }
 
             if !params.is_empty() {
