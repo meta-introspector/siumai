@@ -9,7 +9,6 @@
 //! Before running, set your API key:
 //! ```bash
 //! export OPENAI_API_KEY="your-openai-key"
-//! export GROQ_API_KEY="your-groq-key"
 //! ```
 //!
 //! Usage:

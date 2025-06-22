@@ -454,6 +454,48 @@ if let Some(answer) = response.content_text() {
 
 ### OpenAI API Feature Examples
 
+#### Responses API (OpenAI-Specific)
+
+OpenAI's Responses API provides stateful conversations, background processing, and built-in tools:
+
+```rust
+use siumai::providers::openai::responses::{OpenAiResponses, ResponsesApiCapability};
+use siumai::providers::openai::config::OpenAiConfig;
+use siumai::types::OpenAiBuiltInTool;
+use siumai::prelude::*;
+
+// Create Responses API client with built-in tools
+let config = OpenAiConfig::new("your-api-key")
+    .with_model("gpt-4o")
+    .with_responses_api(true)
+    .with_built_in_tool(OpenAiBuiltInTool::WebSearch);
+
+let client = OpenAiResponses::new(reqwest::Client::new(), config);
+
+// Basic chat with built-in tools
+let messages = vec![user!("What's the latest news about AI?")];
+let response = client.chat_with_tools(messages, None).await?;
+println!("Response: {}", response.content.all_text());
+
+// Background processing for complex tasks
+let complex_messages = vec![user!("Research quantum computing and write a summary")];
+let background_response = client
+    .create_response_background(
+        complex_messages,
+        None,
+        Some(vec![OpenAiBuiltInTool::WebSearch]),
+        None,
+    )
+    .await?;
+
+// Check if background task is ready
+let is_ready = client.is_response_ready(&background_response.id).await?;
+if is_ready {
+    let final_response = client.get_response(&background_response.id).await?;
+    println!("Background result: {}", final_response.content.all_text());
+}
+```
+
 #### Text Embedding
 
 ```rust

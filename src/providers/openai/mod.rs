@@ -83,3 +83,6 @@ pub use files::OpenAiFiles;
 pub use images::OpenAiImages;
 pub use models::OpenAiModels;
 pub use moderation::OpenAiModeration;
+pub use responses::{
+    ListResponsesQuery, OpenAiResponses, ResponseMetadata, ResponseStatus, ResponsesApiCapability,
+};

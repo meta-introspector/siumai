@@ -10,7 +10,6 @@
 //! ```bash
 //! export OPENAI_API_KEY="your-key"
 //! export ANTHROPIC_API_KEY="your-key"
-//! export GROQ_API_KEY="your-key"
 //! ```
 //!
 //! Run with:

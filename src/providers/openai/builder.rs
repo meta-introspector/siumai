@@ -282,6 +282,9 @@ impl OpenAiBuilder {
             openai_params: self.openai_params,
             http_config: self.http_config,
             web_search_config: crate::types::WebSearchConfig::default(),
+            use_responses_api: false,
+            previous_response_id: None,
+            built_in_tools: Vec::new(),
         };
 
         // Create and return the client

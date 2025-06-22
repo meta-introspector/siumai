@@ -264,6 +264,9 @@ impl ChatCapability for OpenAiChatCapability {
             openai_params: OpenAiParams::default(),
             http_config: self.http_config.clone(),
             web_search_config: crate::types::WebSearchConfig::default(),
+            use_responses_api: false,
+            previous_response_id: None,
+            built_in_tools: Vec::new(),
         };
 
         let streaming = super::streaming::OpenAiStreaming::new(config, self.http_client.clone());
@@ -320,6 +323,9 @@ impl OpenAiChatCapability {
             openai_params: OpenAiParams::default(),
             http_config: self.http_config.clone(),
             web_search_config: crate::types::WebSearchConfig::default(),
+            use_responses_api: false,
+            previous_response_id: None,
+            built_in_tools: Vec::new(),
         };
 
         let streaming = super::streaming::OpenAiStreaming::new(config, self.http_client.clone());

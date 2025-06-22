@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **OpenAI Responses API Support** - Complete implementation of OpenAI's Responses API
+  - Stateful conversations with automatic context management
+  - Background processing for long-running tasks (`create_response_background`)
+  - Built-in tools support (Web Search, File Search, Computer Use)
+  - Response lifecycle management (`get_response`, `cancel_response`, `list_responses`)
+  - Response chaining with `continue_conversation` method
+  - New types: `ResponseStatus`, `ResponseMetadata`, `ListResponsesQuery`
+  - New trait: `ResponsesApiCapability` for Responses API specific functionality
+- Configuration enhancements for Responses API
+  - `with_responses_api()` - Enable Responses API mode
+  - `with_built_in_tool()` - Add built-in tools (WebSearch, FileSearch, ComputerUse)
+  - `with_previous_response_id()` - Chain responses together
+- Comprehensive documentation and examples for Responses API usage
+
+### Changed
+
+- Enhanced `OpenAiConfig` with Responses API specific fields
+- Updated examples to demonstrate Responses API capabilities
+
 ## [0.3.0] - 2025-06-21
 
 ### Added

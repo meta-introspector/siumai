@@ -14,7 +14,10 @@ pub mod test_provider;
 pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;
 pub use ollama::OllamaClient;
-pub use openai::OpenAiClient;
+pub use openai::{
+    ListResponsesQuery, OpenAiClient, OpenAiResponses, ResponseMetadata, ResponseStatus,
+    ResponsesApiCapability,
+};
 pub use openai_compatible::{
     DeepSeekProvider, OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
     OpenRouterProvider,

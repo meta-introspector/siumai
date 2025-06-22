@@ -4,9 +4,16 @@
 //! of Chat Completions with the tool-use capabilities of the Assistants API.
 //! It supports built-in tools like web search, file search, and computer use.
 //!
+//! The Responses API provides:
+//! - Stateful conversations with automatic context management
+//! - Background processing for long-running tasks
+//! - Built-in tools (web search, file search, computer use)
+//! - Response lifecycle management (create, get, cancel, list)
+//!
 //! API Reference: <https://platform.openai.com/docs/api-reference/responses>
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::error::LlmError;
@@ -16,6 +23,54 @@ use crate::types::{ChatMessage, ChatResponse, OpenAiBuiltInTool, Tool};
 use crate::web_search::{WebSearchCapability, WebSearchProvider};
 
 use super::config::OpenAiConfig;
+
+/// Response status for background processing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResponseStatus {
+    /// Response is being processed
+    InProgress,
+    /// Response completed successfully
+    Completed,
+    /// Response failed with an error
+    Failed,
+    /// Response was cancelled
+    Cancelled,
+}
+
+/// Response metadata for Responses API
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResponseMetadata {
+    /// Response ID
+    pub id: String,
+    /// Response status
+    pub status: ResponseStatus,
+    /// Creation timestamp
+    pub created_at: u64,
+    /// Completion timestamp (if completed)
+    pub completed_at: Option<u64>,
+    /// Model used
+    pub model: String,
+    /// Whether this was a background request
+    pub background: bool,
+    /// Previous response ID (if chained)
+    pub previous_response_id: Option<String>,
+    /// Error message (if failed)
+    pub error: Option<String>,
+}
+
+/// List responses query parameters
+#[derive(Debug, Clone, Default)]
+pub struct ListResponsesQuery {
+    /// Limit number of results
+    pub limit: Option<u32>,
+    /// Pagination cursor
+    pub after: Option<String>,
+    /// Filter by status
+    pub status: Option<ResponseStatus>,
+    /// Sort order (asc/desc)
+    pub order: Option<String>,
+}
 
 /// `OpenAI` Responses API client
 #[allow(dead_code)]
@@ -52,6 +107,186 @@ impl OpenAiResponses {
         format!("{}/responses", self.config.base_url)
     }
 
+    /// Get a specific response endpoint
+    fn response_endpoint(&self, response_id: &str) -> String {
+        format!("{}/responses/{}", self.config.base_url, response_id)
+    }
+
+    /// Get response cancel endpoint
+    fn response_cancel_endpoint(&self, response_id: &str) -> String {
+        format!("{}/responses/{}/cancel", self.config.base_url, response_id)
+    }
+
+    /// Create a response with background processing
+    pub async fn create_response_background(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        built_in_tools: Option<Vec<OpenAiBuiltInTool>>,
+        previous_response_id: Option<String>,
+    ) -> Result<ResponseMetadata, LlmError> {
+        let request_body = self.build_request_body_with_options(
+            &messages,
+            tools.as_deref(),
+            built_in_tools.as_deref(),
+            false, // stream = false for background
+            true,  // background = true
+            previous_response_id,
+        )?;
+
+        let response = self
+            .http_client
+            .post(self.responses_endpoint())
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("OpenAI Responses API background error: {error_text}"),
+            ));
+        }
+
+        let response_data: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(e.to_string()))?;
+
+        self.parse_response_metadata(response_data)
+    }
+
+    /// Get a response by ID
+    pub async fn get_response(&self, response_id: &str) -> Result<ChatResponse, LlmError> {
+        let response = self
+            .http_client
+            .get(self.response_endpoint(response_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("OpenAI get response error: {error_text}"),
+            ));
+        }
+
+        let response_data: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(e.to_string()))?;
+
+        self.parse_response(response_data)
+    }
+
+    /// Cancel a background response
+    pub async fn cancel_response(&self, response_id: &str) -> Result<ResponseMetadata, LlmError> {
+        let response = self
+            .http_client
+            .post(self.response_cancel_endpoint(response_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Content-Type", "application/json")
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("OpenAI cancel response error: {error_text}"),
+            ));
+        }
+
+        let response_data: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(e.to_string()))?;
+
+        self.parse_response_metadata(response_data)
+    }
+
+    /// List responses with optional filtering
+    pub async fn list_responses(
+        &self,
+        query: Option<ListResponsesQuery>,
+    ) -> Result<Vec<ResponseMetadata>, LlmError> {
+        let mut url = self.responses_endpoint();
+
+        if let Some(q) = query {
+            let mut params = Vec::new();
+
+            if let Some(limit) = q.limit {
+                params.push(format!("limit={}", limit));
+            }
+            if let Some(after) = q.after {
+                params.push(format!("after={}", after));
+            }
+            if let Some(status) = q.status {
+                let status_str = match status {
+                    ResponseStatus::InProgress => "in_progress",
+                    ResponseStatus::Completed => "completed",
+                    ResponseStatus::Failed => "failed",
+                    ResponseStatus::Cancelled => "cancelled",
+                };
+                params.push(format!("status={}", status_str));
+            }
+            if let Some(order) = q.order {
+                params.push(format!("order={}", order));
+            }
+
+            if !params.is_empty() {
+                url.push('?');
+                url.push_str(&params.join("&"));
+            }
+        }
+
+        let response = self
+            .http_client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("OpenAI list responses error: {error_text}"),
+            ));
+        }
+
+        let response_data: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(e.to_string()))?;
+
+        // Parse the list of responses
+        let responses = response_data
+            .get("data")
+            .and_then(|data| data.as_array())
+            .ok_or_else(|| LlmError::ParseError("Invalid response format".to_string()))?;
+
+        let mut result = Vec::new();
+        for response_item in responses {
+            result.push(self.parse_response_metadata(response_item.clone())?);
+        }
+
+        Ok(result)
+    }
+
     /// Build request body for Responses API
     fn build_request_body(
         &self,
@@ -61,11 +296,36 @@ impl OpenAiResponses {
         stream: bool,
         background: bool,
     ) -> Result<serde_json::Value, LlmError> {
+        self.build_request_body_with_options(
+            messages,
+            tools,
+            built_in_tools,
+            stream,
+            background,
+            None,
+        )
+    }
+
+    /// Build request body for Responses API with additional options
+    fn build_request_body_with_options(
+        &self,
+        messages: &[ChatMessage],
+        tools: Option<&[Tool]>,
+        built_in_tools: Option<&[OpenAiBuiltInTool]>,
+        stream: bool,
+        background: bool,
+        previous_response_id: Option<String>,
+    ) -> Result<serde_json::Value, LlmError> {
         let mut body = serde_json::json!({
             "model": self.config.common_params.model,
             "stream": stream,
             "background": background,
         });
+
+        // Add previous response ID for chaining
+        if let Some(prev_id) = previous_response_id {
+            body["previous_response_id"] = serde_json::Value::String(prev_id);
+        }
 
         // Convert messages to API format
         let api_messages: Vec<serde_json::Value> = messages
@@ -124,6 +384,71 @@ impl OpenAiResponses {
         }
 
         Ok(body)
+    }
+
+    /// Parse response metadata from API response
+    fn parse_response_metadata(
+        &self,
+        response_data: serde_json::Value,
+    ) -> Result<ResponseMetadata, LlmError> {
+        let id = response_data
+            .get("id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| LlmError::ParseError("Missing response ID".to_string()))?
+            .to_string();
+
+        let status_str = response_data
+            .get("status")
+            .and_then(|v| v.as_str())
+            .unwrap_or("in_progress");
+
+        let status = match status_str {
+            "in_progress" => ResponseStatus::InProgress,
+            "completed" => ResponseStatus::Completed,
+            "failed" => ResponseStatus::Failed,
+            "cancelled" => ResponseStatus::Cancelled,
+            _ => ResponseStatus::InProgress,
+        };
+
+        let created_at = response_data
+            .get("created_at")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+
+        let completed_at = response_data.get("completed_at").and_then(|v| v.as_u64());
+
+        let model = response_data
+            .get("model")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&self.config.common_params.model)
+            .to_string();
+
+        let background = response_data
+            .get("background")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let previous_response_id = response_data
+            .get("previous_response_id")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let error = response_data
+            .get("error")
+            .and_then(|v| v.get("message"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        Ok(ResponseMetadata {
+            id,
+            status,
+            created_at,
+            completed_at,
+            model,
+            background,
+            previous_response_id,
+            error,
+        })
     }
 
     /// Convert `ChatMessage` to API format
@@ -525,5 +850,254 @@ impl WebSearchCapability for OpenAiResponses {
 
     fn web_search_strategy(&self) -> crate::types::WebSearchStrategy {
         crate::types::WebSearchStrategy::BuiltIn
+    }
+}
+
+/// Trait for OpenAI Responses API specific functionality
+///
+/// This trait extends beyond basic chat capabilities to provide
+/// stateful conversation management, background processing, and
+/// response lifecycle management specific to OpenAI's Responses API.
+#[async_trait]
+pub trait ResponsesApiCapability {
+    /// Create a response with background processing
+    async fn create_response_background(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        built_in_tools: Option<Vec<OpenAiBuiltInTool>>,
+        previous_response_id: Option<String>,
+    ) -> Result<ResponseMetadata, LlmError>;
+
+    /// Get a response by ID
+    async fn get_response(&self, response_id: &str) -> Result<ChatResponse, LlmError>;
+
+    /// Cancel a background response
+    async fn cancel_response(&self, response_id: &str) -> Result<ResponseMetadata, LlmError>;
+
+    /// List responses with optional filtering
+    async fn list_responses(
+        &self,
+        query: Option<ListResponsesQuery>,
+    ) -> Result<Vec<ResponseMetadata>, LlmError>;
+
+    /// Create a response that continues from a previous response
+    async fn continue_conversation(
+        &self,
+        previous_response_id: String,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        background: bool,
+    ) -> Result<ChatResponse, LlmError>;
+
+    /// Check if a response is ready (for background responses)
+    async fn is_response_ready(&self, response_id: &str) -> Result<bool, LlmError>;
+}
+
+#[async_trait]
+impl ResponsesApiCapability for OpenAiResponses {
+    async fn create_response_background(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        built_in_tools: Option<Vec<OpenAiBuiltInTool>>,
+        previous_response_id: Option<String>,
+    ) -> Result<ResponseMetadata, LlmError> {
+        self.create_response_background(messages, tools, built_in_tools, previous_response_id)
+            .await
+    }
+
+    async fn get_response(&self, response_id: &str) -> Result<ChatResponse, LlmError> {
+        self.get_response(response_id).await
+    }
+
+    async fn cancel_response(&self, response_id: &str) -> Result<ResponseMetadata, LlmError> {
+        self.cancel_response(response_id).await
+    }
+
+    async fn list_responses(
+        &self,
+        query: Option<ListResponsesQuery>,
+    ) -> Result<Vec<ResponseMetadata>, LlmError> {
+        self.list_responses(query).await
+    }
+
+    async fn continue_conversation(
+        &self,
+        previous_response_id: String,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        background: bool,
+    ) -> Result<ChatResponse, LlmError> {
+        let request_body = self.build_request_body_with_options(
+            &messages,
+            tools.as_deref(),
+            None,
+            false,
+            background,
+            Some(previous_response_id),
+        )?;
+
+        let response = self
+            .http_client
+            .post(self.responses_endpoint())
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Content-Type", "application/json")
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("OpenAI continue conversation error: {error_text}"),
+            ));
+        }
+
+        let response_data: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(e.to_string()))?;
+
+        self.parse_response(response_data)
+    }
+
+    async fn is_response_ready(&self, response_id: &str) -> Result<bool, LlmError> {
+        let metadata = self.get_response_metadata(response_id).await?;
+        Ok(matches!(
+            metadata.status,
+            ResponseStatus::Completed | ResponseStatus::Failed | ResponseStatus::Cancelled
+        ))
+    }
+}
+
+impl OpenAiResponses {
+    /// Get response metadata without full response content
+    pub async fn get_response_metadata(
+        &self,
+        response_id: &str,
+    ) -> Result<ResponseMetadata, LlmError> {
+        let response = self
+            .http_client
+            .get(self.response_endpoint(response_id))
+            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        if !response.status().is_success() {
+            let status_code = response.status().as_u16();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::api_error(
+                status_code,
+                format!("OpenAI get response metadata error: {error_text}"),
+            ));
+        }
+
+        let response_data: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LlmError::ParseError(e.to_string()))?;
+
+        self.parse_response_metadata(response_data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::providers::openai::config::OpenAiConfig;
+    use crate::types::{
+        ChatMessage, MessageContent, MessageMetadata, MessageRole, OpenAiBuiltInTool,
+    };
+
+    fn create_test_config() -> OpenAiConfig {
+        OpenAiConfig::new("test-key")
+            .with_model("gpt-4o")
+            .with_responses_api(true)
+            .with_built_in_tool(OpenAiBuiltInTool::WebSearch)
+    }
+
+    fn create_test_message() -> ChatMessage {
+        ChatMessage {
+            role: MessageRole::User,
+            content: MessageContent::Text("Hello, world!".to_string()),
+            metadata: MessageMetadata::default(),
+            tool_calls: None,
+            tool_call_id: None,
+        }
+    }
+
+    #[test]
+    fn test_responses_client_creation() {
+        let config = create_test_config();
+        let client = OpenAiResponses::new(reqwest::Client::new(), config);
+
+        // Test that the client was created successfully
+        assert_eq!(client.config.common_params.model, "gpt-4o");
+        assert!(client.config.use_responses_api);
+        assert_eq!(client.config.built_in_tools.len(), 1);
+    }
+
+    #[test]
+    fn test_responses_endpoint() {
+        let config = create_test_config();
+        let client = OpenAiResponses::new(reqwest::Client::new(), config);
+
+        assert_eq!(
+            client.responses_endpoint(),
+            "https://api.openai.com/v1/responses"
+        );
+    }
+
+    #[test]
+    fn test_build_request_body_basic() {
+        let config = create_test_config();
+        let client = OpenAiResponses::new(reqwest::Client::new(), config);
+        let messages = vec![create_test_message()];
+
+        let body = client
+            .build_request_body(&messages, None, None, false, false)
+            .unwrap();
+
+        assert_eq!(body["model"], "gpt-4o");
+        assert_eq!(body["stream"], false);
+        assert_eq!(body["background"], false);
+
+        // Check input format
+        assert!(body["input"].is_object()); // Single message should be an object
+    }
+
+    #[test]
+    fn test_parse_response_metadata() {
+        let config = create_test_config();
+        let client = OpenAiResponses::new(reqwest::Client::new(), config);
+
+        let response_data = serde_json::json!({
+            "id": "resp_123",
+            "status": "completed",
+            "created_at": 1234567890,
+            "completed_at": 1234567900,
+            "model": "gpt-4o",
+            "background": true,
+            "previous_response_id": "prev_resp_456"
+        });
+
+        let metadata = client.parse_response_metadata(response_data).unwrap();
+
+        assert_eq!(metadata.id, "resp_123");
+        assert!(matches!(metadata.status, ResponseStatus::Completed));
+        assert_eq!(metadata.created_at, 1234567890);
+        assert_eq!(metadata.completed_at, Some(1234567900));
+        assert_eq!(metadata.model, "gpt-4o");
+        assert!(metadata.background);
+        assert_eq!(
+            metadata.previous_response_id,
+            Some("prev_resp_456".to_string())
+        );
+        assert!(metadata.error.is_none());
     }
 }
