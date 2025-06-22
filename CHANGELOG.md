@@ -4,6 +4,7 @@
 
 ### Added
 
+- **xAI Provider Support** - Added dedicated xAI provider with Grok models support, reasoning capabilities, and thinking content processing
 - **OpenAI Responses API Support** - Complete implementation of OpenAI's Responses API
   - Stateful conversations with automatic context management
   - Background processing for long-running tasks (`create_response_background`)

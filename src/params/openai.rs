@@ -11,6 +11,7 @@ use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderParams, ProviderType};
 
 /// `OpenAI` Parameter Mapper
+#[derive(Debug, Clone)]
 pub struct OpenAiParameterMapper;
 
 impl ParameterMapper for OpenAiParameterMapper {

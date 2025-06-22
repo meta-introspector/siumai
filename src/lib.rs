@@ -179,8 +179,8 @@ impl Provider {
     }
 
     /// Create an xAI client builder
-    pub fn xai() -> crate::builder::GenericProviderBuilder {
-        crate::builder::LlmBuilder::new().xai()
+    pub fn xai() -> crate::providers::xai::XaiBuilder {
+        crate::providers::xai::XaiBuilder::new()
     }
 
     /// Create an `OpenRouter` client builder

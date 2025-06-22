@@ -7,6 +7,7 @@ pub mod gemini;
 pub mod ollama;
 pub mod openai;
 pub mod openai_compatible;
+pub mod xai;
 
 pub mod test_provider;
 
@@ -22,6 +23,7 @@ pub use openai_compatible::{
     DeepSeekProvider, OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
     OpenRouterProvider,
 };
+pub use xai::XaiClient;
 
 use crate::traits::ProviderCapabilities;
 use crate::types::ProviderType;
@@ -178,9 +180,21 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
                 .with_streaming()
                 .with_tools()
                 .with_vision()
-                .with_custom_feature("reasoning", true),
-            default_base_url: "https://api.x.ai",
-            supported_models: vec!["grok-beta", "grok-vision-beta"],
+                .with_custom_feature("reasoning", true)
+                .with_custom_feature("deferred_completion", true)
+                .with_custom_feature("structured_outputs", true),
+            default_base_url: "https://api.x.ai/v1",
+            supported_models: vec![
+                "grok-3-latest",
+                "grok-3",
+                "grok-3-fast",
+                "grok-3-mini",
+                "grok-3-mini-fast",
+                "grok-2-vision-1212",
+                "grok-2-1212",
+                "grok-beta",
+                "grok-vision-beta",
+            ],
         },
     ]
 }
@@ -208,7 +222,7 @@ pub const fn get_default_model(provider_type: &ProviderType) -> Option<&'static 
         ProviderType::Anthropic => Some("claude-3-5-sonnet-20241022"),
         ProviderType::Gemini => Some("gemini-1.5-flash"),
         ProviderType::Ollama => Some("llama3.2:latest"),
-        ProviderType::XAI => Some("grok-beta"),
+        ProviderType::XAI => Some("grok-3-latest"),
         ProviderType::Custom(_) => None,
     }
 }
@@ -285,7 +299,7 @@ impl ProviderFactory {
             },
             ProviderType::XAI => crate::types::CommonParams {
                 model: get_default_model(provider_type)
-                    .unwrap_or("grok-beta")
+                    .unwrap_or("grok-3-latest")
                     .to_string(),
                 temperature: Some(0.7),
                 max_tokens: Some(4096),
