@@ -59,8 +59,10 @@ tokio-test = "0.4"
 mockito = "1.0"
 env_logger = "0.11"
 futures-util = "0.3"
+rmcp = { version = "0.1.5", features = ["transport-io"] }
 serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
+axum = "0.8.4"
 
 # Examples configuration
 [[example]]
@@ -110,11 +112,6 @@ path = "examples/04_providers/openai/basic_chat.rs"
 [[example]]
 name = "simple_chatbot"
 path = "examples/05_use_cases/simple_chatbot.rs"
-
-# Additional examples
-[[example]]
-name = "basic_usage"
-path = "examples/01_getting_started/basic_usage.rs"
 
 [[example]]
 name = "convenience_methods"
@@ -167,6 +164,14 @@ path = "examples/05_use_cases/content_generator.rs"
 [[example]]
 name = "response_cache"
 path = "examples/02_core_features/response_cache.rs"
+
+[[example]]
+name = "http_mcp_client"
+path = "examples/06_mcp_integration/http_mcp_client.rs"
+
+[[example]]
+name = "http_mcp_server"
+path = "examples/06_mcp_integration/http_mcp_server.rs"
 
 # The profile that 'dist' will build with
 [profile.dist]

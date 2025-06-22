@@ -1,0 +1,272 @@
+# 🔌 OpenAI-Compatible Providers
+
+This directory contains examples demonstrating OpenAI-compatible providers through the Siumai library. These providers offer OpenAI-compatible APIs with different models, pricing, and capabilities.
+
+## 📋 Available Examples
+
+### 🚀 [Models Showcase](./models_showcase.rs)
+**Exploring different OpenAI-compatible providers and models**
+
+Features demonstrated:
+- DeepSeek models and capabilities
+- Groq high-speed inference
+- Other OpenAI-compatible providers
+- Performance and cost comparisons
+- Provider-specific optimizations
+
+```bash
+# Run the models showcase example
+cargo run --example openai_compatible_models_showcase
+```
+
+**Key Learning Points:**
+- How to configure different compatible providers
+- Understanding each provider's strengths
+- Cost and performance trade-offs
+- When to use which provider
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+Set up API keys for the providers you want to use:
+
+```bash
+# DeepSeek (cost-effective, good performance)
+export DEEPSEEK_API_KEY="your-deepseek-key"
+
+# Groq (ultra-fast inference)
+export GROQ_API_KEY="your-groq-key"
+
+# Together AI (diverse model selection)
+export TOGETHER_API_KEY="your-together-key"
+
+# Perplexity (search-augmented responses)
+export PERPLEXITY_API_KEY="your-perplexity-key"
+```
+
+### Quick Start
+
+```rust
+use siumai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // DeepSeek - cost-effective
+    let deepseek = LlmBuilder::new()
+        .openai_compatible("https://api.deepseek.com/v1")
+        .api_key(&std::env::var("DEEPSEEK_API_KEY")?)
+        .model("deepseek-chat")
+        .build()
+        .await?;
+
+    // Groq - ultra-fast
+    let groq = LlmBuilder::new()
+        .openai_compatible("https://api.groq.com/openai/v1")
+        .api_key(&std::env::var("GROQ_API_KEY")?)
+        .model("llama-3.1-70b-versatile")
+        .build()
+        .await?;
+
+    let messages = vec![user!("Explain the benefits of AI")];
+    
+    let response = deepseek.chat(messages.clone()).await?;
+    println!("DeepSeek: {}", response.content_text().unwrap_or_default());
+    
+    Ok(())
+}
+```
+
+## 🎯 Provider Comparison
+
+### DeepSeek
+**Strengths:** Very cost-effective, good performance, reasoning capabilities
+**Best for:** Cost-sensitive applications, general tasks, coding assistance
+**Models:** deepseek-chat, deepseek-coder
+
+```rust
+let deepseek = LlmBuilder::new()
+    .openai_compatible("https://api.deepseek.com/v1")
+    .api_key(&deepseek_key)
+    .model("deepseek-chat")
+    .build().await?;
+```
+
+### Groq
+**Strengths:** Ultra-fast inference, low latency, good for real-time apps
+**Best for:** Real-time applications, chatbots, interactive systems
+**Models:** llama-3.1-70b-versatile, mixtral-8x7b-32768
+
+```rust
+let groq = LlmBuilder::new()
+    .openai_compatible("https://api.groq.com/openai/v1")
+    .api_key(&groq_key)
+    .model("llama-3.1-70b-versatile")
+    .build().await?;
+```
+
+### Together AI
+**Strengths:** Diverse model selection, open-source models, competitive pricing
+**Best for:** Experimenting with different models, specialized tasks
+**Models:** Various Llama, Mistral, and other open-source models
+
+```rust
+let together = LlmBuilder::new()
+    .openai_compatible("https://api.together.xyz/v1")
+    .api_key(&together_key)
+    .model("meta-llama/Llama-3-70b-chat-hf")
+    .build().await?;
+```
+
+### Perplexity
+**Strengths:** Search-augmented responses, up-to-date information
+**Best for:** Research, current events, fact-checking
+**Models:** llama-3.1-sonar-small-128k-online, llama-3.1-sonar-large-128k-online
+
+```rust
+let perplexity = LlmBuilder::new()
+    .openai_compatible("https://api.perplexity.ai")
+    .api_key(&perplexity_key)
+    .model("llama-3.1-sonar-small-128k-online")
+    .build().await?;
+```
+
+## 🌟 Key Benefits
+
+### Cost Effectiveness
+- Often significantly cheaper than OpenAI
+- Competitive pricing models
+- Good performance per dollar
+
+### Speed & Performance
+- Some providers offer ultra-fast inference (Groq)
+- Optimized infrastructure
+- Low latency options
+
+### Model Diversity
+- Access to various open-source models
+- Different model architectures
+- Specialized models for specific tasks
+
+### Innovation
+- Cutting-edge features and capabilities
+- Rapid deployment of new models
+- Experimental features
+
+## ⚙️ Configuration Best Practices
+
+### Provider Selection Strategy
+
+```rust
+// For cost-sensitive applications
+let cost_effective = LlmBuilder::new()
+    .openai_compatible("https://api.deepseek.com/v1")
+    .model("deepseek-chat")
+    .temperature(0.7)
+    .build().await?;
+
+// For speed-critical applications
+let ultra_fast = LlmBuilder::new()
+    .openai_compatible("https://api.groq.com/openai/v1")
+    .model("llama-3.1-70b-versatile")
+    .temperature(0.3)
+    .build().await?;
+
+// For research and current information
+let research_focused = LlmBuilder::new()
+    .openai_compatible("https://api.perplexity.ai")
+    .model("llama-3.1-sonar-small-128k-online")
+    .temperature(0.1)
+    .build().await?;
+```
+
+### Fallback Strategy
+
+```rust
+async fn chat_with_fallback(message: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let providers = vec![
+        ("Groq", groq_client),
+        ("DeepSeek", deepseek_client),
+        ("Together", together_client),
+    ];
+    
+    for (name, client) in providers {
+        match client.chat(vec![user!(message)]).await {
+            Ok(response) => {
+                println!("Success with {}", name);
+                return Ok(response.content_text().unwrap_or_default().to_string());
+            }
+            Err(e) => {
+                println!("Failed with {}: {}", name, e);
+                continue;
+            }
+        }
+    }
+    
+    Err("All providers failed".into())
+}
+```
+
+## 💰 Cost Optimization
+
+### Tips for Cost Management
+
+1. **Choose the right provider for your use case**
+2. **Monitor token usage across providers**
+3. **Implement response caching**
+4. **Use smaller models when possible**
+5. **Set appropriate token limits**
+
+### Performance vs. Cost Trade-offs
+
+- **DeepSeek**: Best cost/performance ratio
+- **Groq**: Premium for speed
+- **Together**: Good balance with model variety
+- **Perplexity**: Premium for search capabilities
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**API Key Issues**
+- Verify API key is correct and active
+- Check if you have sufficient credits
+- Ensure proper environment variable setup
+
+**Model Availability**
+- Some models may not be available in all regions
+- Check provider documentation for model lists
+- Verify model name spelling
+
+**Rate Limiting**
+- Different providers have different rate limits
+- Implement proper retry logic
+- Consider upgrading plans for higher limits
+
+## 🔗 Related Resources
+
+- [DeepSeek Documentation](https://platform.deepseek.com/api-docs/)
+- [Groq Documentation](https://console.groq.com/docs/)
+- [Together AI Documentation](https://docs.together.ai/)
+- [Perplexity Documentation](https://docs.perplexity.ai/)
+
+## 🎯 Next Steps
+
+1. **Explore Providers**
+   - Sign up for different provider accounts
+   - Get API keys and test basic functionality
+   - Compare performance and costs
+
+2. **Model Experimentation**
+   - Try different models from each provider
+   - Compare quality and speed
+   - Find the best fit for your use case
+
+3. **Production Integration**
+   - Implement fallback strategies
+   - Set up monitoring and alerting
+   - Optimize for cost and performance
+
+---
+
+**Ready to explore OpenAI-compatible providers? Start with [models_showcase.rs](models_showcase.rs)! 🔌**

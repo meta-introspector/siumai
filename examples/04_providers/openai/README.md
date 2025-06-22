@@ -10,7 +10,7 @@ Examples demonstrating OpenAI-specific features and capabilities with Siumai.
 Essential OpenAI chat features and model selection.
 
 ```bash
-cargo run --example basic_chat
+cargo run --example openai_basic_chat
 ```
 
 **What you'll learn:**
@@ -25,7 +25,7 @@ cargo run --example basic_chat
 Advanced features like JSON mode, function calling, and structured outputs.
 
 ```bash
-cargo run --example enhanced_features
+cargo run --example openai_enhanced_features
 ```
 
 **What you'll learn:**
@@ -40,7 +40,7 @@ cargo run --example enhanced_features
 Image analysis and multimodal processing with GPT-4 Vision.
 
 ```bash
-cargo run --example vision_processing
+cargo run --example openai_vision_processing
 ```
 
 **What you'll learn:**
@@ -55,7 +55,8 @@ cargo run --example vision_processing
 Audio transcription with Whisper and text-to-speech generation.
 
 ```bash
-cargo run --example audio_processing
+# Note: This example is not yet implemented
+# cargo run --example openai_audio_processing
 ```
 
 **What you'll learn:**
@@ -70,7 +71,8 @@ cargo run --example audio_processing
 Create and edit images using DALL-E models.
 
 ```bash
-cargo run --example image_generation
+# Note: This example is not yet implemented
+# cargo run --example openai_image_generation
 ```
 
 **What you'll learn:**
@@ -85,7 +87,8 @@ cargo run --example image_generation
 File management and processing for Assistants API.
 
 ```bash
-cargo run --example files_api
+# Note: This example is not yet implemented
+# cargo run --example openai_files_api
 ```
 
 **What you'll learn:**
