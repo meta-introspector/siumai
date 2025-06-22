@@ -150,9 +150,6 @@ path = "examples/04_providers/openai_compatible/models_showcase.rs"
 name = "openai_responses_api"
 path = "examples/04_providers/openai/openai_responses_api.rs"
 
-[[example]]
-name = "xai_basic_chat"
-path = "examples/04_providers/xai/basic_chat.rs"
 
 [[example]]
 name = "api_integration"

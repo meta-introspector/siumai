@@ -114,7 +114,7 @@ async fn test_thinking_content_with_utf8_truncation() {
 
     for event in events {
         match event {
-            Ok(ChatStreamEvent::ReasoningDelta { delta }) => {
+            Ok(ChatStreamEvent::ThinkingDelta { delta }) => {
                 reasoning_content.push_str(&delta);
             }
             Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
@@ -188,7 +188,7 @@ async fn test_mixed_content_with_extreme_fragmentation() {
             Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
                 all_content.push_str(&delta);
             }
-            Ok(ChatStreamEvent::ReasoningDelta { delta }) => {
+            Ok(ChatStreamEvent::ThinkingDelta { delta }) => {
                 all_content.push_str(&delta);
             }
             _ => {}
