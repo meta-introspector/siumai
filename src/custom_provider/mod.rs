@@ -24,6 +24,8 @@ pub struct CustomProviderConfig {
     pub base_url: String,
     /// API key or authentication token
     pub api_key: String,
+    /// Default model to use (optional)
+    pub model: Option<String>,
     /// Custom headers
     pub headers: HashMap<String, String>,
     /// Request timeout in seconds
@@ -39,10 +41,17 @@ impl CustomProviderConfig {
             name: name.into(),
             base_url: base_url.into(),
             api_key: api_key.into(),
+            model: None,
             headers: HashMap::new(),
             timeout: Some(30),
             custom_params: HashMap::new(),
         }
+    }
+
+    /// Set the default model
+    pub fn with_model<S: Into<String>>(mut self, model: S) -> Self {
+        self.model = Some(model.into());
+        self
     }
 
     /// Add a custom header
@@ -301,7 +310,15 @@ impl ChatCapability for CustomProviderClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        let mut request = CustomChatRequest::new(messages, "default".to_string());
+        // Use configured model, or first supported model as fallback
+        let model = self
+            .config
+            .model
+            .clone()
+            .or_else(|| self.provider.supported_models().first().cloned())
+            .unwrap_or_else(|| "default".to_string());
+
+        let mut request = CustomChatRequest::new(messages, model);
 
         if let Some(tools) = tools {
             request = request.with_tools(tools);
@@ -323,7 +340,15 @@ impl ChatCapability for CustomProviderClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        let mut request = CustomChatRequest::new(messages, "default".to_string()).with_stream(true);
+        // Use configured model, or first supported model as fallback
+        let model = self
+            .config
+            .model
+            .clone()
+            .or_else(|| self.provider.supported_models().first().cloned())
+            .unwrap_or_else(|| "default".to_string());
+
+        let mut request = CustomChatRequest::new(messages, model).with_stream(true);
 
         if let Some(tools) = tools {
             request = request.with_tools(tools);
@@ -362,4 +387,39 @@ impl LlmClient for CustomProviderClient {
 pub trait CustomProviderBuilder {
     /// Build the custom provider
     fn build(self) -> Result<Box<dyn CustomProvider>, LlmError>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_custom_provider_config_creation() {
+        let config = CustomProviderConfig::new("test-provider", "https://api.test.com", "test-key");
+
+        assert_eq!(config.name, "test-provider");
+        assert_eq!(config.base_url, "https://api.test.com");
+        assert_eq!(config.api_key, "test-key");
+        assert_eq!(config.model, None);
+        assert!(config.headers.is_empty());
+        assert_eq!(config.timeout, Some(30));
+        assert!(config.custom_params.is_empty());
+    }
+
+    #[test]
+    fn test_custom_provider_config_with_model() {
+        let config = CustomProviderConfig::new("test-provider", "https://api.test.com", "test-key")
+            .with_model("test-model-v1")
+            .with_header("Authorization", "Bearer token")
+            .with_timeout(60)
+            .with_param("temperature", 0.7);
+
+        assert_eq!(config.model, Some("test-model-v1".to_string()));
+        assert_eq!(
+            config.headers.get("Authorization"),
+            Some(&"Bearer token".to_string())
+        );
+        assert_eq!(config.timeout, Some(60));
+        assert!(config.custom_params.contains_key("temperature"));
+    }
 }

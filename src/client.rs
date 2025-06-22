@@ -27,6 +27,7 @@ pub enum ClientWrapper {
     OpenAi(Box<dyn LlmClient>),
     Anthropic(Box<dyn LlmClient>),
     Gemini(Box<dyn LlmClient>),
+    Groq(Box<dyn LlmClient>),
     Custom(Box<dyn LlmClient>),
 }
 
@@ -46,6 +47,11 @@ impl ClientWrapper {
         Self::Gemini(client)
     }
 
+    /// Creates a Groq client wrapper
+    pub fn groq(client: Box<dyn LlmClient>) -> Self {
+        Self::Groq(client)
+    }
+
     /// Creates a custom client wrapper
     pub fn custom(client: Box<dyn LlmClient>) -> Self {
         Self::Custom(client)
@@ -57,6 +63,7 @@ impl ClientWrapper {
             Self::OpenAi(client) => client.as_ref(),
             Self::Anthropic(client) => client.as_ref(),
             Self::Gemini(client) => client.as_ref(),
+            Self::Groq(client) => client.as_ref(),
             Self::Custom(client) => client.as_ref(),
         }
     }
@@ -67,6 +74,7 @@ impl ClientWrapper {
             Self::OpenAi(_) => ProviderType::OpenAi,
             Self::Anthropic(_) => ProviderType::Anthropic,
             Self::Gemini(_) => ProviderType::Gemini,
+            Self::Groq(_) => ProviderType::Groq,
             Self::Custom(_) => ProviderType::Custom("unknown".to_string()),
         }
     }
@@ -128,6 +136,11 @@ impl UnifiedLlmClient {
     /// Create from a Gemini client
     pub fn from_gemini(client: Box<dyn LlmClient>) -> Self {
         Self::new(ClientWrapper::gemini(client))
+    }
+
+    /// Create from a Groq client
+    pub fn from_groq(client: Box<dyn LlmClient>) -> Self {
+        Self::new(ClientWrapper::groq(client))
     }
 
     /// Create from a custom client
@@ -314,6 +327,9 @@ impl ClientFactory {
             )),
             ProviderType::Ollama => Err(LlmError::UnsupportedOperation(
                 "Ollama client not yet implemented in ClientWrapper".to_string(),
+            )),
+            ProviderType::Groq => Err(LlmError::UnsupportedOperation(
+                "Groq client not yet implemented in ClientWrapper".to_string(),
             )),
             ProviderType::Custom(_) => Err(LlmError::UnsupportedOperation(
                 "Custom client not yet implemented".to_string(),

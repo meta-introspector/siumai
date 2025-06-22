@@ -133,6 +133,7 @@ impl RetryPolicy {
             ProviderType::XAI => Self::xai_policy(),
             ProviderType::Ollama => Self::ollama_policy(),
             ProviderType::Custom(_) => Self::default(),
+            ProviderType::Groq => Self::default(),
         }
     }
 

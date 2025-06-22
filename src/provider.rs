@@ -128,6 +128,7 @@ impl LlmClient for Siumai {
             ProviderType::XAI => "xai",
             ProviderType::Ollama => "ollama",
             ProviderType::Custom(_) => "custom",
+            ProviderType::Groq => "groq",
         }
     }
 
@@ -425,6 +426,29 @@ impl SiumaiBuilder {
                     config,
                     http_client,
                 ))
+            }
+            ProviderType::Groq => {
+                let base_url = self
+                    .base_url
+                    .unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
+                let model = self
+                    .model
+                    .unwrap_or_else(|| "llama-3.3-70b-versatile".to_string());
+
+                let mut config = crate::providers::groq::GroqConfig::new(api_key)
+                    .with_base_url(base_url)
+                    .with_model(model);
+
+                // Set common parameters
+                if let Some(temp) = self.common_params.temperature {
+                    config = config.with_temperature(temp);
+                }
+                if let Some(max_tokens) = self.common_params.max_tokens {
+                    config = config.with_max_tokens(max_tokens);
+                }
+
+                let http_client = reqwest::Client::new();
+                Box::new(crate::providers::groq::GroqClient::new(config, http_client))
             }
             ProviderType::Custom(name) => {
                 match name.as_str() {

@@ -64,6 +64,21 @@ cargo run --example custom_configurations
 - Configuration management
 - Performance tuning
 
+### [custom_provider.rs](custom_provider.rs)
+**🏗️ Building custom AI providers**
+
+Create your own AI provider implementation for any API.
+
+```bash
+cargo run --example custom_provider
+```
+
+**What you'll learn:**
+- Implementing the CustomProvider trait
+- Handling API requests and responses
+- Supporting streaming responses
+- Provider validation and error handling
+
 ## Prerequisites
 
 These examples require more advanced setup:
@@ -98,6 +113,11 @@ ollama pull llava  # For vision tasks
 1. [multimodal_processing.rs](multimodal_processing.rs) - Rich user experiences
 2. [batch_processing.rs](batch_processing.rs) - Handle user scale
 3. [custom_configurations.rs](custom_configurations.rs) - Optimize costs
+
+### For Platform Integrators
+1. [custom_provider.rs](custom_provider.rs) - Build custom integrations
+2. [custom_configurations.rs](custom_configurations.rs) - Advanced setup patterns
+3. [batch_processing.rs](batch_processing.rs) - Scale custom providers
 
 ## Key Concepts
 
@@ -141,6 +161,24 @@ let client = LlmBuilder::new()
     .await?;
 ```
 
+### Custom Provider
+```rust
+// Implement your own AI provider
+use siumai::custom_provider::*;
+
+let config = CustomProviderConfig::new(
+    "my-provider",
+    "https://api.myprovider.com/v1",
+    "your-api-key"
+)
+.with_model("my-model-v1")
+.with_header("User-Agent", "my-app/1.0")
+.with_timeout(30);
+
+let provider = Box::new(MyCustomProvider::new(config.clone()));
+let client = CustomProviderClient::new(provider, config)?;
+```
+
 ## Performance Considerations
 
 ### Thinking Models
@@ -166,6 +204,12 @@ let client = LlmBuilder::new()
 - Cost vs. quality trade-offs
 - Latency vs. throughput balance
 - Monitoring and alerting needs
+
+### Custom Providers
+- API compatibility and rate limits
+- Authentication and security
+- Error handling and retries
+- Response format standardization
 
 ## Common Patterns
 
@@ -238,6 +282,37 @@ where
 }
 ```
 
+### Custom Provider Implementation
+```rust
+use siumai::custom_provider::*;
+use async_trait::async_trait;
+
+#[async_trait]
+impl CustomProvider for MyProvider {
+    fn name(&self) -> &str { "my-provider" }
+
+    fn supported_models(&self) -> Vec<String> {
+        vec!["my-model-v1".to_string()]
+    }
+
+    fn capabilities(&self) -> ProviderCapabilities {
+        ProviderCapabilities::new()
+            .with_chat()
+            .with_streaming()
+    }
+
+    async fn chat(&self, request: CustomChatRequest) -> Result<CustomChatResponse, LlmError> {
+        // Your API integration here
+        todo!()
+    }
+
+    async fn chat_stream(&self, request: CustomChatRequest) -> Result<ChatStream, LlmError> {
+        // Your streaming implementation here
+        todo!()
+    }
+}
+```
+
 ## Troubleshooting
 
 ### Thinking Models
@@ -263,6 +338,13 @@ where
 - Invalid parameter combinations
 - Performance vs. cost trade-offs
 - Monitoring complexity
+
+### Custom Provider Issues
+- API authentication failures
+- Response format mismatches
+- Rate limiting and quotas
+- Network connectivity problems
+- Model availability and versioning
 
 ## Next Steps
 

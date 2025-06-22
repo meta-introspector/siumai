@@ -85,6 +85,12 @@ impl McpServer {
     }
 }
 
+impl Default for McpServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl McpServer {
     pub fn new() -> Self {
         Self
@@ -111,6 +117,7 @@ impl ServerHandler for McpServer {
 /// JSON-RPC request structure
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
+    #[allow(dead_code)]
     jsonrpc: String,
     method: String,
     params: Option<Value>,
@@ -240,7 +247,7 @@ async fn handle_mcp_request(
 
                             // Convert to readable format
                             let datetime = chrono::DateTime::from_timestamp(timestamp as i64, 0)
-                                .unwrap_or_else(|| chrono::Utc::now());
+                                .unwrap_or_else(chrono::Utc::now);
 
                             let time_str = match timezone {
                                 "local" => {

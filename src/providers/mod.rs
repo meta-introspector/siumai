@@ -4,6 +4,7 @@
 
 pub mod anthropic;
 pub mod gemini;
+pub mod groq;
 pub mod ollama;
 pub mod openai;
 pub mod openai_compatible;
@@ -224,6 +225,7 @@ pub const fn get_default_model(provider_type: &ProviderType) -> Option<&'static 
         ProviderType::Ollama => Some("llama3.2:latest"),
         ProviderType::XAI => Some("grok-3-latest"),
         ProviderType::Custom(_) => None,
+        ProviderType::Groq => Some("https://api.groq.com/openai/v1"),
     }
 }
 
@@ -303,6 +305,16 @@ impl ProviderFactory {
                     .to_string(),
                 temperature: Some(0.7),
                 max_tokens: Some(4096),
+                top_p: Some(1.0),
+                stop_sequences: None,
+                seed: None,
+            },
+            ProviderType::Groq => crate::types::CommonParams {
+                model: get_default_model(provider_type)
+                    .unwrap_or("llama-3.3-70b-versatile")
+                    .to_string(),
+                temperature: Some(0.7),
+                max_tokens: Some(8192),
                 top_p: Some(1.0),
                 stop_sequences: None,
                 seed: None,

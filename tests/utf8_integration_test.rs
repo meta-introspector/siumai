@@ -7,7 +7,7 @@ use siumai::utils::Utf8StreamDecoder;
 
 #[test]
 fn test_utf8_decoder_with_sse_like_data() {
-    let mut decoder = Utf8StreamDecoder::new();
+    let _decoder = Utf8StreamDecoder::new();
 
     // Simulate SSE data with Chinese content that might be truncated
     let sse_data = r#"data: {"choices":[{"delta":{"content":"你好！关于UTF-8编码的问题，我来详细解释一下：\n\nUTF-8是一种可变长度的字符编码，中文字符通常占用3个字节。例如：'中'字的UTF-8编码是 0xE4 0xB8 0xAD。\n\n在网络传输中，如果数据包在字符边界被截断，就可能出现乱码。这就是为什么需要UTF-8流式解码器的原因。🌍✨"}}]}
@@ -128,7 +128,7 @@ fn test_utf8_decoder_with_thinking_content() {
 
 #[test]
 fn test_utf8_decoder_with_json_boundaries() {
-    let mut decoder = Utf8StreamDecoder::new();
+    let _decoder = Utf8StreamDecoder::new();
 
     // Test JSON with Chinese content that might be split at various boundaries
     let json_data = r#"{"id":"test-123","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"测试中文内容：你好世界！🌍 这是一个包含emoji的测试。"},"finish_reason":null}]}"#;

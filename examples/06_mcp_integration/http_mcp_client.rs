@@ -31,9 +31,11 @@ struct JsonRpcRequest {
 /// JSON-RPC response structure from MCP server
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
+    #[allow(dead_code)]
     jsonrpc: String,
     result: Option<serde_json::Value>,
     error: Option<JsonRpcError>,
+    #[allow(dead_code)]
     id: Option<serde_json::Value>,
 }
 
@@ -42,6 +44,7 @@ struct JsonRpcResponse {
 struct JsonRpcError {
     code: i32,
     message: String,
+    #[allow(dead_code)]
     data: Option<serde_json::Value>,
 }
 

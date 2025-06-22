@@ -130,7 +130,8 @@ pub mod prelude {
     pub use crate::{Provider, assistant, provider, system, tool, user};
     pub use crate::{
         quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
-        quick_ollama, quick_ollama_with_model, quick_openai, quick_openai_with_model,
+        quick_groq, quick_groq_with_model, quick_ollama, quick_ollama_with_model, quick_openai,
+        quick_openai_with_model,
     };
 }
 
@@ -181,6 +182,11 @@ impl Provider {
     /// Create an xAI client builder
     pub fn xai() -> crate::providers::xai::XaiBuilder {
         crate::providers::xai::XaiBuilder::new()
+    }
+
+    /// Create a Groq client builder
+    pub fn groq() -> crate::providers::groq::GroqBuilder {
+        crate::providers::groq::GroqBuilder::new()
     }
 
     /// Create an `OpenRouter` client builder
@@ -238,7 +244,7 @@ impl crate::provider::Siumai {
 // Re-export convenience functions and builder
 pub use crate::builder::{
     LlmBuilder, quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
-    quick_openai, quick_openai_with_model,
+    quick_groq, quick_groq_with_model, quick_openai, quick_openai_with_model,
 };
 
 // Convenient macro definitions

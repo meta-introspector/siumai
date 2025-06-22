@@ -25,6 +25,9 @@ use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 ///     openai_params: Default::default(),
 ///     http_config: Default::default(),
 ///     web_search_config: Default::default(),
+///     use_responses_api: false,
+///     previous_response_id: None,
+///     built_in_tools: Vec::new(),
 /// };
 /// ```
 #[derive(Debug, Clone)]

@@ -39,8 +39,8 @@ async fn test_utf8_truncation_with_chinese_characters() {
 
     // Collect all content deltas
     let mut content = String::new();
-    for event in events {
-        if let Ok(ChatStreamEvent::ContentDelta { delta, .. }) = event {
+    for event in events.into_iter().flatten() {
+        if let ChatStreamEvent::ContentDelta { delta, .. } = event {
             content.push_str(&delta);
         }
     }
@@ -76,8 +76,8 @@ async fn test_emoji_handling_in_truncated_stream() {
 
     // Collect all content
     let mut content = String::new();
-    for event in events {
-        if let Ok(ChatStreamEvent::ContentDelta { delta, .. }) = event {
+    for event in events.into_iter().flatten() {
+        if let ChatStreamEvent::ContentDelta { delta, .. } = event {
             content.push_str(&delta);
         }
     }
@@ -200,7 +200,7 @@ async fn test_mixed_content_with_extreme_fragmentation() {
         !all_content.contains('�'),
         "Should handle extreme fragmentation without corruption"
     );
-    assert!(all_content.len() > 0, "Should have some content");
+    assert!(!all_content.is_empty(), "Should have some content");
 }
 
 #[tokio::test]
@@ -285,8 +285,8 @@ async fn test_comparison_with_and_without_truncation() {
     // Extract content from both
     let extract_content = |events: Vec<Result<ChatStreamEvent, siumai::error::LlmError>>| {
         let mut content = String::new();
-        for event in events {
-            if let Ok(ChatStreamEvent::ContentDelta { delta, .. }) = event {
+        for event in events.into_iter().flatten() {
+            if let ChatStreamEvent::ContentDelta { delta, .. } = event {
                 content.push_str(&delta);
             }
         }

@@ -68,6 +68,7 @@ use serde_json;
 ///     "https://api.myprovider.com/v1",
 ///     "your-api-key"
 /// )
+/// .with_model("my-model-v1")
 /// .with_header("User-Agent", "my-app/1.0")
 /// .with_timeout(30)
 /// .with_param("temperature", 0.7);

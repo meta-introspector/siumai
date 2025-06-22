@@ -123,6 +123,20 @@ pub async fn quick_ollama_with_model(
     LlmBuilder::new().ollama().model(model).build().await
 }
 
+/// Quick Groq client creation with minimal configuration.
+///
+/// Uses environment variable `GROQ_API_KEY` and default settings.
+pub async fn quick_groq() -> Result<crate::providers::groq::GroqClient, LlmError> {
+    quick_groq_with_model("llama-3.3-70b-versatile").await
+}
+
+/// Quick Groq client creation with custom model.
+pub async fn quick_groq_with_model(
+    model: &str,
+) -> Result<crate::providers::groq::GroqClient, LlmError> {
+    LlmBuilder::new().groq().model(model).build().await
+}
+
 /// Core LLM builder that provides common configuration options.
 ///
 /// This builder allows setting up HTTP client configuration, timeouts,
@@ -366,6 +380,14 @@ impl LlmBuilder {
     /// xAI-specific builder for further configuration
     pub const fn xai(self) -> GenericProviderBuilder {
         GenericProviderBuilder::new(self, ProviderType::XAI)
+    }
+
+    /// Create a Groq client builder.
+    ///
+    /// # Returns
+    /// Groq-specific builder for further configuration
+    pub fn groq(self) -> crate::providers::groq::GroqBuilder {
+        crate::providers::groq::GroqBuilder::new()
     }
 
     // OpenAI-Compatible Providers

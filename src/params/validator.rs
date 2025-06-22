@@ -223,6 +223,7 @@ impl EnhancedParameterValidator {
             ProviderType::XAI => (0.0, 2.0),
             ProviderType::Ollama => (0.0, 2.0),
             ProviderType::Custom(_) => (0.0, 2.0),
+            ProviderType::Groq => (0.0, 2.0),
         }
     }
 
@@ -235,6 +236,7 @@ impl EnhancedParameterValidator {
             ProviderType::XAI => (1, 131_072),
             ProviderType::Ollama => (1, 32_768),
             ProviderType::Custom(_) => (1, 100_000),
+            ProviderType::Groq => (1, 32_768),
         }
     }
 
@@ -245,7 +247,13 @@ impl EnhancedParameterValidator {
             ProviderType::Gemini => model.starts_with("gemini-"),
             ProviderType::XAI => model.starts_with("grok-"),
             ProviderType::Ollama => true, // Ollama supports various models
-            ProviderType::Custom(_) => true, // Assume custom providers handle their own validation
+            ProviderType::Custom(_) => true,
+            ProviderType::Groq => {
+                model.contains("llama")
+                    || model.contains("mixtral")
+                    || model.contains("gemma")
+                    || model.contains("whisper")
+            } // Assume custom providers handle their own validation
         }
     }
 
@@ -265,6 +273,7 @@ impl EnhancedParameterValidator {
             ProviderType::XAI => Some("grok-beta".to_string()),
             ProviderType::Ollama => Some("llama3.2:latest".to_string()),
             ProviderType::Custom(_) => None,
+            ProviderType::Groq => Some("llama-3.3-70b-versatile".to_string()),
         }
     }
 
@@ -276,6 +285,7 @@ impl EnhancedParameterValidator {
             ProviderType::XAI => 4,
             ProviderType::Ollama => 10,
             ProviderType::Custom(_) => 10,
+            ProviderType::Groq => 4,
         }
     }
 }

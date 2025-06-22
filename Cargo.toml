@@ -107,6 +107,10 @@ name = "batch_processing"
 path = "examples/03_advanced_features/batch_processing.rs"
 
 [[example]]
+name = "custom_provider"
+path = "examples/03_advanced_features/custom_provider.rs"
+
+[[example]]
 name = "openai_basic_chat"
 path = "examples/04_providers/openai/basic_chat.rs"
 

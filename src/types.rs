@@ -15,6 +15,7 @@ pub enum ProviderType {
     Gemini,
     Ollama,
     XAI,
+    Groq,
     Custom(String),
 }
 
@@ -26,6 +27,7 @@ impl std::fmt::Display for ProviderType {
             Self::Gemini => write!(f, "gemini"),
             Self::Ollama => write!(f, "ollama"),
             Self::XAI => write!(f, "xai"),
+            Self::Groq => write!(f, "groq"),
             Self::Custom(name) => write!(f, "{name}"),
         }
     }
