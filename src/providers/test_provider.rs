@@ -210,7 +210,7 @@ impl TestProvider {
                                 if let Some(reasoning) =
                                     delta.get("reasoning").and_then(|v| v.as_str())
                                 {
-                                    return Some(ChatStreamEvent::ReasoningDelta {
+                                    return Some(ChatStreamEvent::ThinkingDelta {
                                         delta: reasoning.to_string(),
                                     });
                                 }
@@ -391,7 +391,7 @@ mod tests {
             matches!(
                 event,
                 Ok(ChatStreamEvent::ContentDelta { .. })
-                    | Ok(ChatStreamEvent::ReasoningDelta { .. })
+                    | Ok(ChatStreamEvent::ThinkingDelta { .. })
             )
         });
         assert!(has_content);
@@ -405,7 +405,7 @@ mod tests {
                     delta
                 );
             }
-            if let Ok(ChatStreamEvent::ReasoningDelta { delta }) = event {
+            if let Ok(ChatStreamEvent::ThinkingDelta { delta }) = event {
                 assert!(
                     !delta.contains('�'),
                     "Found replacement character in reasoning: {}",
@@ -432,7 +432,7 @@ mod tests {
         // Should have reasoning deltas for thinking content
         let has_reasoning = events
             .iter()
-            .any(|event| matches!(event, Ok(ChatStreamEvent::ReasoningDelta { .. })));
+            .any(|event| matches!(event, Ok(ChatStreamEvent::ThinkingDelta { .. })));
         assert!(has_reasoning);
     }
 }

@@ -349,7 +349,7 @@ async fn try_streaming_with_fallback(client: &dyn ChatCapability) -> Result<Stri
                 ChatStreamEvent::ContentDelta { delta, .. } => {
                     result.push_str(&delta);
                 }
-                ChatStreamEvent::Done { .. } => break,
+                ChatStreamEvent::StreamEnd { .. } => break,
                 _ => {}
             }
         }
@@ -474,7 +474,7 @@ async fn adaptive_chat(
                     ChatStreamEvent::ContentDelta { delta, .. } => {
                         result.push_str(&delta);
                     }
-                    ChatStreamEvent::Done { .. } => break,
+                    ChatStreamEvent::StreamEnd { .. } => break,
                     _ => {}
                 }
             }

@@ -84,7 +84,7 @@ async fn demonstrate_basic_streaming(provider: &dyn ChatCapability) {
                     print!("{delta}");
                     io::stdout().flush().unwrap();
                 }
-                ChatStreamEvent::Done { .. } => {
+                ChatStreamEvent::StreamEnd { .. } => {
                     // Stream completed
                     println!("\n   ✅ Basic streaming successful\n");
                     break;
@@ -126,15 +126,12 @@ async fn demonstrate_stream_event_types(provider: &dyn ChatCapability) {
                     total_text.push_str(&delta);
                     println!("   📝 Text chunk {text_chunks} (index: {index:?}): \"{delta}\"");
                 }
-                ChatStreamEvent::Done {
-                    finish_reason,
-                    usage,
-                } => {
+                ChatStreamEvent::StreamEnd { response } => {
                     println!("\n   🏁 Completion event received");
-                    if let Some(reason) = finish_reason {
+                    if let Some(reason) = response.finish_reason {
                         println!("   🏁 Finish reason: {reason:?}");
                     }
-                    if let Some(usage) = usage {
+                    if let Some(usage) = response.usage {
                         println!("   📊 Usage: {} total tokens", usage.total_tokens);
                     }
                     break;
@@ -188,7 +185,7 @@ async fn demonstrate_stream_error_handling(_provider: &dyn ChatCapability) {
                 Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
                     println!("   📝 Unexpected text: {delta}");
                 }
-                Ok(ChatStreamEvent::Done { .. }) => {
+                Ok(ChatStreamEvent::StreamEnd { .. }) => {
                     println!("   ❌ Unexpected completion");
                     break;
                 }
@@ -252,7 +249,7 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
 
                     chunk_times.push(elapsed);
                 }
-                ChatStreamEvent::Done { .. } => {
+                ChatStreamEvent::StreamEnd { .. } => {
                     break;
                 }
                 _ => {}
@@ -298,7 +295,7 @@ async fn demonstrate_stream_performance(provider: &dyn ChatCapability) {
 ///
 /// Stream Events:
 /// - `ContentDelta`: Incremental text content as it's generated
-/// - Done: Stream completion with final response metadata
+/// - StreamEnd: Stream completion with final response metadata
 /// - `UsageUpdate`: Token usage information during streaming
 ///
 /// Benefits:

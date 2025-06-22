@@ -980,22 +980,13 @@ pub enum ChatStreamEvent {
         /// Index of the choice
         index: Option<usize>,
     },
-    /// Thinking content delta (for models that support thinking)
+    /// Thinking/reasoning content delta (for models that support internal reasoning)
+    /// This includes content from <think> tags, reasoning fields, and thinking modes
     ThinkingDelta {
-        /// The incremental thinking content
+        /// The incremental thinking/reasoning content
         delta: String,
     },
-    /// Reasoning content delta (for models like `OpenAI` o1)
-    ReasoningDelta {
-        /// The incremental reasoning content
-        delta: String,
-    },
-    /// Usage statistics (usually sent at the end)
-    Usage {
-        /// Token usage information
-        usage: Usage,
-    },
-    /// Usage statistics update (alias for Usage)
+    /// Usage statistics update
     UsageUpdate {
         /// Token usage information
         usage: Usage,
@@ -1004,13 +995,6 @@ pub enum ChatStreamEvent {
     StreamStart {
         /// Response metadata
         metadata: ResponseMetadata,
-    },
-    /// Stream finished
-    Done {
-        /// Final finish reason
-        finish_reason: Option<FinishReason>,
-        /// Final usage statistics
-        usage: Option<Usage>,
     },
     /// Stream end event with final response
     StreamEnd {

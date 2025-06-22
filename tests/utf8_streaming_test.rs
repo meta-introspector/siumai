@@ -223,7 +223,7 @@ async fn test_thinking_tag_boundary_splitting() {
 
     for event in events {
         match event {
-            Ok(ChatStreamEvent::ReasoningDelta { .. }) => {
+            Ok(ChatStreamEvent::ThinkingDelta { .. }) => {
                 has_reasoning = true;
             }
             Ok(ChatStreamEvent::ContentDelta { .. }) => {

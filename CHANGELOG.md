@@ -20,8 +20,19 @@
 
 ### Changed
 
+- **BREAKING**: Simplified `ChatStreamEvent` enum for better consistency
+  - Unified `ThinkingDelta` and `ReasoningDelta` into single `ThinkingDelta` event
+  - Removed duplicate `Usage` event (kept `UsageUpdate`)
+  - Removed duplicate `Done` event (kept `StreamEnd`)
+  - Reduced from 10 to 7 stream event types while maintaining full functionality
 - Enhanced `OpenAiConfig` with Responses API specific fields
 - Updated examples to demonstrate Responses API capabilities
+
+### Fixed
+
+- Updated all examples to use new `StreamEnd` event instead of deprecated `Done` event
+  - Fixed `simple_chatbot.rs`, `streaming_chat.rs`, and `capability_detection.rs` examples
+  - Ensured all streaming examples work with the simplified event structure
 
 ## [0.3.0] - 2025-06-21
 

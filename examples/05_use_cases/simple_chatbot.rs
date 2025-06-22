@@ -340,7 +340,7 @@ impl Chatbot {
                     io::stdout().flush().unwrap();
                     full_response.push_str(&delta);
                 }
-                ChatStreamEvent::Done { .. } => {
+                ChatStreamEvent::StreamEnd { .. } => {
                     println!(); // New line after streaming
                     break;
                 }

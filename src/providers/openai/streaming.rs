@@ -395,7 +395,7 @@ impl OpenAiStreaming {
     fn convert_openai_response(&self, response: OpenAiStreamResponse) -> ChatStreamEvent {
         // Handle usage information (final chunk)
         if let Some(usage) = response.usage {
-            return ChatStreamEvent::Usage {
+            return ChatStreamEvent::UsageUpdate {
                 usage: Usage {
                     prompt_tokens: usage.prompt_tokens,
                     completion_tokens: usage.completion_tokens.unwrap_or(0),
@@ -416,9 +416,9 @@ impl OpenAiStreaming {
             if let Some(content) = delta.content {
                 // Check for <think> tags in the content
                 if contains_thinking_tags(&content) {
-                    // Extract thinking content and emit as reasoning delta
+                    // Extract thinking content and emit as thinking delta
                     if let Some(thinking) = extract_thinking_content(&content) {
-                        return ChatStreamEvent::ReasoningDelta { delta: thinking };
+                        return ChatStreamEvent::ThinkingDelta { delta: thinking };
                     }
                     // Filter out thinking tags from the main content
                     let filtered_content = filter_thinking_content(&content);
@@ -451,7 +451,7 @@ impl OpenAiStreaming {
 
             // Handle reasoning delta (o1 models)
             if let Some(reasoning) = delta.reasoning {
-                return ChatStreamEvent::ReasoningDelta { delta: reasoning };
+                return ChatStreamEvent::ThinkingDelta { delta: reasoning };
             }
 
             // Handle tool call deltas

@@ -41,7 +41,6 @@ pub struct StreamProcessor {
     buffer: String,
     tool_calls: HashMap<String, ToolCallBuilder>,
     thinking_buffer: String,
-    reasoning_buffer: String,
     current_usage: Option<Usage>,
 }
 
@@ -51,7 +50,6 @@ impl StreamProcessor {
             buffer: String::new(),
             tool_calls: HashMap::new(),
             thinking_buffer: String::new(),
-            reasoning_buffer: String::new(),
             current_usage: None,
         }
     }
@@ -98,23 +96,6 @@ impl StreamProcessor {
                     accumulated: self.thinking_buffer.clone(),
                 }
             }
-            ChatStreamEvent::ReasoningDelta { delta } => {
-                self.reasoning_buffer.push_str(&delta);
-                ProcessedEvent::ReasoningUpdate {
-                    delta,
-                    accumulated: self.reasoning_buffer.clone(),
-                }
-            }
-            ChatStreamEvent::Usage { usage } => {
-                if let Some(ref mut current) = self.current_usage {
-                    current.merge(&usage);
-                } else {
-                    self.current_usage = Some(usage.clone());
-                }
-                ProcessedEvent::UsageUpdate {
-                    usage: self.current_usage.clone().unwrap(),
-                }
-            }
             ChatStreamEvent::UsageUpdate { usage } => {
                 if let Some(ref mut current) = self.current_usage {
                     current.merge(&usage);
@@ -127,21 +108,7 @@ impl StreamProcessor {
             }
             ChatStreamEvent::StreamStart { metadata } => ProcessedEvent::StreamStart { metadata },
             ChatStreamEvent::StreamEnd { response } => ProcessedEvent::StreamEnd { response },
-            ChatStreamEvent::Done {
-                finish_reason,
-                usage,
-            } => {
-                if let Some(usage) = usage {
-                    if let Some(ref mut current) = self.current_usage {
-                        current.merge(&usage);
-                    } else {
-                        self.current_usage = Some(usage);
-                    }
-                }
-                ProcessedEvent::StreamEnd {
-                    response: self.build_final_response_with_finish_reason(finish_reason),
-                }
-            }
+
             ChatStreamEvent::Error { error } => ProcessedEvent::Error {
                 error: LlmError::InternalError(error),
             },
@@ -164,13 +131,6 @@ impl StreamProcessor {
             metadata.insert(
                 "thinking".to_string(),
                 serde_json::Value::String(self.thinking_buffer.clone()),
-            );
-        }
-
-        if !self.reasoning_buffer.is_empty() {
-            metadata.insert(
-                "reasoning".to_string(),
-                serde_json::Value::String(self.reasoning_buffer.clone()),
             );
         }
 
@@ -218,10 +178,6 @@ pub enum ProcessedEvent {
         index: Option<usize>,
     },
     ThinkingUpdate {
-        delta: String,
-        accumulated: String,
-    },
-    ReasoningUpdate {
         delta: String,
         accumulated: String,
     },

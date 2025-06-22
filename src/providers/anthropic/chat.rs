@@ -435,7 +435,7 @@ impl AnthropicChatCapability {
                                 }))
                             }
                             AnthropicDelta::ThinkingDelta { thinking } => {
-                                Some(Ok(ChatStreamEvent::ReasoningDelta { delta: thinking }))
+                                Some(Ok(ChatStreamEvent::ThinkingDelta { delta: thinking }))
                             }
                             AnthropicDelta::InputJsonDelta { partial_json } => {
                                 // Handle tool input delta
@@ -446,7 +446,7 @@ impl AnthropicChatCapability {
                             }
                             AnthropicDelta::SignatureDelta { signature } => {
                                 // Handle signature delta (for thinking mode)
-                                Some(Ok(ChatStreamEvent::ReasoningDelta { delta: signature }))
+                                Some(Ok(ChatStreamEvent::ThinkingDelta { delta: signature }))
                             }
                         }
                     }

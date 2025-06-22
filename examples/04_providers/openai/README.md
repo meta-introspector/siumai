@@ -281,7 +281,7 @@ while let Some(event) = stream.next().await {
             response_text.push_str(&delta);
             print!("{}", delta); // Real-time display
         }
-        ChatStreamEvent::Done { .. } => break,
+        ChatStreamEvent::StreamEnd { .. } => break,
         _ => {}
     }
 }

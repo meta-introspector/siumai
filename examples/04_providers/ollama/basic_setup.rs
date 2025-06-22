@@ -144,7 +144,7 @@ async fn demonstrate_streaming_chat() {
                                 print!("{delta}");
                                 io::stdout().flush().unwrap();
                             }
-                            Ok(ChatStreamEvent::Done { .. }) => {
+                            Ok(ChatStreamEvent::StreamEnd { .. }) => {
                                 println!("\n   ✅ Streaming completed");
                                 break;
                             }

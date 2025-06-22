@@ -729,9 +729,17 @@ impl OpenAiResponses {
 
                 if data == "[DONE]" {
                     // Stream end event
-                    events.push(crate::stream::ChatStreamEvent::Done {
-                        finish_reason: Some(crate::types::FinishReason::Stop),
-                        usage: None,
+                    events.push(crate::stream::ChatStreamEvent::StreamEnd {
+                        response: crate::types::ChatResponse {
+                            id: None,
+                            content: crate::types::MessageContent::Text(String::new()),
+                            model: None,
+                            usage: None,
+                            finish_reason: Some(crate::types::FinishReason::Stop),
+                            tool_calls: None,
+                            thinking: None,
+                            metadata: std::collections::HashMap::new(),
+                        },
                     });
                     continue;
                 }
@@ -802,7 +810,9 @@ impl OpenAiResponses {
                                 .map(|v| v as u32),
                             cached_tokens: None,
                         };
-                        events.push(crate::stream::ChatStreamEvent::Usage { usage: usage_info });
+                        events.push(crate::stream::ChatStreamEvent::UsageUpdate {
+                            usage: usage_info,
+                        });
                     }
                 }
             }
