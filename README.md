@@ -606,4 +606,4 @@ at your option.
 
 ---
 
-Made with ❤️ by the Siumai team
+Made with ❤️ by the YumchaLabs team
