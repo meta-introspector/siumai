@@ -23,7 +23,12 @@ use axum::{
     response::Json,
     routing::post,
 };
-use rmcp::{Error as McpError, ServerHandler, model::*, schemars, tool};
+use rmcp::{
+    ServerHandler,
+    handler::server::{router::tool::ToolRouter, tool::Parameters},
+    model::*,
+    schemars, tool, tool_handler, tool_router,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::sync::Arc;
@@ -45,16 +50,24 @@ pub struct GetTimeRequest {
 
 /// MCP Server implementation with tools
 #[derive(Clone)]
-pub struct McpServer;
+pub struct McpServer {
+    tool_router: ToolRouter<McpServer>,
+}
 
-#[tool(tool_box)]
+#[tool_router]
 impl McpServer {
+    pub fn new() -> Self {
+        Self {
+            tool_router: Self::tool_router(),
+        }
+    }
+
     /// Add two numbers together
     #[tool(description = "Add two numbers together")]
     async fn add(
         &self,
-        #[tool(aggr)] AddRequest { a, b }: AddRequest,
-    ) -> Result<CallToolResult, McpError> {
+        Parameters(AddRequest { a, b }): Parameters<AddRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
         let result = a + b;
         Ok(CallToolResult::success(vec![Content::text(format!(
             "{} + {} = {}",
@@ -66,8 +79,8 @@ impl McpServer {
     #[tool(description = "Get current date and time")]
     async fn get_time(
         &self,
-        #[tool(aggr)] GetTimeRequest { timezone }: GetTimeRequest,
-    ) -> Result<CallToolResult, McpError> {
+        Parameters(GetTimeRequest { timezone }): Parameters<GetTimeRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
         let now = std::time::SystemTime::now();
         let time_str = match timezone.as_deref() {
             Some("local") => {
@@ -91,13 +104,7 @@ impl Default for McpServer {
     }
 }
 
-impl McpServer {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-#[tool(tool_box)]
+#[tool_handler]
 impl ServerHandler for McpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
