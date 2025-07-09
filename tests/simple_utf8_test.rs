@@ -11,23 +11,23 @@ fn test_utf8_decoder_with_chinese_truncation() {
     // Test Chinese text: "你好世界" (Hello World)
     let text = "你好世界";
     let bytes = text.as_bytes();
-    println!("Original text: {}", text);
-    println!("Bytes: {:?}", bytes);
+    println!("Original text: {text}");
+    println!("Bytes: {bytes:?}");
 
     // Split into chunks that will truncate UTF-8 characters
     let mut result = String::new();
     for chunk in bytes.chunks(2) {
         let decoded = decoder.decode(chunk);
-        println!("Chunk: {:?} -> Decoded: '{}'", chunk, decoded);
+        println!("Chunk: {chunk:?} -> Decoded: '{decoded}'");
         result.push_str(&decoded);
     }
 
     // Flush any remaining bytes
     let remaining = decoder.flush();
-    println!("Remaining: '{}'", remaining);
+    println!("Remaining: '{remaining}'");
     result.push_str(&remaining);
 
-    println!("Final result: '{}'", result);
+    println!("Final result: '{result}'");
     assert_eq!(result, text, "Decoded text should match original");
 }
 
@@ -38,23 +38,23 @@ fn test_utf8_decoder_with_emoji() {
     // Test emoji: "🌍🚀✨"
     let text = "🌍🚀✨";
     let bytes = text.as_bytes();
-    println!("Original emoji text: {}", text);
-    println!("Bytes: {:?}", bytes);
+    println!("Original emoji text: {text}");
+    println!("Bytes: {bytes:?}");
 
     // Split into very small chunks
     let mut result = String::new();
     for chunk in bytes.chunks(3) {
         let decoded = decoder.decode(chunk);
-        println!("Chunk: {:?} -> Decoded: '{}'", chunk, decoded);
+        println!("Chunk: {chunk:?} -> Decoded: '{decoded}'");
         result.push_str(&decoded);
     }
 
     // Flush any remaining bytes
     let remaining = decoder.flush();
-    println!("Remaining: '{}'", remaining);
+    println!("Remaining: '{remaining}'");
     result.push_str(&remaining);
 
-    println!("Final result: '{}'", result);
+    println!("Final result: '{result}'");
     assert_eq!(result, text, "Decoded emoji should match original");
 }
 
@@ -65,23 +65,23 @@ fn test_utf8_decoder_with_mixed_content() {
     // Test mixed content with thinking tags
     let text = "<think>这是思考内容🤔</think>你好世界！";
     let bytes = text.as_bytes();
-    println!("Original mixed text: {}", text);
-    println!("Bytes: {:?}", bytes);
+    println!("Original mixed text: {text}");
+    println!("Bytes: {bytes:?}");
 
     // Split into small chunks that may break UTF-8 sequences
     let mut result = String::new();
     for chunk in bytes.chunks(4) {
         let decoded = decoder.decode(chunk);
-        println!("Chunk: {:?} -> Decoded: '{}'", chunk, decoded);
+        println!("Chunk: {chunk:?} -> Decoded: '{decoded}'");
         result.push_str(&decoded);
     }
 
     // Flush any remaining bytes
     let remaining = decoder.flush();
-    println!("Remaining: '{}'", remaining);
+    println!("Remaining: '{remaining}'");
     result.push_str(&remaining);
 
-    println!("Final result: '{}'", result);
+    println!("Final result: '{result}'");
     assert_eq!(result, text, "Decoded mixed content should match original");
 
     // Verify no corruption characters
@@ -98,23 +98,23 @@ fn test_utf8_decoder_single_byte_chunks() {
     // Test with single byte chunks (worst case)
     let text = "测试UTF-8🌍";
     let bytes = text.as_bytes();
-    println!("Original text: {}", text);
-    println!("Bytes: {:?}", bytes);
+    println!("Original text: {text}");
+    println!("Bytes: {bytes:?}");
 
     // Process one byte at a time
     let mut result = String::new();
     for (i, &byte) in bytes.iter().enumerate() {
         let decoded = decoder.decode(&[byte]);
-        println!("Byte {}: {:02X} -> Decoded: '{}'", i, byte, decoded);
+        println!("Byte {i}: {byte:02X} -> Decoded: '{decoded}'");
         result.push_str(&decoded);
     }
 
     // Flush any remaining bytes
     let remaining = decoder.flush();
-    println!("Remaining: '{}'", remaining);
+    println!("Remaining: '{remaining}'");
     result.push_str(&remaining);
 
-    println!("Final result: '{}'", result);
+    println!("Final result: '{result}'");
     assert_eq!(result, text, "Single-byte processing should work correctly");
     assert!(
         !result.contains('�'),

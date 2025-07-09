@@ -85,7 +85,7 @@ impl HttpMcpClient {
             id: self.next_id(),
         };
 
-        println!("📤 Sending MCP request: {}", method);
+        println!("📤 Sending MCP request: {method}");
 
         let response = self
             .http_client
@@ -93,10 +93,10 @@ impl HttpMcpClient {
             .json(&request)
             .send()
             .await
-            .map_err(|e| LlmError::provider_error("MCP", format!("HTTP request failed: {}", e)))?;
+            .map_err(|e| LlmError::provider_error("MCP", format!("HTTP request failed: {e}")))?;
 
         let json_response: JsonRpcResponse = response.json().await.map_err(|e| {
-            LlmError::provider_error("MCP", format!("Failed to parse JSON response: {}", e))
+            LlmError::provider_error("MCP", format!("Failed to parse JSON response: {e}"))
         })?;
 
         if let Some(error) = json_response.error {
@@ -174,10 +174,8 @@ impl HttpMcpClient {
             .as_ref()
             .ok_or_else(|| LlmError::provider_error("MCP", "Tool call missing function"))?;
 
-        let arguments: serde_json::Value =
-            serde_json::from_str(&function.arguments).map_err(|e| {
-                LlmError::provider_error("MCP", format!("Invalid tool arguments: {}", e))
-            })?;
+        let arguments: serde_json::Value = serde_json::from_str(&function.arguments)
+            .map_err(|e| LlmError::provider_error("MCP", format!("Invalid tool arguments: {e}")))?;
 
         let params = json!({
             "name": function.name,
@@ -200,7 +198,7 @@ impl HttpMcpClient {
             .and_then(|text| text.as_str())
             .ok_or_else(|| LlmError::provider_error("MCP", "Invalid tool call response format"))?;
 
-        println!("✅ Tool call result: {}", content);
+        println!("✅ Tool call result: {content}");
         Ok(content.to_string())
     }
 }
@@ -296,7 +294,7 @@ impl HttpMcpLlmDemo {
             // Create messages for the LLM
             let user_message =
                 "Please add the numbers 15 and 27, then tell me the current time in UTC.";
-            println!("👤 User: {}", user_message);
+            println!("👤 User: {user_message}");
 
             let mut messages = vec![ChatMessage::user(user_message).build()];
 
@@ -316,7 +314,7 @@ impl HttpMcpLlmDemo {
                             if let Some(function) = &tool_call.function {
                                 println!("   📞 Calling: {}", function.name);
                                 let result = self.mcp_client.call_tool(tool_call).await?;
-                                println!("   ✅ Result: {}", result);
+                                println!("   ✅ Result: {result}");
 
                                 // Add tool result to messages
                                 tool_results.push(
@@ -350,7 +348,7 @@ impl HttpMcpLlmDemo {
                                 );
                             }
                             Err(e) => {
-                                println!("⚠️ Error getting final LLM response: {}", e);
+                                println!("⚠️ Error getting final LLM response: {e}");
                             }
                         }
 
@@ -363,7 +361,7 @@ impl HttpMcpLlmDemo {
                     }
                 }
                 Err(e) => {
-                    println!("⚠️ Error with LLM integration: {}", e);
+                    println!("⚠️ Error with LLM integration: {e}");
                     println!("💡 Continuing with tool demonstration...");
                 }
             }
@@ -421,13 +419,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match HttpMcpLlmDemo::new(server_url).await {
         Ok(demo) => {
             if let Err(e) = demo.run_demo().await {
-                eprintln!("❌ Demo failed: {}", e);
+                eprintln!("❌ Demo failed: {e}");
                 eprintln!("💡 Make sure the HTTP MCP server is running on port 3000");
                 std::process::exit(1);
             }
         }
         Err(e) => {
-            eprintln!("❌ Failed to initialize HTTP MCP client: {}", e);
+            eprintln!("❌ Failed to initialize HTTP MCP client: {e}");
             eprintln!("💡 Make sure the HTTP MCP server is running:");
             eprintln!("   cargo run --example http_mcp_server");
             std::process::exit(1);

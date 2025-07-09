@@ -26,7 +26,7 @@ async fn test_utf8_truncation_with_chinese_characters() {
     // Debug output
     println!("Number of events: {}", events.len());
     for (i, event) in events.iter().enumerate() {
-        println!("Event {}: {:?}", i, event);
+        println!("Event {i}: {event:?}");
     }
 
     // Verify we got events without errors
@@ -34,7 +34,7 @@ async fn test_utf8_truncation_with_chinese_characters() {
 
     // Check that all events are successful
     for event in &events {
-        assert!(event.is_ok(), "Event should be successful: {:?}", event);
+        assert!(event.is_ok(), "Event should be successful: {event:?}");
     }
 
     // Collect all content deltas
@@ -121,7 +121,7 @@ async fn test_thinking_content_with_utf8_truncation() {
                 regular_content.push_str(&delta);
             }
             Ok(_) => {} // Other event types
-            Err(e) => panic!("Unexpected error: {:?}", e),
+            Err(e) => panic!("Unexpected error: {e:?}"),
         }
     }
 
@@ -230,10 +230,7 @@ async fn test_thinking_tag_boundary_splitting() {
                 has_content = true;
             }
             Ok(_) => {}
-            Err(e) => panic!(
-                "Should not have errors with tag boundary splitting: {:?}",
-                e
-            ),
+            Err(e) => panic!("Should not have errors with tag boundary splitting: {e:?}"),
         }
     }
 

@@ -47,25 +47,25 @@ The answer is 36."#;
 
     // Demonstrate the thinking content processing utilities
     println!("Original response with thinking tags:");
-    println!("{}\n", simulated_response_with_thinking);
+    println!("{simulated_response_with_thinking}\n");
 
     // Test the utility functions
     use siumai::providers::openai::utils::*;
 
     // Check if content contains thinking tags
     let has_thinking = contains_thinking_tags(simulated_response_with_thinking);
-    println!("Contains thinking tags: {}", has_thinking);
+    println!("Contains thinking tags: {has_thinking}");
 
     // Extract thinking content
     if let Some(thinking) = extract_thinking_content(simulated_response_with_thinking) {
         println!("\n🤔 Extracted thinking content:");
-        println!("{}", thinking);
+        println!("{thinking}");
     }
 
     // Filter out thinking content for display
     let filtered_content = filter_thinking_content(simulated_response_with_thinking);
     println!("\n📄 Filtered content (without thinking tags):");
-    println!("{}", filtered_content);
+    println!("{filtered_content}");
 
     println!("\n{}", "=".repeat(60));
 
@@ -92,17 +92,17 @@ Rust是一种系统编程语言，具有以下特点：
 这些特性使得Rust非常适合系统级编程。"#;
 
     println!("DeepSeek-style response:");
-    println!("{}\n", deepseek_style_response);
+    println!("{deepseek_style_response}\n");
 
     // Process the DeepSeek-style content
     if let Some(thinking) = extract_thinking_content(deepseek_style_response) {
         println!("🤔 Extracted thinking (Chinese):");
-        println!("{}", thinking);
+        println!("{thinking}");
     }
 
     let filtered = filter_thinking_content(deepseek_style_response);
     println!("\n📄 Filtered response:");
-    println!("{}", filtered);
+    println!("{filtered}");
 
     println!("\n{}", "=".repeat(60));
 
@@ -131,18 +131,18 @@ Rust是一种系统编程语言，具有以下特点：
     ];
 
     for (description, content) in test_cases {
-        println!("\nTest case: {}", description);
-        println!("Content: {}", content);
+        println!("\nTest case: {description}");
+        println!("Content: {content}");
         println!("Has thinking: {}", contains_thinking_tags(content));
 
         if let Some(thinking) = extract_thinking_content(content) {
-            println!("Extracted: {}", thinking);
+            println!("Extracted: {thinking}");
         } else {
             println!("Extracted: None");
         }
 
         let filtered = filter_thinking_content(content);
-        println!("Filtered: {}", filtered);
+        println!("Filtered: {filtered}");
         println!("{}", "-".repeat(40));
     }
 

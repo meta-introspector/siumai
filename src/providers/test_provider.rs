@@ -401,15 +401,13 @@ mod tests {
             if let Ok(ChatStreamEvent::ContentDelta { delta, .. }) = event {
                 assert!(
                     !delta.contains('�'),
-                    "Found replacement character in content: {}",
-                    delta
+                    "Found replacement character in content: {delta}"
                 );
             }
             if let Ok(ChatStreamEvent::ThinkingDelta { delta }) = event {
                 assert!(
                     !delta.contains('�'),
-                    "Found replacement character in reasoning: {}",
-                    delta
+                    "Found replacement character in reasoning: {delta}"
                 );
             }
         }

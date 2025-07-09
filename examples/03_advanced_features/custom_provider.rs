@@ -255,7 +255,7 @@ impl CustomProvider for ExampleCustomProvider {
                 let delta = if i == 0 {
                     word.to_string()
                 } else {
-                    format!(" {}", word)
+                    format!(" {word}")
                 };
                 Ok(ChatStreamEvent::ContentDelta { delta, index: None })
             })
@@ -387,7 +387,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(event) = stream.next().await {
         match event? {
             ChatStreamEvent::ContentDelta { delta, .. } => {
-                print!("{}", delta);
+                print!("{delta}");
                 std::io::Write::flush(&mut std::io::stdout())?;
             }
             ChatStreamEvent::StreamEnd { .. } => {
@@ -409,7 +409,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match client.provider().chat(invalid_request).await {
         Ok(_) => println!("❌ Expected error but got success"),
-        Err(e) => println!("✅ Correctly handled error: {}", e),
+        Err(e) => println!("✅ Correctly handled error: {e}"),
     }
 
     // Step 7: Demonstrate different model configurations

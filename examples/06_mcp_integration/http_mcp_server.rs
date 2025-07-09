@@ -70,8 +70,7 @@ impl McpServer {
     ) -> Result<CallToolResult, ErrorData> {
         let result = a + b;
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "{} + {} = {}",
-            a, b, result
+            "{a} + {b} = {result}"
         ))]))
     }
 
@@ -84,13 +83,13 @@ impl McpServer {
         let now = std::time::SystemTime::now();
         let time_str = match timezone.as_deref() {
             Some("local") => {
-                format!("Current local time: {:?}", now)
+                format!("Current local time: {now:?}")
             }
             Some(tz_name) => {
-                format!("Current time in {}: {:?}", tz_name, now)
+                format!("Current time in {tz_name}: {now:?}")
             }
             None => {
-                format!("Current UTC time: {:?}", now)
+                format!("Current UTC time: {now:?}")
             }
         };
 
@@ -218,7 +217,7 @@ async fn handle_mcp_request(
                 if let Some(tool_name) = params.get("name").and_then(|n| n.as_str()) {
                     let arguments = params.get("arguments").cloned().unwrap_or(json!({}));
 
-                    println!("🔧 Executing tool: {}", tool_name);
+                    println!("🔧 Executing tool: {tool_name}");
                     println!(
                         "📥 Arguments: {}",
                         serde_json::to_string_pretty(&arguments)
@@ -230,9 +229,9 @@ async fn handle_mcp_request(
                             let a = arguments.get("a").and_then(|v| v.as_f64()).unwrap_or(0.0);
                             let b = arguments.get("b").and_then(|v| v.as_f64()).unwrap_or(0.0);
                             let result = a + b;
-                            let result_text = format!("{} + {} = {}", a, b, result);
+                            let result_text = format!("{a} + {b} = {result}");
 
-                            println!("📤 Result: {}", result_text);
+                            println!("📤 Result: {result_text}");
 
                             json!({
                                 "content": [{
@@ -279,7 +278,7 @@ async fn handle_mcp_request(
                                 }
                             };
 
-                            println!("📤 Result: {}", time_str);
+                            println!("📤 Result: {time_str}");
 
                             json!({
                                 "content": [{
@@ -295,7 +294,7 @@ async fn handle_mcp_request(
                                 result: None,
                                 error: Some(JsonRpcError {
                                     code: -32601,
-                                    message: format!("Unknown tool: {}", tool_name),
+                                    message: format!("Unknown tool: {tool_name}"),
                                     data: None,
                                 }),
                                 id: request.id,

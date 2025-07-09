@@ -42,22 +42,21 @@ impl StdioMcpClient {
             return Err(LlmError::provider_error(
                 "MCP",
                 format!(
-                    "Server binary not found at {}. Please run: cargo build --example stdio_mcp_server",
-                    server_binary
+                    "Server binary not found at {server_binary}. Please run: cargo build --example stdio_mcp_server"
                 ),
             ));
         }
 
-        println!("📡 Starting stdio MCP server: {}", server_binary);
+        println!("📡 Starting stdio MCP server: {server_binary}");
 
         // Create child process transport
         let transport = TokioChildProcess::new(TokioCommand::new(server_binary)).map_err(|e| {
-            LlmError::provider_error("MCP", format!("Failed to create child process: {}", e))
+            LlmError::provider_error("MCP", format!("Failed to create child process: {e}"))
         })?;
 
         // Create service
         let service = ().serve(transport).await.map_err(|e| {
-            LlmError::provider_error("MCP", format!("Failed to create MCP service: {}", e))
+            LlmError::provider_error("MCP", format!("Failed to create MCP service: {e}"))
         })?;
 
         println!("✅ MCP client connected to stdio server");
@@ -76,7 +75,7 @@ impl StdioMcpClient {
             .service
             .list_tools(Default::default())
             .await
-            .map_err(|e| LlmError::provider_error("MCP", format!("Failed to list tools: {}", e)))?;
+            .map_err(|e| LlmError::provider_error("MCP", format!("Failed to list tools: {e}")))?;
 
         let mut llm_tools = Vec::new();
 
@@ -104,10 +103,8 @@ impl StdioMcpClient {
             .as_ref()
             .ok_or_else(|| LlmError::provider_error("MCP", "Tool call missing function"))?;
 
-        let arguments: serde_json::Value =
-            serde_json::from_str(&function.arguments).map_err(|e| {
-                LlmError::provider_error("MCP", format!("Invalid tool arguments: {}", e))
-            })?;
+        let arguments: serde_json::Value = serde_json::from_str(&function.arguments)
+            .map_err(|e| LlmError::provider_error("MCP", format!("Invalid tool arguments: {e}")))?;
 
         let request = CallToolRequestParam {
             name: function.name.clone().into(),
@@ -123,7 +120,7 @@ impl StdioMcpClient {
             .service
             .call_tool(request)
             .await
-            .map_err(|e| LlmError::provider_error("MCP", format!("Tool call failed: {}", e)))?;
+            .map_err(|e| LlmError::provider_error("MCP", format!("Tool call failed: {e}")))?;
 
         // Extract text content from MCP response
         let content = result
@@ -138,14 +135,14 @@ impl StdioMcpClient {
             })
             .ok_or_else(|| LlmError::provider_error("MCP", "Invalid tool call response format"))?;
 
-        println!("✅ Tool call result: {}", content);
+        println!("✅ Tool call result: {content}");
         Ok(content)
     }
 
     /// Shutdown the MCP client
     pub async fn shutdown(self) -> Result<(), LlmError> {
         self.service.cancel().await.map_err(|e| {
-            LlmError::provider_error("MCP", format!("Failed to shutdown MCP service: {}", e))
+            LlmError::provider_error("MCP", format!("Failed to shutdown MCP service: {e}"))
         })?;
         println!("🔌 MCP client disconnected");
         Ok(())
@@ -243,7 +240,7 @@ impl StdioMcpLlmDemo {
             println!("🤖 Step 4: Integrating with real LLM...");
 
             let user_message = "Please add 25 and 17, then tell me the current time in UTC.";
-            println!("👤 User: {}", user_message);
+            println!("👤 User: {user_message}");
 
             let mut messages = vec![ChatMessage::user(user_message).build()];
 
@@ -262,7 +259,7 @@ impl StdioMcpLlmDemo {
                             if let Some(function) = &tool_call.function {
                                 println!("   📞 Calling: {}", function.name);
                                 let result = self.mcp_client.call_tool(tool_call).await?;
-                                println!("   ✅ Result: {}", result);
+                                println!("   ✅ Result: {result}");
 
                                 tool_results.push(
                                     ChatMessage::tool(result.clone(), tool_call.id.clone()).build(),
@@ -295,7 +292,7 @@ impl StdioMcpLlmDemo {
                                 );
                             }
                             Err(e) => {
-                                println!("⚠️ Error getting final LLM response: {}", e);
+                                println!("⚠️ Error getting final LLM response: {e}");
                             }
                         }
 
@@ -308,7 +305,7 @@ impl StdioMcpLlmDemo {
                     }
                 }
                 Err(e) => {
-                    println!("⚠️ Error with LLM integration: {}", e);
+                    println!("⚠️ Error with LLM integration: {e}");
                     println!("💡 Continuing with tool demonstration...");
                 }
             }
@@ -370,18 +367,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match StdioMcpLlmDemo::new().await {
         Ok(mut demo) => {
             if let Err(e) = demo.run_demo().await {
-                eprintln!("❌ Demo failed: {}", e);
+                eprintln!("❌ Demo failed: {e}");
                 let _ = demo.shutdown().await;
                 std::process::exit(1);
             }
 
             // Shutdown gracefully
             if let Err(e) = demo.shutdown().await {
-                eprintln!("⚠️ Warning: Failed to shutdown cleanly: {}", e);
+                eprintln!("⚠️ Warning: Failed to shutdown cleanly: {e}");
             }
         }
         Err(e) => {
-            eprintln!("❌ Failed to initialize stdio MCP client: {}", e);
+            eprintln!("❌ Failed to initialize stdio MCP client: {e}");
             eprintln!("💡 Make sure to build the server first:");
             eprintln!("   cargo build --example stdio_mcp_server");
             std::process::exit(1);

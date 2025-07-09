@@ -65,7 +65,7 @@ impl StdioMcpServer {
         Parameters(AddRequest { a, b }): Parameters<AddRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let result = a + b;
-        eprintln!("🔧 Tool 'add' called: {} + {} = {}", a, b, result);
+        eprintln!("🔧 Tool 'add' called: {a} + {b} = {result}");
         Ok(CallToolResult::success(vec![Content::text(format!(
             "{a} + {b} = {result}"
         ))]))
@@ -107,7 +107,7 @@ impl StdioMcpServer {
             }
         };
 
-        eprintln!("🔧 Tool 'get_time' called: {}", time_str);
+        eprintln!("🔧 Tool 'get_time' called: {time_str}");
         Ok(CallToolResult::success(vec![Content::text(time_str)]))
     }
 }

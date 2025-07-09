@@ -19,7 +19,7 @@ fn test_utf8_decoder_with_sse_like_data() {
 
     // Test with various chunk sizes that might split UTF-8 characters
     for chunk_size in [1, 2, 3, 5, 7, 11, 13] {
-        println!("\n=== Testing with chunk size: {} ===", chunk_size);
+        println!("\n=== Testing with chunk size: {chunk_size} ===");
         let mut decoder = Utf8StreamDecoder::new();
         let mut result = String::new();
 
@@ -39,33 +39,28 @@ fn test_utf8_decoder_with_sse_like_data() {
         result.push_str(&remaining);
 
         // Verify the result matches the original
-        assert_eq!(result, sse_data, "Chunk size {} failed", chunk_size);
+        assert_eq!(result, sse_data, "Chunk size {chunk_size} failed");
         assert!(
             !result.contains('�'),
-            "Chunk size {} produced corruption",
-            chunk_size
+            "Chunk size {chunk_size} produced corruption"
         );
 
         // Verify Chinese characters are intact
         assert!(
             result.contains("你好"),
-            "Chinese greeting missing with chunk size {}",
-            chunk_size
+            "Chinese greeting missing with chunk size {chunk_size}"
         );
         assert!(
             result.contains("中文字符"),
-            "Chinese characters missing with chunk size {}",
-            chunk_size
+            "Chinese characters missing with chunk size {chunk_size}"
         );
         assert!(
             result.contains("🌍"),
-            "Emoji missing with chunk size {}",
-            chunk_size
+            "Emoji missing with chunk size {chunk_size}"
         );
         assert!(
             result.contains("✨"),
-            "Sparkles emoji missing with chunk size {}",
-            chunk_size
+            "Sparkles emoji missing with chunk size {chunk_size}"
         );
     }
 }
@@ -153,11 +148,10 @@ fn test_utf8_decoder_with_json_boundaries() {
         result.push_str(&remaining);
 
         // Verify integrity
-        assert_eq!(result, json_data, "Split at position {} failed", split_pos);
+        assert_eq!(result, json_data, "Split at position {split_pos} failed");
         assert!(
             !result.contains('�'),
-            "Split at position {} produced corruption",
-            split_pos
+            "Split at position {split_pos} produced corruption"
         );
     }
 }
@@ -170,8 +164,7 @@ fn test_utf8_decoder_performance_with_large_content() {
     let mut large_text = String::new();
     for i in 0..1000 {
         large_text.push_str(&format!(
-            "第{}行：这是包含中文、English和emoji🚀的混合内容。\n",
-            i
+            "第{i}行：这是包含中文、English和emoji🚀的混合内容。\n"
         ));
     }
 
@@ -192,7 +185,7 @@ fn test_utf8_decoder_performance_with_large_content() {
     let remaining = decoder.flush();
     result.push_str(&remaining);
 
-    println!("Processed {} chunks", chunk_count);
+    println!("Processed {chunk_count} chunks");
 
     // Verify integrity
     assert_eq!(result, large_text);
