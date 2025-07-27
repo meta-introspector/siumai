@@ -14,20 +14,21 @@
 //! ## Usage
 //!
 //! ```rust
-//! use siumai::tracing::{TracingConfig, init_tracing};
+//! use siumai::tracing::{TracingConfig, init_tracing, OutputFormat};
 //!
 //! // Initialize tracing with default configuration
-//! init_tracing(TracingConfig::default()).await?;
+//! init_tracing(TracingConfig::default())?;
 //!
 //! // Or with custom configuration
 //! let config = TracingConfig::builder()
 //!     .enable_http_tracing(true)
 //!     .enable_performance_monitoring(true)
-//!     .log_level("debug")
+//!     .log_level_str("debug")?
 //!     .output_format(OutputFormat::Json)
 //!     .build();
 //!
-//! init_tracing(config).await?;
+//! init_tracing(config)?;
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 pub mod config;
