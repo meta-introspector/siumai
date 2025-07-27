@@ -9,7 +9,7 @@ use std::env;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    env_logger::init();
+    siumai::tracing::init_default_tracing().ok();
 
     println!("🧠 Thinking Content Processing Example");
     println!("=====================================\n");

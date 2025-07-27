@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.0] - 2025-07-27
+
+### Added
+
+- **Enhanced Tracing and Monitoring System** - Complete HTTP request/response tracing with security features
+  - **Pretty JSON Formatting** - `.pretty_json(true)` enables human-readable JSON bodies and headers
+
+    ```rust
+    .debug_tracing().pretty_json(true)  // Multi-line indented JSON
+    ```
+
+  - **Sensitive Value Masking** - `.mask_sensitive_values(true)` automatically masks API keys and tokens (enabled by default)
+
+    ```rust
+    // Default: "Bearer sk-1...cdef" (secure)
+    .mask_sensitive_values(false)  // Shows full keys (not recommended)
+    ```
+
+  - **Comprehensive HTTP Tracing** - Automatic logging of request/response headers, bodies, timing, and status codes
+  - **Multiple Tracing Modes** - `.debug_tracing()`, `.json_tracing()`, `.minimal_tracing()` for different use cases
+  - **UTF-8 Stream Handling** - Proper handling of multi-byte characters in streaming responses
+  - **Security by Default** - API keys automatically masked as `sk-1...cdef` to prevent accidental exposure
+
 ## [0.4.0] - 2025-06-22
 
 ### Added

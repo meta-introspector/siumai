@@ -22,7 +22,7 @@ use tokio::time::sleep;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    env_logger::init();
+    siumai::tracing::init_default_tracing().ok();
 
     // Get API key from environment
     let api_key =

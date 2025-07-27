@@ -4,12 +4,95 @@
 
 use async_trait::async_trait;
 use std::collections::HashMap;
+use std::time::Instant;
 
 use crate::error::LlmError;
 use crate::params::{OpenAiParameterMapper, OpenAiParams, ParameterMapper};
 use crate::stream::ChatStream;
 use crate::traits::ChatCapability;
 use crate::types::*;
+use tracing::{debug, error, info};
+
+/// Format JSON for logging based on environment or configuration
+fn format_json_for_logging(value: &serde_json::Value) -> String {
+    // Check if pretty JSON is requested via environment variable or global config
+    let pretty_json = std::env::var("SIUMAI_PRETTY_JSON")
+        .unwrap_or_default()
+        .to_lowercase()
+        == "true"
+        || crate::tracing::get_pretty_json();
+
+    if pretty_json {
+        serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+    } else {
+        serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
+    }
+}
+
+/// Mask sensitive values in strings for security
+fn mask_sensitive_value(value: &str) -> String {
+    if !crate::tracing::get_mask_sensitive_values() {
+        return value.to_string();
+    }
+
+    // Check if this looks like an API key or token
+    if let Some(token) = value.strip_prefix("Bearer ") {
+        if token.len() > 8 {
+            format!("Bearer {}...{}", &token[..4], &token[token.len() - 4..])
+        } else {
+            "Bearer ***".to_string()
+        }
+    } else if value.starts_with("sk-") || value.starts_with("xai-") || value.starts_with("gsk_") {
+        // OpenAI, xAI, Groq API keys
+        if value.len() > 8 {
+            format!("{}...{}", &value[..4], &value[value.len() - 4..])
+        } else {
+            "***".to_string()
+        }
+    } else if value.len() > 20
+        && (value.contains("key") || value.contains("token") || value.contains("secret"))
+    {
+        // Generic long strings that might be sensitive
+        if value.len() > 8 {
+            format!("{}...{}", &value[..4], &value[value.len() - 4..])
+        } else {
+            "***".to_string()
+        }
+    } else {
+        value.to_string()
+    }
+}
+
+/// Format headers for logging based on pretty JSON configuration
+fn format_headers_for_logging(headers: &reqwest::header::HeaderMap) -> String {
+    let pretty_json = std::env::var("SIUMAI_PRETTY_JSON")
+        .unwrap_or_default()
+        .to_lowercase()
+        == "true"
+        || crate::tracing::get_pretty_json();
+
+    let header_map: std::collections::HashMap<&str, String> = headers
+        .iter()
+        .map(|(k, v)| {
+            let value = v.to_str().unwrap_or("<invalid>");
+            let masked_value = if k.as_str().to_lowercase().contains("authorization")
+                || k.as_str().to_lowercase().contains("key")
+                || k.as_str().to_lowercase().contains("token")
+            {
+                mask_sensitive_value(value)
+            } else {
+                value.to_string()
+            };
+            (k.as_str(), masked_value)
+        })
+        .collect();
+
+    if pretty_json {
+        serde_json::to_string_pretty(&header_map).unwrap_or_else(|_| format!("{header_map:?}"))
+    } else {
+        serde_json::to_string(&header_map).unwrap_or_else(|_| format!("{header_map:?}"))
+    }
+}
 
 use super::types::*;
 use super::utils::*;
@@ -194,10 +277,14 @@ impl ChatCapability for OpenAiChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
+        let start_time = Instant::now();
+
+        info!("Starting OpenAI chat request");
+
         // Create a ChatRequest from messages and tools
         let request = ChatRequest {
-            messages,
-            tools,
+            messages: messages.clone(),
+            tools: tools.clone(),
             common_params: CommonParams::default(),
             provider_params: None,
             http_config: None,
@@ -215,6 +302,13 @@ impl ChatCapability for OpenAiChatCapability {
         let body = self.build_chat_request_body(&request)?;
         let url = format!("{}/chat/completions", self.base_url);
 
+        debug!(
+            url = %url,
+            request_body = %format_json_for_logging(&body),
+            request_headers = %format_headers_for_logging(&headers),
+            "Sending OpenAI API request"
+        );
+
         let response = self
             .http_client
             .post(&url)
@@ -223,9 +317,18 @@ impl ChatCapability for OpenAiChatCapability {
             .send()
             .await?;
 
+        let duration = start_time.elapsed();
+
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
+
+            error!(
+                status_code = status.as_u16(),
+                error_text = %error_text,
+                duration_ms = duration.as_millis(),
+                "OpenAI API request failed"
+            );
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
@@ -234,8 +337,31 @@ impl ChatCapability for OpenAiChatCapability {
             });
         }
 
-        let openai_response: OpenAiChatResponse = response.json().await?;
-        self.parse_chat_response(openai_response)
+        debug!(
+            status_code = response.status().as_u16(),
+            duration_ms = duration.as_millis(),
+            response_headers = %format_headers_for_logging(response.headers()),
+            "OpenAI API request successful"
+        );
+
+        // Get response body as text first for logging
+        let response_text = response.text().await?;
+
+        debug!(
+            response_body = %response_text,
+            "OpenAI API response body"
+        );
+
+        let openai_response: OpenAiChatResponse = serde_json::from_str(&response_text)?;
+        let chat_response = self.parse_chat_response(openai_response)?;
+
+        info!(
+            duration_ms = duration.as_millis(),
+            response_length = chat_response.content.all_text().len(),
+            "OpenAI chat request completed"
+        );
+
+        Ok(chat_response)
     }
 
     async fn chat_stream(
@@ -278,6 +404,10 @@ impl ChatCapability for OpenAiChatCapability {
 impl OpenAiChatCapability {
     /// Chat with a `ChatRequest` (legacy method)
     pub async fn chat(&self, request: ChatRequest) -> Result<ChatResponse, LlmError> {
+        let start_time = Instant::now();
+
+        info!("Starting OpenAI chat request");
+
         let headers = build_headers(
             &self.api_key,
             self.organization.as_deref(),
@@ -288,6 +418,13 @@ impl OpenAiChatCapability {
         let body = self.build_chat_request_body(&request)?;
         let url = format!("{}/chat/completions", self.base_url);
 
+        debug!(
+            url = %url,
+            request_body = %format_json_for_logging(&body),
+            request_headers = %format_headers_for_logging(&headers),
+            "Sending OpenAI API request"
+        );
+
         let response = self
             .http_client
             .post(&url)
@@ -296,9 +433,18 @@ impl OpenAiChatCapability {
             .send()
             .await?;
 
+        let duration = start_time.elapsed();
+
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
+
+            error!(
+                status_code = status.as_u16(),
+                error_text = %error_text,
+                duration_ms = duration.as_millis(),
+                "OpenAI API request failed"
+            );
 
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
@@ -307,8 +453,31 @@ impl OpenAiChatCapability {
             });
         }
 
-        let openai_response: OpenAiChatResponse = response.json().await?;
-        self.parse_chat_response(openai_response)
+        debug!(
+            status_code = response.status().as_u16(),
+            duration_ms = duration.as_millis(),
+            response_headers = %format_headers_for_logging(response.headers()),
+            "OpenAI API request successful"
+        );
+
+        // Get response body as text first for logging
+        let response_text = response.text().await?;
+
+        debug!(
+            response_body = %response_text,
+            "OpenAI API response body"
+        );
+
+        let openai_response: OpenAiChatResponse = serde_json::from_str(&response_text)?;
+        let chat_response = self.parse_chat_response(openai_response)?;
+
+        info!(
+            duration_ms = duration.as_millis(),
+            response_length = chat_response.content.all_text().len(),
+            "OpenAI chat request completed"
+        );
+
+        Ok(chat_response)
     }
 
     /// Chat stream with a `ChatRequest` (legacy method)

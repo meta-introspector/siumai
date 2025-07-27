@@ -309,33 +309,33 @@ impl ErrorReporter {
     fn log_error(&self, classified_error: &ClassifiedError) {
         match classified_error.severity {
             ErrorSeverity::Critical => {
-                log::error!(
-                    "CRITICAL ERROR [{:?}]: {} - Recovery: {:?}",
-                    classified_error.category,
-                    classified_error.error,
-                    classified_error.recovery_suggestions
+                tracing::error!(
+                    category = ?classified_error.category,
+                    error = %classified_error.error,
+                    recovery_suggestions = ?classified_error.recovery_suggestions,
+                    "CRITICAL ERROR"
                 );
             }
             ErrorSeverity::High => {
-                log::error!(
-                    "HIGH ERROR [{:?}]: {} - Recovery: {:?}",
-                    classified_error.category,
-                    classified_error.error,
-                    classified_error.recovery_suggestions
+                tracing::error!(
+                    category = ?classified_error.category,
+                    error = %classified_error.error,
+                    recovery_suggestions = ?classified_error.recovery_suggestions,
+                    "HIGH ERROR"
                 );
             }
             ErrorSeverity::Medium => {
-                log::warn!(
-                    "MEDIUM ERROR [{:?}]: {}",
-                    classified_error.category,
-                    classified_error.error
+                tracing::warn!(
+                    category = ?classified_error.category,
+                    error = %classified_error.error,
+                    "MEDIUM ERROR"
                 );
             }
             ErrorSeverity::Low => {
-                log::info!(
-                    "LOW ERROR [{:?}]: {}",
-                    classified_error.category,
-                    classified_error.error
+                tracing::info!(
+                    category = ?classified_error.category,
+                    error = %classified_error.error,
+                    "LOW ERROR"
                 );
             }
         }

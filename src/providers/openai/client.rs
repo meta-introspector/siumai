@@ -31,6 +31,10 @@ pub struct OpenAiClient {
     specific_params: OpenAiSpecificParams,
     /// HTTP client for making requests
     http_client: reqwest::Client,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Tracing guard to keep tracing system active
+    _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
 impl OpenAiClient {
@@ -67,7 +71,22 @@ impl OpenAiClient {
             openai_params: config.openai_params,
             specific_params,
             http_client,
+            tracing_config: None,
+            _tracing_guard: None,
         }
+    }
+
+    /// Set the tracing guard to keep tracing system active
+    pub(crate) fn set_tracing_guard(
+        &mut self,
+        guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    ) {
+        self._tracing_guard = guard;
+    }
+
+    /// Set the tracing configuration
+    pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
+        self.tracing_config = config;
     }
 
     /// Creates a new `OpenAI` client with configuration (for OpenAI-compatible providers)

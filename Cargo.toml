@@ -1,6 +1,6 @@
 [package]
 name = "siumai"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 description = "A unified LLM interface library for Rust"
@@ -45,8 +45,10 @@ thiserror = "2.0"
 # UUID generation
 uuid = { version = "1.0", features = ["v4", "serde"] }
 
-# Logging
-log = "0.4"
+# Tracing and observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt", "time", "chrono"] }
+tracing-appender = "0.2"
 
 # Random number generation (for retry jitter)
 rand = "0.8"
@@ -58,7 +60,8 @@ regex = "1.11.1"
 [dev-dependencies]
 tokio-test = "0.4"
 mockito = "1.0"
-env_logger = "0.11"
+tracing-test = "0.2"
+tempfile = "3.0"
 futures-util = "0.3"
 rmcp = { version = "0.2.1", features = ["transport-io", "transport-child-process", "macros", "server", "client"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -109,6 +112,12 @@ path = "examples/03_advanced_features/batch_processing.rs"
 [[example]]
 name = "custom_provider"
 path = "examples/03_advanced_features/custom_provider.rs"
+
+[[example]]
+name = "tracing_monitoring"
+path = "examples/03_advanced_features/tracing_monitoring.rs"
+
+
 
 [[example]]
 name = "openai_basic_chat"

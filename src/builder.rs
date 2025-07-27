@@ -541,6 +541,7 @@ pub struct OpenAiBuilder {
     common_params: CommonParams,
     openai_params: OpenAiParams,
     http_config: HttpConfig,
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl OpenAiBuilder {
@@ -555,6 +556,7 @@ impl OpenAiBuilder {
             common_params: CommonParams::default(),
             openai_params: OpenAiParams::default(),
             http_config: HttpConfig::default(),
+            tracing_config: None,
         }
     }
 
@@ -664,6 +666,110 @@ impl OpenAiBuilder {
         self
     }
 
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable simple tracing (uses debug configuration)
+    pub fn enable_tracing(self) -> Self {
+        self.debug_tracing()
+    }
+
+    /// Disable tracing explicitly
+    pub fn disable_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::disabled())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    ///
+    /// This enables multi-line, indented JSON formatting and organized header display
+    /// in debug logs, making them more human-readable for debugging purposes.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::prelude::*;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Provider::openai()
+    ///     .api_key("your-key")
+    ///     .model("gpt-4o-mini")
+    ///     .debug_tracing()
+    ///     .pretty_json(true)  // Enable pretty formatting
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development);
+
+        let updated_config = crate::tracing::TracingConfigBuilder::from_config(config)
+            .pretty_json(pretty)
+            .build();
+
+        self.tracing_config = Some(updated_config);
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in tracing logs
+    ///
+    /// When enabled (default), sensitive values like API keys and authorization tokens
+    /// are automatically masked in logs for security. Only the first and last few
+    /// characters are shown.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::prelude::*;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Provider::openai()
+    ///     .api_key("your-key")
+    ///     .model("gpt-4o-mini")
+    ///     .debug_tracing()
+    ///     .mask_sensitive_values(false)  // Disable masking (not recommended for production)
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn mask_sensitive_values(mut self, mask: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development);
+
+        let updated_config = crate::tracing::TracingConfigBuilder::from_config(config)
+            .mask_sensitive_values(mask)
+            .build();
+
+        self.tracing_config = Some(updated_config);
+        self
+    }
+
     /// Builds the `OpenAI` client
     pub async fn build(self) -> Result<OpenAiClient, LlmError> {
         let api_key = self
@@ -677,6 +783,13 @@ impl OpenAiBuilder {
             .base_url
             .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
 
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
+
         let http_client = self.base.http_client.unwrap_or_else(|| {
             let mut builder = reqwest::Client::builder()
                 .timeout(self.base.timeout.unwrap_or(Duration::from_secs(30)));
@@ -688,7 +801,7 @@ impl OpenAiBuilder {
             builder.build().unwrap()
         });
 
-        Ok(OpenAiClient::new_legacy(
+        let mut client = OpenAiClient::new_legacy(
             api_key,
             base_url,
             http_client,
@@ -697,7 +810,12 @@ impl OpenAiBuilder {
             self.http_config,
             self.organization,
             self.project,
-        ))
+        );
+
+        // Set tracing guard to keep tracing system active
+        client.set_tracing_guard(_tracing_guard);
+
+        Ok(client)
     }
 }
 

@@ -353,7 +353,7 @@ async fn handle_mcp_request(
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    env_logger::init();
+    siumai::tracing::init_default_tracing().ok();
 
     println!("🌐 HTTP MCP Server - Starting server with simple tools");
     println!("📋 Available tools:");

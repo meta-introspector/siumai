@@ -138,9 +138,7 @@ impl ServerHandler for StdioMcpServer {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging to stderr (stdout is used for MCP communication)
-    env_logger::Builder::from_default_env()
-        .target(env_logger::Target::Stderr)
-        .init();
+    siumai::tracing::init_default_tracing().ok();
 
     eprintln!("🌐 Stdio MCP Server - Starting server with simple tools");
     eprintln!("📋 Available tools:");

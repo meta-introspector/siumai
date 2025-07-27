@@ -53,6 +53,8 @@ pub struct OpenAiBuilder {
     openai_params: OpenAiParams,
     /// HTTP configuration
     http_config: HttpConfig,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl OpenAiBuilder {
@@ -71,6 +73,7 @@ impl OpenAiBuilder {
             common_params: CommonParams::default(),
             openai_params: OpenAiParams::default(),
             http_config: HttpConfig::default(),
+            tracing_config: None,
         }
     }
 
@@ -244,6 +247,126 @@ impl OpenAiBuilder {
 
     // === Build Method ===
 
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    ///
+    /// This allows you to configure detailed tracing and monitoring for this client.
+    /// The tracing configuration will override any global tracing settings.
+    ///
+    /// # Arguments
+    /// * `config` - The tracing configuration to use
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::prelude::*;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Provider::openai()
+    ///     .api_key("your-key")
+    ///     .model("gpt-4o-mini")
+    ///     .tracing(TracingConfig::debug())
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    ///
+    /// This is a convenience method that enables detailed tracing suitable for development.
+    /// Equivalent to `.tracing(TracingConfig::development())`.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::prelude::*;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Provider::openai()
+    ///     .api_key("your-key")
+    ///     .model("gpt-4o-mini")
+    ///     .debug_tracing()
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    ///
+    /// This is a convenience method that enables basic tracing with minimal overhead.
+    /// Equivalent to `.tracing(TracingConfig::minimal())`.
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    ///
+    /// This is a convenience method that enables structured JSON logging suitable for production.
+    /// Equivalent to `.tracing(TracingConfig::json_production())`.
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable simple tracing (uses debug configuration)
+    ///
+    /// This is a convenience method for quickly enabling tracing.
+    /// Equivalent to `.debug_tracing()`.
+    pub fn enable_tracing(self) -> Self {
+        self.debug_tracing()
+    }
+
+    /// Disable tracing explicitly
+    ///
+    /// This will disable all tracing for this client, even if global tracing is enabled.
+    pub fn disable_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::disabled())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    ///
+    /// This enables multi-line, indented JSON formatting and organized header display
+    /// in debug logs, making them more human-readable for debugging purposes.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::prelude::*;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Provider::openai()
+    ///     .api_key("your-key")
+    ///     .model("gpt-4o-mini")
+    ///     .debug_tracing()
+    ///     .pretty_json(true)  // Enable pretty formatting
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development);
+
+        let updated_config = crate::tracing::TracingConfigBuilder::from_config(config)
+            .pretty_json(pretty)
+            .build();
+
+        self.tracing_config = Some(updated_config);
+        self
+    }
+
     /// Build the `OpenAI` client with the configured settings.
     ///
     /// # Returns
@@ -269,6 +392,13 @@ impl OpenAiBuilder {
             .base_url
             .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
 
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
+        } else {
+            None
+        };
+
         // Build HTTP client using the base builder
         let http_client = self.base.build_http_client()?;
 
@@ -287,7 +417,11 @@ impl OpenAiBuilder {
             built_in_tools: Vec::new(),
         };
 
-        // Create and return the client
-        Ok(OpenAiClient::new(config, http_client))
+        // Create client and store tracing guard to keep tracing active
+        let mut client = OpenAiClient::new(config, http_client);
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
+
+        Ok(client)
     }
 }

@@ -350,7 +350,7 @@ impl StdioMcpLlmDemo {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    env_logger::init();
+    siumai::tracing::init_default_tracing().ok();
 
     println!("🌐 Stdio MCP Client - LLM Integration Demo");
     println!("==========================================");

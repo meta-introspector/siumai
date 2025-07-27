@@ -79,6 +79,44 @@ cargo run --example custom_provider
 - Supporting streaming responses
 - Provider validation and error handling
 
+### [tracing_monitoring.rs](tracing_monitoring.rs)
+**🔍 Comprehensive tracing and monitoring**
+
+Demonstrates all available tracing capabilities in siumai: built-in debug logging, HTTP-level tracing, and production monitoring.
+
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY="your-key"
+
+# Method 1: Built-in siumai debug logging (recommended)
+SIUMAI_LOG_LEVEL=debug cargo run --example tracing_monitoring
+
+# Method 2: HTTP-level debugging with reqwest
+RUST_LOG=reqwest=debug cargo run --example tracing_monitoring
+
+# Method 3: Combined approach (maximum visibility)
+RUST_LOG=reqwest=debug SIUMAI_LOG_LEVEL=debug cargo run --example tracing_monitoring
+
+# Method 4: Production JSON logging
+SIUMAI_LOG_LEVEL=info SIUMAI_LOG_FORMAT=json SIUMAI_LOG_FILE=app.log cargo run --example tracing_monitoring
+```
+
+**What you'll see automatically:**
+- ✅ Request details (model, messages, parameters)
+- ✅ Complete request body with all parameters
+- ✅ Response details (content, token usage)
+- ✅ Error information (status codes, error messages)
+- ✅ Performance metrics (response time)
+- ✅ Tool usage tracing
+- ✅ HTTP-level request/response details (with RUST_LOG)
+
+**Key benefits:**
+- Zero code changes required - just call `init_tracing_from_env()`
+- Multiple tracing levels (application + HTTP)
+- Environment variable controlled
+- Production-ready structured logging
+- Automatic performance monitoring
+
 ## Prerequisites
 
 These examples require more advanced setup:
@@ -105,9 +143,10 @@ ollama pull llava  # For vision tasks
 3. [custom_configurations.rs](custom_configurations.rs) - Fine-tune performance
 
 ### For Production Engineers
-1. [batch_processing.rs](batch_processing.rs) - Scale processing
-2. [custom_configurations.rs](custom_configurations.rs) - Optimize for production
-3. [thinking_models.rs](thinking_models.rs) - Leverage advanced models
+1. [tracing_monitoring.rs](tracing_monitoring.rs) - Monitor and debug in production
+2. [batch_processing.rs](batch_processing.rs) - Scale processing
+3. [custom_configurations.rs](custom_configurations.rs) - Optimize for production
+4. [thinking_models.rs](thinking_models.rs) - Leverage advanced models
 
 ### For Application Developers
 1. [multimodal_processing.rs](multimodal_processing.rs) - Rich user experiences
@@ -179,6 +218,25 @@ let provider = Box::new(MyCustomProvider::new(config.clone()));
 let client = CustomProviderClient::new(provider, config)?;
 ```
 
+### Tracing and Monitoring
+```rust
+// Initialize comprehensive tracing
+let _guard = init_tracing_from_env()?;
+
+// All LLM interactions are automatically traced
+let client = Provider::openai().build().await?;
+let response = client.chat(messages).await?; // Traced automatically
+
+// Manual performance tracking
+let perf_tracer = PerformanceTracer::new(PerformanceConfig::default());
+let trace_id = TraceId::new();
+perf_tracer.record_latency(trace_id, "openai", duration).await;
+
+// Get performance statistics
+let stats = perf_tracer.get_stats().await;
+println!("Average latency: {}ms", stats.avg_latency.as_millis());
+```
+
 ## Performance Considerations
 
 ### Thinking Models
@@ -210,6 +268,13 @@ let client = CustomProviderClient::new(provider, config)?;
 - Authentication and security
 - Error handling and retries
 - Response format standardization
+
+### Tracing and Monitoring
+- Minimal overhead when disabled
+- Configurable sampling rates for high-traffic scenarios
+- Structured logging for easy analysis
+- Memory usage scales with trace retention
+- File I/O impact for persistent logging
 
 ## Common Patterns
 

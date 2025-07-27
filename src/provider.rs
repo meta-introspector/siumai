@@ -157,6 +157,7 @@ pub struct SiumaiBuilder {
     http_config: HttpConfig,
     organization: Option<String>,
     project: Option<String>,
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl SiumaiBuilder {
@@ -173,6 +174,7 @@ impl SiumaiBuilder {
             http_config: HttpConfig::default(),
             organization: None,
             project: None,
+            tracing_config: None,
         }
     }
 
@@ -327,6 +329,62 @@ impl SiumaiBuilder {
     /// Enable image generation capability
     pub fn with_image_generation(self) -> Self {
         self.with_capability("image_generation")
+    }
+
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    ///
+    /// This allows you to configure detailed tracing and monitoring for this client.
+    /// The tracing configuration will override any global tracing settings.
+    ///
+    /// # Arguments
+    /// * `config` - The tracing configuration to use
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// use siumai::prelude::*;
+    ///
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = Siumai::builder()
+    ///     .openai()
+    ///     .api_key("your-key")
+    ///     .model("gpt-4o-mini")
+    ///     .tracing(TracingConfig::debug())
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable simple tracing (uses debug configuration)
+    pub fn enable_tracing(self) -> Self {
+        self.debug_tracing()
+    }
+
+    /// Disable tracing explicitly
+    pub fn disable_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::disabled())
     }
 
     /// Build the siumai provider
