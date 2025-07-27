@@ -14,6 +14,7 @@ use super::config::GroqConfig;
 #[derive(Debug, Clone)]
 pub struct GroqBuilder {
     config: GroqConfig,
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl GroqBuilder {
@@ -21,6 +22,7 @@ impl GroqBuilder {
     pub fn new() -> Self {
         Self {
             config: GroqConfig::default(),
+            tracing_config: None,
         }
     }
 
@@ -117,6 +119,51 @@ impl GroqBuilder {
         self
     }
 
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_pretty_json(pretty);
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in tracing logs
+    pub fn mask_sensitive_values(mut self, mask: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_mask_sensitive_values(mask);
+        self.tracing_config = Some(config);
+        self
+    }
+
     /// Build the `Groq` client
     pub async fn build(mut self) -> Result<GroqClient, LlmError> {
         // Try to get API key from environment if not set
@@ -128,6 +175,13 @@ impl GroqBuilder {
 
         // Validate configuration
         self.config.validate()?;
+
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
 
         // Create HTTP client
         let mut client_builder = reqwest::Client::builder();

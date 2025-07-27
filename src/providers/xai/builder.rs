@@ -12,6 +12,7 @@ use super::config::XaiConfig;
 #[derive(Debug, Clone)]
 pub struct XaiBuilder {
     config: XaiConfig,
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl XaiBuilder {
@@ -19,6 +20,7 @@ impl XaiBuilder {
     pub fn new() -> Self {
         Self {
             config: XaiConfig::default(),
+            tracing_config: None,
         }
     }
 
@@ -100,12 +102,64 @@ impl XaiBuilder {
         self
     }
 
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_pretty_json(pretty);
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in tracing logs
+    pub fn mask_sensitive_values(mut self, mask: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_mask_sensitive_values(mask);
+        self.tracing_config = Some(config);
+        self
+    }
+
     /// Build the `xAI` client
     pub async fn build(self) -> Result<XaiClient, LlmError> {
         // Validate configuration
         self.config
             .validate()
             .map_err(|e| LlmError::InvalidInput(format!("Invalid xAI configuration: {e}")))?;
+
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
 
         // Set default model if not specified
         if self.config.common_params.model.is_empty() {
@@ -126,6 +180,13 @@ impl XaiBuilder {
         self.config
             .validate()
             .map_err(|e| LlmError::InvalidInput(format!("Invalid xAI configuration: {e}")))?;
+
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
 
         // Set default model if not specified
         let mut config = self.config;

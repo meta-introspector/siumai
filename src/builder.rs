@@ -378,8 +378,8 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// xAI-specific builder for further configuration
-    pub const fn xai(self) -> GenericProviderBuilder {
-        GenericProviderBuilder::new(self, ProviderType::XAI)
+    pub fn xai(self) -> crate::providers::xai::XaiBuilder {
+        crate::providers::xai::XaiBuilder::new()
     }
 
     /// Create a Groq client builder.
@@ -828,6 +828,7 @@ pub struct AnthropicBuilder {
     common_params: CommonParams,
     anthropic_params: AnthropicParams,
     http_config: HttpConfig,
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl AnthropicBuilder {
@@ -840,6 +841,7 @@ impl AnthropicBuilder {
             common_params: CommonParams::default(),
             anthropic_params: AnthropicParams::default(),
             http_config: HttpConfig::default(),
+            tracing_config: None,
         }
     }
 
@@ -911,6 +913,51 @@ impl AnthropicBuilder {
         self
     }
 
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_pretty_json(pretty);
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in tracing logs
+    pub fn mask_sensitive_values(mut self, mask: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_mask_sensitive_values(mask);
+        self.tracing_config = Some(config);
+        self
+    }
+
     /// Adds metadata
     pub fn metadata<K, V>(mut self, key: K, value: V) -> Self
     where
@@ -940,6 +987,13 @@ impl AnthropicBuilder {
         let base_url = self
             .base_url
             .unwrap_or_else(|| "https://api.anthropic.com".to_string());
+
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
 
         let http_client = self.base.http_client.unwrap_or_else(|| {
             reqwest::Client::builder()
@@ -1039,6 +1093,8 @@ pub struct GeminiBuilder {
     json_schema: Option<serde_json::Value>,
     /// Thinking configuration
     thinking_config: Option<crate::providers::gemini::ThinkingConfig>,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl GeminiBuilder {
@@ -1058,6 +1114,7 @@ impl GeminiBuilder {
             safety_settings: None,
             json_schema: None,
             thinking_config: None,
+            tracing_config: None,
         }
     }
 
@@ -1176,11 +1233,63 @@ impl GeminiBuilder {
         self
     }
 
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_pretty_json(pretty);
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in tracing logs
+    pub fn mask_sensitive_values(mut self, mask: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_mask_sensitive_values(mask);
+        self.tracing_config = Some(config);
+        self
+    }
+
     /// Build the Gemini client
     pub async fn build(self) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
         let api_key = self.api_key.ok_or_else(|| {
             LlmError::ConfigurationError("API key is required for Gemini".to_string())
         })?;
+
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
 
         let mut config = crate::providers::gemini::GeminiConfig::new(api_key);
 
@@ -1262,6 +1371,7 @@ pub struct OllamaBuilder {
     common_params: CommonParams,
     ollama_params: OllamaParams,
     http_config: HttpConfig,
+    tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
 impl OllamaBuilder {
@@ -1274,6 +1384,7 @@ impl OllamaBuilder {
             common_params: CommonParams::default(),
             ollama_params: OllamaParams::default(),
             http_config: HttpConfig::default(),
+            tracing_config: None,
         }
     }
 
@@ -1436,11 +1547,72 @@ impl OllamaBuilder {
         self
     }
 
+    /// Enable thinking mode for thinking models
+    ///
+    /// # Arguments
+    /// * `think` - Whether to enable thinking mode
+    pub const fn think(mut self, think: bool) -> Self {
+        self.ollama_params.think = Some(think);
+        self
+    }
+
+    // === Tracing Configuration ===
+
+    /// Set custom tracing configuration
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Enable debug tracing (development-friendly configuration)
+    pub fn debug_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::development())
+    }
+
+    /// Enable minimal tracing (info level, LLM only)
+    pub fn minimal_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::minimal())
+    }
+
+    /// Enable production-ready JSON tracing
+    pub fn json_tracing(self) -> Self {
+        self.tracing(crate::tracing::TracingConfig::json_production())
+    }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers in tracing
+    pub fn pretty_json(mut self, pretty: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_pretty_json(pretty);
+        self.tracing_config = Some(config);
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in tracing logs
+    pub fn mask_sensitive_values(mut self, mask: bool) -> Self {
+        let config = self
+            .tracing_config
+            .take()
+            .unwrap_or_else(crate::tracing::TracingConfig::development)
+            .with_mask_sensitive_values(mask);
+        self.tracing_config = Some(config);
+        self
+    }
+
     /// Build the Ollama client
     pub async fn build(self) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
         let base_url = self
             .base_url
             .unwrap_or_else(|| "http://localhost:11434".to_string());
+
+        // Initialize tracing if configured
+        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config)?)
+        } else {
+            None
+        };
 
         let mut config = crate::providers::ollama::OllamaConfig::builder()
             .base_url(base_url)

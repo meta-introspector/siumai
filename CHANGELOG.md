@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.1] - 2025-07-27
+
+### Added
+
+- **Unified Tracing API** - All provider builders (Anthropic, Gemini, Ollama, Groq, xAI) now support tracing methods (`debug_tracing()`, `json_tracing()`, `minimal_tracing()`, `pretty_json()`, `mask_sensitive_values()`)
+
+### Fixed
+
 ## [0.5.0] - 2025-07-27
 
 ### Added

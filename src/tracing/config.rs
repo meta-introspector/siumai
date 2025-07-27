@@ -226,6 +226,18 @@ impl TracingConfig {
             ..Default::default()
         }
     }
+
+    /// Enable pretty-printed formatting for JSON bodies and headers
+    pub fn with_pretty_json(mut self, pretty: bool) -> Self {
+        self.pretty_json = pretty;
+        self
+    }
+
+    /// Control masking of sensitive values (API keys, tokens) in logs
+    pub fn with_mask_sensitive_values(mut self, mask: bool) -> Self {
+        self.mask_sensitive_values = mask;
+        self
+    }
 }
 
 /// Builder for tracing configuration
