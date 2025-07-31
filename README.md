@@ -499,15 +499,29 @@ if is_ready {
 #### Text Embedding
 
 ```rust
-use siumai::providers::openai::{OpenAiConfig, OpenAiEmbeddings};
-use siumai::traits::EmbeddingCapability;
+use siumai::prelude::*;
 
-let config = OpenAiConfig::new("your-api-key");
-let client = OpenAiEmbeddings::new(config, reqwest::Client::new());
+// Unified interface - works with any provider that supports embeddings
+let client = Siumai::builder()
+    .openai()
+    .api_key("your-api-key")
+    .model("text-embedding-3-small")
+    .build()
+    .await?;
 
 let texts = vec!["Hello, world!".to_string()];
 let response = client.embed(texts).await?;
-println!("Embedding dimension: {}", response.embeddings[0].len());
+println!("Got {} embeddings with {} dimensions",
+         response.embeddings.len(),
+         response.embeddings[0].len());
+
+// Provider-specific interface for advanced features
+let embeddings_client = Provider::openai()
+    .api_key("your-api-key")
+    .build()
+    .await?;
+
+let response = embeddings_client.embed(texts).await?;
 ```
 
 #### Text-to-Speech

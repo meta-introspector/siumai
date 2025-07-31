@@ -264,6 +264,57 @@ impl ModelListingCapability for OpenAiClient {
     }
 }
 
+#[async_trait]
+impl EmbeddingCapability for OpenAiClient {
+    async fn embed(&self, texts: Vec<String>) -> Result<EmbeddingResponse, LlmError> {
+        // Create an OpenAiEmbeddings instance using the client's configuration
+        let config = super::config::OpenAiConfig {
+            api_key: self.chat_capability.api_key.clone(),
+            base_url: self.chat_capability.base_url.clone(),
+            organization: self.chat_capability.organization.clone(),
+            project: self.chat_capability.project.clone(),
+            common_params: self.common_params.clone(),
+            openai_params: self.openai_params.clone(),
+            http_config: self.chat_capability.http_config.clone(),
+            web_search_config: crate::types::WebSearchConfig::default(),
+            use_responses_api: false,
+            previous_response_id: None,
+            built_in_tools: Vec::new(),
+        };
+
+        let embeddings = super::embeddings::OpenAiEmbeddings::new(config, self.http_client.clone());
+        embeddings.embed(texts).await
+    }
+
+    fn embedding_dimension(&self) -> usize {
+        // Return dimension based on model
+        let model = if !self.common_params.model.is_empty() {
+            &self.common_params.model
+        } else {
+            "text-embedding-3-small"
+        };
+
+        match model {
+            "text-embedding-3-small" => 1536,
+            "text-embedding-3-large" => 3072,
+            "text-embedding-ada-002" => 1536,
+            _ => 1536, // Default fallback
+        }
+    }
+
+    fn max_tokens_per_embedding(&self) -> usize {
+        8192 // OpenAI's current limit
+    }
+
+    fn supported_embedding_models(&self) -> Vec<String> {
+        vec![
+            "text-embedding-3-small".to_string(),
+            "text-embedding-3-large".to_string(),
+            "text-embedding-ada-002".to_string(),
+        ]
+    }
+}
+
 impl LlmProvider for OpenAiClient {
     fn provider_name(&self) -> &'static str {
         "openai"

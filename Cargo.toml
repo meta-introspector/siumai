@@ -63,7 +63,7 @@ mockito = "1.0"
 tracing-test = "0.2"
 tempfile = "3.0"
 futures-util = "0.3"
-rmcp = { version = "0.2.1", features = ["transport-io", "transport-child-process", "macros", "server", "client"] }
+rmcp = { version = "0.3.2", features = ["transport-io", "transport-child-process", "macros", "server", "client"] }
 serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 axum = "0.8.4"
@@ -96,6 +96,10 @@ path = "examples/02_core_features/error_handling.rs"
 [[example]]
 name = "capability_detection"
 path = "examples/02_core_features/capability_detection.rs"
+
+[[example]]
+name = "embedding_unified"
+path = "examples/02_core_features/embedding_unified.rs"
 
 [[example]]
 name = "thinking_models"
