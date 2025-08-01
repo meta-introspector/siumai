@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.0] (Not Released)
+
+### Fixed
+
+- **Send + Sync Markers** - Added Send + Sync bounds to all capability traits and stream types for proper multi-threading support
+
 ## [0.6.0] - 2025-08-01
 
 ### Added

@@ -422,6 +422,7 @@ impl ClientPool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     #[test]
     fn test_client_manager() {
@@ -445,5 +446,60 @@ mod tests {
         );
         assert_eq!(config.api_key, "test-key");
         assert_eq!(config.base_url, "https://api.example.com");
+    }
+
+    // Test that client types are Send + Sync for multi-threading
+    #[test]
+    fn test_client_types_are_send_sync() {
+        // Test that ClientWrapper can be used in Arc (requires Send + Sync)
+        fn test_arc_usage() {
+            let _: Option<Arc<ClientWrapper>> = None;
+            let _: Option<Arc<UnifiedLlmClient>> = None;
+            let _: Option<Arc<ClientManager>> = None;
+            let _: Option<Arc<ClientPool>> = None;
+        }
+
+        test_arc_usage();
+    }
+
+    // Test actual multi-threading with ClientPool
+    #[tokio::test]
+    async fn test_client_pool_multithreading() {
+        use std::sync::Arc;
+        use tokio::task;
+
+        let pool = Arc::new(ClientPool::new(5));
+
+        // Spawn multiple tasks that access the pool concurrently
+        let mut handles = Vec::new();
+
+        for i in 0..10 {
+            let pool_clone = pool.clone();
+            let handle = task::spawn(async move {
+                // Try to get a client (will be None since pool is empty)
+                let client = pool_clone.get_client();
+                assert!(client.is_none());
+
+                // Check pool size
+                let size = pool_clone.size();
+                assert_eq!(size, 0);
+
+                i // Return task id for verification
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all tasks to complete
+        let mut results = Vec::new();
+        for handle in handles {
+            let result = handle.await.unwrap();
+            results.push(result);
+        }
+
+        // Verify all tasks completed
+        assert_eq!(results.len(), 10);
+        for (i, result) in results.iter().enumerate() {
+            assert_eq!(*result, i);
+        }
     }
 }

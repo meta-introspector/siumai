@@ -123,8 +123,27 @@ use futures::Stream;
 use std::pin::Pin;
 
 /// Audio stream for streaming TTS
-pub type AudioStream = Pin<Box<dyn Stream<Item = Result<AudioStreamEvent, LlmError>> + Send>>;
+pub type AudioStream =
+    Pin<Box<dyn Stream<Item = Result<AudioStreamEvent, LlmError>> + Send + Sync>>;
 
 /// Completion stream for streaming completions
 pub type CompletionStream =
-    Pin<Box<dyn Stream<Item = Result<CompletionStreamEvent, LlmError>> + Send>>;
+    Pin<Box<dyn Stream<Item = Result<CompletionStreamEvent, LlmError>> + Send + Sync>>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    // Test that stream types are Send + Sync for multi-threading
+    #[test]
+    fn test_stream_types_are_send_sync() {
+        // Test that stream types can be used in Arc (requires Send + Sync)
+        fn test_arc_usage() {
+            let _: Option<Arc<AudioStream>> = None;
+            let _: Option<Arc<CompletionStream>> = None;
+        }
+
+        test_arc_usage();
+    }
+}

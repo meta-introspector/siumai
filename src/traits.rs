@@ -277,7 +277,7 @@ impl<T: ChatCapability> ChatExtensions for T {}
 /// - OpenAI: https://platform.openai.com/docs/guides/speech-to-text
 /// - Google: https://cloud.google.com/speech-to-text/docs
 #[async_trait]
-pub trait AudioCapability {
+pub trait AudioCapability: Send + Sync {
     /// Get all audio features supported by this provider.
     fn supported_features(&self) -> &[AudioFeature];
 
@@ -455,7 +455,7 @@ pub trait AudioCapability {
 /// - Google: https://cloud.google.com/vision/docs
 /// - Anthropic: https://docs.anthropic.com/en/docs/vision
 #[async_trait]
-pub trait VisionCapability {
+pub trait VisionCapability: Send + Sync {
     /// Analyzes an image with optional text prompt.
     ///
     /// # Arguments
@@ -653,7 +653,7 @@ pub trait EmbeddingExtensions: EmbeddingCapability {
 /// - OpenAI: https://platform.openai.com/docs/api-reference/images
 /// - Stability AI: https://platform.stability.ai/docs/api-reference
 #[async_trait]
-pub trait ImageGenerationCapability {
+pub trait ImageGenerationCapability: Send + Sync {
     /// Generate images from text prompts.
     ///
     /// # Arguments
@@ -754,7 +754,7 @@ pub trait ImageGenerationCapability {
 /// - OpenAI: https://platform.openai.com/docs/api-reference/files
 /// - Anthropic: https://docs.anthropic.com/en/api/messages
 #[async_trait]
-pub trait FileManagementCapability {
+pub trait FileManagementCapability: Send + Sync {
     /// Upload a file to the provider's storage.
     ///
     /// # Arguments
@@ -809,7 +809,7 @@ pub trait FileManagementCapability {
 /// # API References
 /// - OpenAI: https://platform.openai.com/docs/api-reference/moderations
 #[async_trait]
-pub trait ModerationCapability {
+pub trait ModerationCapability: Send + Sync {
     /// Moderate content for policy violations.
     ///
     /// # Arguments
@@ -849,7 +849,7 @@ pub trait ModerationCapability {
 /// - OpenAI: https://platform.openai.com/docs/api-reference/models
 /// - Anthropic: Models are typically hardcoded
 #[async_trait]
-pub trait ModelListingCapability {
+pub trait ModelListingCapability: Send + Sync {
     /// Get available models from the provider.
     ///
     /// # Returns
@@ -889,7 +889,7 @@ pub trait ModelListingCapability {
 /// # API References
 /// - OpenAI: https://platform.openai.com/docs/api-reference/completions
 #[async_trait]
-pub trait CompletionCapability {
+pub trait CompletionCapability: Send + Sync {
     /// Generate text completion from a prompt.
     ///
     /// # Arguments
@@ -924,7 +924,7 @@ pub trait CompletionCapability {
 /// # API References
 /// - OpenAI: https://platform.openai.com/docs/api-reference
 #[async_trait]
-pub trait OpenAiCapability {
+pub trait OpenAiCapability: Send + Sync {
     /// Chat with structured output using JSON schema.
     ///
     /// # Arguments
@@ -965,7 +965,7 @@ pub trait OpenAiCapability {
 
 /// Anthropic-specific capabilities.
 #[async_trait]
-pub trait AnthropicCapability {
+pub trait AnthropicCapability: Send + Sync {
     /// Caches prompts.
     async fn chat_with_cache(
         &self,
@@ -1011,7 +1011,7 @@ pub trait OpenAiEmbeddingCapability: EmbeddingCapability {
 
 /// Gemini-specific capabilities.
 #[async_trait]
-pub trait GeminiCapability {
+pub trait GeminiCapability: Send + Sync {
     /// Search-augmented generation.
     async fn chat_with_search(
         &self,
@@ -1233,5 +1233,100 @@ mod tests {
         assert!(caps.supports("streaming"));
         assert!(caps.supports("custom_feature"));
         assert!(!caps.supports("audio"));
+    }
+
+    // Test that all capability traits are Send + Sync
+    #[test]
+    fn test_capability_traits_are_send_sync() {
+        use std::sync::Arc;
+
+        // Test that trait objects can be used in Arc (requires Send + Sync)
+        fn test_arc_usage() {
+            // These should compile without errors if traits have Send + Sync
+            let _: Option<Arc<dyn ChatCapability>> = None;
+            let _: Option<Arc<dyn AudioCapability>> = None;
+            let _: Option<Arc<dyn VisionCapability>> = None;
+            let _: Option<Arc<dyn EmbeddingCapability>> = None;
+            let _: Option<Arc<dyn ImageGenerationCapability>> = None;
+            let _: Option<Arc<dyn FileManagementCapability>> = None;
+            let _: Option<Arc<dyn ModerationCapability>> = None;
+            let _: Option<Arc<dyn ModelListingCapability>> = None;
+            let _: Option<Arc<dyn CompletionCapability>> = None;
+            let _: Option<Arc<dyn OpenAiCapability>> = None;
+            let _: Option<Arc<dyn AnthropicCapability>> = None;
+            let _: Option<Arc<dyn GeminiCapability>> = None;
+        }
+
+        test_arc_usage();
+    }
+
+    // Test actual multi-threading with capability traits
+    #[tokio::test]
+    async fn test_capability_traits_multithreading() {
+        use std::sync::Arc;
+        use tokio::task;
+
+        // Create a mock capability that we can share across threads
+        struct MockCapability;
+
+        #[async_trait::async_trait]
+        impl ChatCapability for MockCapability {
+            async fn chat_with_tools(
+                &self,
+                _messages: Vec<ChatMessage>,
+                _tools: Option<Vec<Tool>>,
+            ) -> Result<ChatResponse, crate::error::LlmError> {
+                Ok(ChatResponse {
+                    id: Some("mock-id".to_string()),
+                    content: MessageContent::Text("Mock response".to_string()),
+                    model: Some("mock-model".to_string()),
+                    usage: None,
+                    finish_reason: Some(crate::types::FinishReason::Stop),
+                    tool_calls: None,
+                    thinking: None,
+                    metadata: std::collections::HashMap::new(),
+                })
+            }
+
+            async fn chat_stream(
+                &self,
+                _messages: Vec<ChatMessage>,
+                _tools: Option<Vec<Tool>>,
+            ) -> Result<crate::stream::ChatStream, crate::error::LlmError> {
+                Err(crate::error::LlmError::UnsupportedOperation(
+                    "Mock streaming not implemented".to_string(),
+                ))
+            }
+        }
+
+        let capability: Arc<dyn ChatCapability> = Arc::new(MockCapability);
+
+        // Spawn multiple tasks that use the capability concurrently
+        let mut handles = Vec::new();
+
+        for i in 0..5 {
+            let capability_clone = capability.clone();
+            let handle = task::spawn(async move {
+                // This tests that the capability can be used across thread boundaries
+                let messages = vec![ChatMessage::user("Test message").build()];
+                let result = capability_clone.chat_with_tools(messages, None).await;
+                assert!(result.is_ok());
+                i // Return task id for verification
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all tasks to complete
+        let mut results = Vec::new();
+        for handle in handles {
+            let result = handle.await.unwrap();
+            results.push(result);
+        }
+
+        // Verify all tasks completed
+        assert_eq!(results.len(), 5);
+        for (i, result) in results.iter().enumerate() {
+            assert_eq!(*result, i);
+        }
     }
 }

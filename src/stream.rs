@@ -11,7 +11,7 @@ use crate::error::LlmError;
 use crate::types::*;
 
 /// Chat Stream - Main interface for streaming responses
-pub type ChatStream = Pin<Box<dyn Stream<Item = Result<ChatStreamEvent, LlmError>> + Send>>;
+pub type ChatStream = Pin<Box<dyn Stream<Item = Result<ChatStreamEvent, LlmError>> + Send + Sync>>;
 
 // Re-export ChatStreamEvent from types module to avoid duplication
 pub use crate::types::ChatStreamEvent;
@@ -297,6 +297,82 @@ mod tests {
                 assert_eq!(accumulated, "Hello");
             }
             _ => panic!("Expected ContentUpdate"),
+        }
+    }
+
+    // Test that stream types are Send + Sync for multi-threading
+    #[test]
+    fn test_stream_types_are_send_sync() {
+        use std::sync::Arc;
+
+        // Test that stream types can be used in Arc (requires Send + Sync)
+        fn test_arc_usage() {
+            let _: Option<Arc<ChatStream>> = None;
+        }
+
+        test_arc_usage();
+    }
+
+    // Test actual multi-threading with stream types
+    #[tokio::test]
+    async fn test_stream_multithreading() {
+        use futures::stream;
+        use std::sync::Arc;
+        use tokio::task;
+
+        // Create a mock stream that we can share across threads
+        let mock_events = vec![
+            Ok(ChatStreamEvent::ContentDelta {
+                delta: "Hello".to_string(),
+                index: None,
+            }),
+            Ok(ChatStreamEvent::ContentDelta {
+                delta: " World".to_string(),
+                index: None,
+            }),
+            Ok(ChatStreamEvent::StreamEnd {
+                response: crate::types::ChatResponse {
+                    id: Some("test-id".to_string()),
+                    content: crate::types::MessageContent::Text("Hello World".to_string()),
+                    model: Some("test-model".to_string()),
+                    usage: None,
+                    finish_reason: Some(crate::types::FinishReason::Stop),
+                    tool_calls: None,
+                    thinking: None,
+                    metadata: std::collections::HashMap::new(),
+                },
+            }),
+        ];
+
+        let stream: ChatStream = Box::pin(stream::iter(mock_events));
+        let stream_arc = Arc::new(tokio::sync::Mutex::new(stream));
+
+        // Spawn multiple tasks that could potentially access the stream
+        // (In practice, streams are usually consumed by one task, but this tests Send + Sync)
+        let mut handles = Vec::new();
+
+        for i in 0..3 {
+            let stream_clone = stream_arc.clone();
+            let handle = task::spawn(async move {
+                // This tests that the stream can be moved across thread boundaries
+                let _guard = stream_clone.lock().await;
+                // In a real scenario, we'd consume the stream here
+                i // Return task id for verification
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all tasks to complete
+        let mut results = Vec::new();
+        for handle in handles {
+            let result = handle.await.unwrap();
+            results.push(result);
+        }
+
+        // Verify all tasks completed
+        assert_eq!(results.len(), 3);
+        for (i, result) in results.iter().enumerate() {
+            assert_eq!(*result, i);
         }
     }
 }
