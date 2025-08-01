@@ -39,7 +39,8 @@ pub struct FunctionCallDelta {
 /// Stream Processor - for processing and transforming stream events
 pub struct StreamProcessor {
     buffer: String,
-    tool_calls: Vec<ToolCallBuilder>, // Changed to Vec to use index-based access
+    tool_calls: std::collections::HashMap<String, ToolCallBuilder>, // Use ID as key to handle duplicate indices
+    tool_call_order: Vec<String>, // Track order of tool calls for consistent output
     thinking_buffer: String,
     current_usage: Option<Usage>,
 }
@@ -48,7 +49,8 @@ impl StreamProcessor {
     pub fn new() -> Self {
         Self {
             buffer: String::new(),
-            tool_calls: Vec::new(),
+            tool_calls: std::collections::HashMap::new(),
+            tool_call_order: Vec::new(),
             thinking_buffer: String::new(),
             current_usage: None,
         }
@@ -71,26 +73,50 @@ impl StreamProcessor {
                 arguments_delta,
                 index,
             } => {
-                // Use index to access the correct tool call in the array
-                let tool_index = index.unwrap_or(0);
-
                 tracing::debug!("Tool call delta - ID: '{}', Index: {:?}", id, index);
 
-                // Ensure the vector is large enough
-                while self.tool_calls.len() <= tool_index {
-                    self.tool_calls.push(ToolCallBuilder::new());
+                // Use tool call ID as the primary key to handle duplicate indices
+                // This solves the problem where OpenAI returns multiple tool calls with the same index
+                let tool_id = if !id.is_empty() {
+                    id.clone()
+                } else {
+                    // If no ID, we need to find the most recent tool call that doesn't have an ID yet
+                    // This handles the case where subsequent deltas don't include the ID
+                    if let Some(last_id) = self.tool_call_order.last() {
+                        last_id.clone()
+                    } else {
+                        // Fallback: create a temporary ID based on order
+                        format!("temp_tool_call_{}", self.tool_call_order.len())
+                    }
+                };
+
+                // Get or create the tool call builder
+                let is_new_tool_call = !self.tool_calls.contains_key(&tool_id);
+                let builder = self.tool_calls.entry(tool_id.clone()).or_insert_with(|| {
+                    let mut builder = ToolCallBuilder::new();
+                    if !id.is_empty() {
+                        builder.id = id.clone();
+                    } else {
+                        builder.id = tool_id.clone();
+                    }
+                    builder
+                });
+
+                // Track order of tool calls for consistent output
+                if is_new_tool_call && !id.is_empty() {
+                    self.tool_call_order.push(tool_id.clone());
                 }
 
-                let builder = &mut self.tool_calls[tool_index];
-
-                // Set the ID from the first delta that has it (usually the first one)
-                if !id.is_empty() && builder.id.is_empty() {
-                    builder.id = id.clone();
-                }
-
+                // Accumulate function name
                 if let Some(name) = function_name {
-                    builder.name.push_str(&name);
+                    if builder.name.is_empty() {
+                        builder.name = name;
+                    } else {
+                        builder.name.push_str(&name);
+                    }
                 }
+
+                // Accumulate arguments
                 if let Some(args) = arguments_delta {
                     builder.arguments.push_str(&args);
                 }
@@ -148,10 +174,11 @@ impl StreamProcessor {
 
         let tool_calls = if !self.tool_calls.is_empty() {
             Some(
-                self.tool_calls
+                self.tool_call_order
                     .iter()
+                    .filter_map(|id| self.tool_calls.get(id))
                     .filter(|builder| !builder.name.is_empty()) // Only include tool calls with names
-                    .map(ToolCallBuilder::build)
+                    .map(|builder| builder.build())
                     .collect(),
             )
         } else {
