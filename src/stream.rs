@@ -39,7 +39,7 @@ pub struct FunctionCallDelta {
 /// Stream Processor - for processing and transforming stream events
 pub struct StreamProcessor {
     buffer: String,
-    tool_calls: HashMap<String, ToolCallBuilder>,
+    tool_calls: Vec<ToolCallBuilder>, // Changed to Vec to use index-based access
     thinking_buffer: String,
     current_usage: Option<Usage>,
 }
@@ -48,7 +48,7 @@ impl StreamProcessor {
     pub fn new() -> Self {
         Self {
             buffer: String::new(),
-            tool_calls: HashMap::new(),
+            tool_calls: Vec::new(),
             thinking_buffer: String::new(),
             current_usage: None,
         }
@@ -71,10 +71,22 @@ impl StreamProcessor {
                 arguments_delta,
                 index,
             } => {
-                let call_id = id.clone();
-                let builder = self.tool_calls.entry(call_id.clone()).or_default();
+                // Use index to access the correct tool call in the array
+                let tool_index = index.unwrap_or(0);
 
-                builder.id = call_id.clone();
+                tracing::debug!("Tool call delta - ID: '{}', Index: {:?}", id, index);
+
+                // Ensure the vector is large enough
+                while self.tool_calls.len() <= tool_index {
+                    self.tool_calls.push(ToolCallBuilder::new());
+                }
+
+                let builder = &mut self.tool_calls[tool_index];
+
+                // Set the ID from the first delta that has it (usually the first one)
+                if !id.is_empty() && builder.id.is_empty() {
+                    builder.id = id.clone();
+                }
 
                 if let Some(name) = function_name {
                     builder.name.push_str(&name);
@@ -84,7 +96,7 @@ impl StreamProcessor {
                 }
 
                 ProcessedEvent::ToolCallUpdate {
-                    id: call_id,
+                    id: builder.id.clone(),
                     current_state: builder.clone(),
                     index,
                 }
@@ -137,7 +149,8 @@ impl StreamProcessor {
         let tool_calls = if !self.tool_calls.is_empty() {
             Some(
                 self.tool_calls
-                    .values()
+                    .iter()
+                    .filter(|builder| !builder.name.is_empty()) // Only include tool calls with names
                     .map(ToolCallBuilder::build)
                     .collect(),
             )

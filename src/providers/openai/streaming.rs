@@ -7,6 +7,8 @@ use serde::Deserialize;
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::Mutex;
 
+use crate::{ChatResponse, FinishReason, MessageContent};
+
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, ResponseMetadata, Usage};
@@ -132,6 +134,8 @@ pub struct OpenAiStreaming {
     http_client: reqwest::Client,
     /// SSE line buffer for handling incomplete lines
     sse_buffer: Arc<Mutex<String>>,
+    /// Event queue for handling multiple events from a single chunk
+    event_queue: Arc<Mutex<Vec<Result<ChatStreamEvent, LlmError>>>>,
 }
 
 impl OpenAiStreaming {
@@ -141,6 +145,7 @@ impl OpenAiStreaming {
             config,
             http_client,
             sse_buffer: Arc::new(Mutex::new(String::new())),
+            event_queue: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -282,21 +287,52 @@ impl OpenAiStreaming {
         });
 
         // Add a final flush operation
-        let flush_stream = futures::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
+        // Create a flush stream that handles both UTF-8 decoder flush and event queue flush
+        let flush_stream = futures::stream::unfold(
+            (streaming_for_flush, decoder_for_flush, 0),
+            |(streaming, decoder, phase)| async move {
+                match phase {
+                    0 => {
+                        // Phase 0: handle UTF-8 decoder flush
+                        let remaining = {
+                            let mut decoder = decoder.lock().unwrap();
+                            decoder.flush()
+                        };
 
-            if !remaining.is_empty() {
-                streaming_for_flush
-                    .parse_sse_chunk_buffered(&remaining)
-                    .await
-            } else {
-                // Also flush any remaining SSE buffer content
-                streaming_for_flush.flush_sse_buffer().await
-            }
-        })
+                        if !remaining.is_empty() {
+                            let result = streaming.parse_sse_chunk_buffered(&remaining).await;
+                            Some((result, (streaming, decoder, 1)))
+                        } else {
+                            // Move to phase 1
+                            Some((None, (streaming, decoder, 1)))
+                        }
+                    }
+                    1 => {
+                        // Phase 1: flush SSE buffer
+                        let result = streaming.flush_sse_buffer().await;
+                        if result.is_some() {
+                            Some((result, (streaming, decoder, 2)))
+                        } else {
+                            // Move to phase 2
+                            Some((None, (streaming, decoder, 2)))
+                        }
+                    }
+                    _ => {
+                        // Phase 2+: drain event queue
+                        let event = {
+                            let mut queue = streaming.event_queue.lock().await;
+                            if !queue.is_empty() {
+                                Some(queue.remove(0))
+                            } else {
+                                None
+                            }
+                        };
+
+                        event.map(|event| (Some(event), (streaming, decoder, 2)))
+                    }
+                }
+            },
+        )
         .filter_map(|result| async move { result });
 
         Ok(decoded_stream.chain(flush_stream))
@@ -307,10 +343,13 @@ impl OpenAiStreaming {
         &self,
         chunk: &str,
     ) -> Option<Result<ChatStreamEvent, LlmError>> {
+        tracing::debug!("Received SSE chunk: '{}'", chunk);
+
         // Add chunk to buffer
         {
             let mut buffer = self.sse_buffer.lock().await;
             buffer.push_str(chunk);
+            tracing::debug!("SSE buffer now contains: '{}'", buffer);
         }
 
         // Process complete lines from buffer
@@ -319,21 +358,91 @@ impl OpenAiStreaming {
 
     /// Process complete lines from the SSE buffer
     async fn process_buffered_lines(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let mut buffer = self.sse_buffer.lock().await;
+        // First, check if we have queued events
+        {
+            let mut queue = self.event_queue.lock().await;
+            if !queue.is_empty() {
+                tracing::debug!(
+                    "Returning queued event, {} events remaining in queue",
+                    queue.len() - 1
+                );
+                return queue.remove(0).into();
+            } else {
+                tracing::debug!("No queued events available");
+            }
+        }
 
-        // Find the last complete line (ending with \n)
-        if let Some(last_newline_pos) = buffer.rfind('\n') {
-            // Extract complete lines
-            let complete_lines = buffer[..=last_newline_pos].to_string();
-            // Keep incomplete line in buffer
-            let remaining = buffer[last_newline_pos + 1..].to_string();
-            *buffer = remaining;
+        {
+            let mut buffer = self.sse_buffer.lock().await;
 
-            // Release the lock before processing
-            drop(buffer);
+            // Find the last complete line (ending with \n)
+            if let Some(last_newline_pos) = buffer.rfind('\n') {
+                // Extract complete lines
+                let complete_lines = buffer[..=last_newline_pos].to_string();
+                // Keep incomplete line in buffer
+                let remaining = buffer[last_newline_pos + 1..].to_string();
+                *buffer = remaining;
 
-            // Process the complete lines
-            return self.parse_sse_chunk(&complete_lines).await;
+                // Release the lock before processing
+                drop(buffer);
+
+                // Process all events from the complete lines
+                let events = self.parse_sse_chunk_all_events(&complete_lines);
+
+                if !events.is_empty() {
+                    let mut events_iter = events.into_iter();
+                    let first_event = events_iter.next();
+
+                    // Queue remaining events
+                    let remaining_events: Vec<_> = events_iter.collect();
+                    if !remaining_events.is_empty() {
+                        let mut queue = self.event_queue.lock().await;
+                        tracing::debug!(
+                            "Queueing {} events, queue size before: {}",
+                            remaining_events.len(),
+                            queue.len()
+                        );
+                        queue.extend(remaining_events);
+                        tracing::debug!("Queue size after: {}", queue.len());
+                    }
+
+                    return first_event;
+                }
+            }
+        }
+
+        // Check if we have data that might be a complete SSE event without trailing newline
+        // This can happen at the end of the stream
+        {
+            let mut buffer = self.sse_buffer.lock().await;
+            if !buffer.is_empty() && (buffer.starts_with("data: ") || buffer.starts_with("event: "))
+            {
+                let content = buffer.clone();
+                buffer.clear();
+
+                // Release the lock before processing
+                drop(buffer);
+
+                tracing::debug!(
+                    "Processing buffered SSE data without newline: '{}'",
+                    content
+                );
+                let events = self.parse_sse_chunk_all_events(&content);
+
+                if !events.is_empty() {
+                    let mut events_iter = events.into_iter();
+                    let first_event = events_iter.next();
+
+                    // Queue remaining events
+                    let remaining_events: Vec<_> = events_iter.collect();
+                    if !remaining_events.is_empty() {
+                        let mut queue = self.event_queue.lock().await;
+                        queue.extend(remaining_events);
+                    }
+
+                    return first_event;
+                }
+            }
         }
 
         // No complete lines yet
@@ -351,14 +460,35 @@ impl OpenAiStreaming {
 
         if !remaining.is_empty() {
             // Try to parse remaining content as if it were complete
-            self.parse_sse_chunk(&remaining).await
-        } else {
-            None
+            let events = self.parse_sse_chunk_all_events(&remaining);
+
+            if !events.is_empty() {
+                let mut events_iter = events.into_iter();
+                let first_event = events_iter.next();
+
+                // Queue remaining events
+                let remaining_events: Vec<_> = events_iter.collect();
+                if !remaining_events.is_empty() {
+                    let mut queue = self.event_queue.lock().await;
+                    queue.extend(remaining_events);
+                }
+
+                return first_event;
+            }
         }
+
+        None
     }
 
-    /// Parse a Server-Sent Events chunk (original method for complete lines)
-    async fn parse_sse_chunk(&self, chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
+    /// Parse a Server-Sent Events chunk and return all events found
+    pub fn parse_sse_chunk_all_events(
+        &self,
+        chunk: &str,
+    ) -> Vec<Result<ChatStreamEvent, LlmError>> {
+        let mut events = Vec::new();
+
+        tracing::debug!("Parsing SSE chunk with {} lines", chunk.lines().count());
+
         for line in chunk.lines() {
             let line = line.trim();
 
@@ -371,16 +501,31 @@ impl OpenAiStreaming {
             if let Some(data) = line.strip_prefix("data: ") {
                 // Check for stream end
                 if data == "[DONE]" {
-                    return None;
+                    // Add a stream end event
+                    events.push(Ok(ChatStreamEvent::StreamEnd {
+                        response: ChatResponse {
+                            id: None,
+                            content: MessageContent::Text(String::new()),
+                            model: None,
+                            usage: None,
+                            finish_reason: Some(FinishReason::Stop),
+                            tool_calls: None,
+                            thinking: None,
+                            metadata: std::collections::HashMap::new(),
+                        },
+                    }));
+                    break;
                 }
 
                 // Parse JSON data
+                tracing::debug!("Parsing SSE data: {}", data);
                 match serde_json::from_str::<OpenAiStreamResponse>(data) {
                     Ok(response) => {
-                        return Some(Ok(self.convert_openai_response(response)));
+                        tracing::debug!("Parsed response: {:?}", response);
+                        events.push(Ok(self.convert_openai_response(response)));
                     }
                     Err(e) => {
-                        return Some(Err(LlmError::ParseError(format!(
+                        events.push(Err(LlmError::ParseError(format!(
                             "Failed to parse SSE data: {e}"
                         ))));
                     }
@@ -388,7 +533,8 @@ impl OpenAiStreaming {
             }
         }
 
-        None
+        tracing::debug!("Parsed {} events from SSE chunk", events.len());
+        events
     }
 
     /// Convert `OpenAI` stream response to our `ChatStreamEvent`
@@ -411,6 +557,30 @@ impl OpenAiStreaming {
         // Process choices
         for choice in response.choices {
             let delta = choice.delta;
+
+            // Handle finish reason (stream end)
+            if let Some(finish_reason) = choice.finish_reason {
+                let finish_reason_enum = match finish_reason.as_str() {
+                    "stop" => FinishReason::Stop,
+                    "length" => FinishReason::Length,
+                    "tool_calls" => FinishReason::ToolCalls,
+                    "content_filter" => FinishReason::ContentFilter,
+                    _ => FinishReason::Stop,
+                };
+
+                return ChatStreamEvent::StreamEnd {
+                    response: ChatResponse {
+                        id: Some(response.id),
+                        content: MessageContent::Text(String::new()),
+                        model: Some(response.model),
+                        usage: None, // Usage comes in a separate event
+                        finish_reason: Some(finish_reason_enum),
+                        tool_calls: None, // Tool calls are accumulated by StreamProcessor
+                        thinking: None,
+                        metadata: std::collections::HashMap::new(),
+                    },
+                };
+            }
 
             // Handle content delta
             if let Some(content) = delta.content {
@@ -457,6 +627,13 @@ impl OpenAiStreaming {
             // Handle tool call deltas
             if let Some(tool_calls) = delta.tool_calls {
                 if let Some(tool_call) = tool_calls.into_iter().next() {
+                    // Debug logging for tool call deltas
+                    tracing::debug!(
+                        "Tool call delta - ID: {:?}, Function: {:?}",
+                        tool_call.id,
+                        tool_call.function
+                    );
+
                     return ChatStreamEvent::ToolCallDelta {
                         id: tool_call.id.unwrap_or_default(),
                         function_name: tool_call.function.as_ref().and_then(|f| f.name.clone()),

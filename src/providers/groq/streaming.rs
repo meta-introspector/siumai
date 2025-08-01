@@ -6,6 +6,8 @@ use futures::{Stream, StreamExt};
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::Mutex;
 
+use crate::{ChatResponse, FinishReason, MessageContent};
+
 use crate::ResponseMetadata;
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
@@ -25,6 +27,8 @@ pub struct GroqStreaming {
     http_client: reqwest::Client,
     /// SSE line buffer for handling incomplete lines
     sse_buffer: Arc<Mutex<String>>,
+    /// Event queue for handling multiple events from a single chunk
+    event_queue: Arc<Mutex<Vec<Result<ChatStreamEvent, LlmError>>>>,
 }
 
 impl GroqStreaming {
@@ -34,6 +38,7 @@ impl GroqStreaming {
             config,
             http_client,
             sse_buffer: Arc::new(Mutex::new(String::new())),
+            event_queue: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -193,21 +198,45 @@ impl GroqStreaming {
 
     /// Process complete lines from the SSE buffer
     async fn process_buffered_lines(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let mut buffer = self.sse_buffer.lock().await;
+        // First, check if we have queued events
+        {
+            let mut queue = self.event_queue.lock().await;
+            if !queue.is_empty() {
+                return queue.remove(0).into();
+            }
+        }
 
-        // Find the last complete line (ending with \n)
-        if let Some(last_newline_pos) = buffer.rfind('\n') {
-            // Extract complete lines
-            let complete_lines = buffer[..=last_newline_pos].to_string();
-            // Keep incomplete line in buffer
-            let remaining = buffer[last_newline_pos + 1..].to_string();
-            *buffer = remaining;
+        {
+            let mut buffer = self.sse_buffer.lock().await;
 
-            // Release the lock before processing
-            drop(buffer);
+            // Find the last complete line (ending with \n)
+            if let Some(last_newline_pos) = buffer.rfind('\n') {
+                // Extract complete lines
+                let complete_lines = buffer[..=last_newline_pos].to_string();
+                // Keep incomplete line in buffer
+                let remaining = buffer[last_newline_pos + 1..].to_string();
+                *buffer = remaining;
 
-            // Process the complete lines
-            return self.parse_sse_chunk(&complete_lines).await;
+                // Release the lock before processing
+                drop(buffer);
+
+                // Process all events from the complete lines
+                let events = self.parse_sse_chunk_all_events(&complete_lines);
+
+                if !events.is_empty() {
+                    let mut events_iter = events.into_iter();
+                    let first_event = events_iter.next();
+
+                    // Queue remaining events
+                    let remaining_events: Vec<_> = events_iter.collect();
+                    if !remaining_events.is_empty() {
+                        let mut queue = self.event_queue.lock().await;
+                        queue.extend(remaining_events);
+                    }
+
+                    return first_event;
+                }
+            }
         }
 
         // No complete lines yet
@@ -225,14 +254,30 @@ impl GroqStreaming {
 
         if !remaining.is_empty() {
             // Try to parse remaining content as if it were complete
-            self.parse_sse_chunk(&remaining).await
-        } else {
-            None
+            let events = self.parse_sse_chunk_all_events(&remaining);
+
+            if !events.is_empty() {
+                let mut events_iter = events.into_iter();
+                let first_event = events_iter.next();
+
+                // Queue remaining events
+                let remaining_events: Vec<_> = events_iter.collect();
+                if !remaining_events.is_empty() {
+                    let mut queue = self.event_queue.lock().await;
+                    queue.extend(remaining_events);
+                }
+
+                return first_event;
+            }
         }
+
+        None
     }
 
-    /// Parse a Server-Sent Events chunk (original method for complete lines)
-    async fn parse_sse_chunk(&self, chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
+    /// Parse a Server-Sent Events chunk and return all events found
+    fn parse_sse_chunk_all_events(&self, chunk: &str) -> Vec<Result<ChatStreamEvent, LlmError>> {
+        let mut events = Vec::new();
+
         for line in chunk.lines() {
             let line = line.trim();
 
@@ -245,16 +290,29 @@ impl GroqStreaming {
             if let Some(data) = line.strip_prefix("data: ") {
                 // Check for stream end
                 if data == "[DONE]" {
-                    return None;
+                    // Add a stream end event
+                    events.push(Ok(ChatStreamEvent::StreamEnd {
+                        response: ChatResponse {
+                            id: None,
+                            content: MessageContent::Text(String::new()),
+                            model: None,
+                            usage: None,
+                            finish_reason: Some(FinishReason::Stop),
+                            tool_calls: None,
+                            thinking: None,
+                            metadata: std::collections::HashMap::new(),
+                        },
+                    }));
+                    break;
                 }
 
                 // Parse JSON data
                 match serde_json::from_str::<GroqChatStreamChunk>(data) {
                     Ok(response) => {
-                        return Some(Ok(self.convert_groq_response(response)));
+                        events.push(Ok(self.convert_groq_response(response)));
                     }
                     Err(e) => {
-                        return Some(Err(LlmError::ParseError(format!(
+                        events.push(Err(LlmError::ParseError(format!(
                             "Failed to parse SSE data: {e}"
                         ))));
                     }
@@ -262,7 +320,7 @@ impl GroqStreaming {
             }
         }
 
-        None
+        events
     }
 
     /// Convert `Groq` stream response to our `ChatStreamEvent`
@@ -283,6 +341,30 @@ impl GroqStreaming {
         // Process choices
         for choice in response.choices {
             let delta = choice.delta;
+
+            // Handle finish reason (stream end)
+            if let Some(finish_reason) = choice.finish_reason {
+                let finish_reason_enum = match finish_reason.as_str() {
+                    "stop" => FinishReason::Stop,
+                    "length" => FinishReason::Length,
+                    "tool_calls" => FinishReason::ToolCalls,
+                    "content_filter" => FinishReason::ContentFilter,
+                    _ => FinishReason::Stop,
+                };
+
+                return ChatStreamEvent::StreamEnd {
+                    response: ChatResponse {
+                        id: Some(response.id),
+                        content: MessageContent::Text(String::new()),
+                        model: Some(response.model),
+                        usage: None, // Usage comes in a separate event
+                        finish_reason: Some(finish_reason_enum),
+                        tool_calls: None, // Tool calls are accumulated by StreamProcessor
+                        thinking: None,
+                        metadata: std::collections::HashMap::new(),
+                    },
+                };
+            }
 
             // Handle content delta
             if let Some(content) = delta.content {

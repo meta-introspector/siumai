@@ -205,6 +205,8 @@ path = "examples/06_mcp_integration/stdio_mcp_client.rs"
 name = "stdio_mcp_server"
 path = "examples/06_mcp_integration/stdio_mcp_server.rs"
 
+
+
 # The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"
