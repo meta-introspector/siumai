@@ -326,7 +326,8 @@ impl HttpMcpLlmDemo {
                                     }
                                     Err(e) => {
                                         println!("   ❌ Error: {}", e);
-                                        tool_results.push((tool_call.clone(), format!("Error: {}", e)));
+                                        tool_results
+                                            .push((tool_call.clone(), format!("Error: {}", e)));
                                     }
                                 }
                             }
@@ -340,14 +341,13 @@ impl HttpMcpLlmDemo {
                         follow_up_messages.push(
                             ChatMessage::assistant("")
                                 .with_tool_calls(tool_calls)
-                                .build()
+                                .build(),
                         );
 
                         // Add tool result messages
                         for (tool_call, result) in tool_results {
-                            follow_up_messages.push(
-                                ChatMessage::tool(&result, &tool_call.id).build()
-                            );
+                            follow_up_messages
+                                .push(ChatMessage::tool(&result, &tool_call.id).build());
                         }
 
                         // Get final response from LLM
@@ -415,7 +415,10 @@ impl HttpMcpLlmDemo {
 
                                 // Execute tool calls if any
                                 if let Some(tool_calls) = final_response.get_tool_calls() {
-                                    println!("📋 Executing {} tool calls from stream:", tool_calls.len());
+                                    println!(
+                                        "📋 Executing {} tool calls from stream:",
+                                        tool_calls.len()
+                                    );
 
                                     let mut stream_tool_results = Vec::new();
                                     for tool_call in tool_calls {
@@ -429,11 +432,15 @@ impl HttpMcpLlmDemo {
                                             match self.mcp_client.call_tool(tool_call).await {
                                                 Ok(result) => {
                                                     println!("   ✅ Result: {}", result);
-                                                    stream_tool_results.push((tool_call.clone(), result));
+                                                    stream_tool_results
+                                                        .push((tool_call.clone(), result));
                                                 }
                                                 Err(e) => {
                                                     println!("   ❌ Error: {}", e);
-                                                    stream_tool_results.push((tool_call.clone(), format!("Error: {}", e)));
+                                                    stream_tool_results.push((
+                                                        tool_call.clone(),
+                                                        format!("Error: {}", e),
+                                                    ));
                                                 }
                                             }
                                         }
@@ -443,17 +450,18 @@ impl HttpMcpLlmDemo {
                                     let mut stream_follow_up_messages = messages.clone();
 
                                     // Add assistant message with tool calls
-                                    let stream_tool_calls = final_response.get_tool_calls().unwrap_or(&vec![]).clone();
+                                    let stream_tool_calls =
+                                        final_response.get_tool_calls().unwrap_or(&vec![]).clone();
                                     stream_follow_up_messages.push(
                                         ChatMessage::assistant("")
                                             .with_tool_calls(stream_tool_calls)
-                                            .build()
+                                            .build(),
                                     );
 
                                     // Add tool result messages
                                     for (tool_call, result) in stream_tool_results {
                                         stream_follow_up_messages.push(
-                                            ChatMessage::tool(&result, &tool_call.id).build()
+                                            ChatMessage::tool(&result, &tool_call.id).build(),
                                         );
                                     }
 
@@ -461,12 +469,20 @@ impl HttpMcpLlmDemo {
                                     println!("\n🤖 Getting final response from LLM (streaming)...");
                                     match llm_client.chat(stream_follow_up_messages).await {
                                         Ok(final_response) => {
-                                            if let MessageContent::Text(content) = &final_response.content {
-                                                println!("🎯 Final LLM response (streaming): {}", content);
+                                            if let MessageContent::Text(content) =
+                                                &final_response.content
+                                            {
+                                                println!(
+                                                    "🎯 Final LLM response (streaming): {}",
+                                                    content
+                                                );
                                             }
                                         }
                                         Err(e) => {
-                                            println!("⚠️ Error getting final response (streaming): {}", e);
+                                            println!(
+                                                "⚠️ Error getting final response (streaming): {}",
+                                                e
+                                            );
                                         }
                                     }
                                 } else {
