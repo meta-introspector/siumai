@@ -1,10 +1,11 @@
 //! 🔗 Unified Embedding Interface - Text embeddings across providers
 //!
-//! This example demonstrates how to use the unified embedding interface:
-//! - Direct embedding calls through Siumai
-//! - Capability-based embedding access
-//! - Provider-specific embedding features
+//! This example demonstrates the complete embedding functionality through Siumai's unified interface:
+//! - Direct embedding calls through Siumai unified client
+//! - Capability-based embedding access and detection
+//! - Provider comparison (OpenAI, Ollama, Anthropic)
 //! - Error handling for unsupported providers
+//! - Interface comparison: unified vs provider-specific
 //!
 //! Before running, set your API keys:
 //! ```bash
@@ -14,7 +15,7 @@
 //!
 //! Run with:
 //! ```bash
-//! cargo run --example embedding_unified
+//! cargo run --example embedding
 //! ```
 
 use siumai::prelude::*;

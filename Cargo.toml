@@ -105,16 +105,8 @@ name = "capability_detection"
 path = "examples/02_core_features/capability_detection.rs"
 
 [[example]]
-name = "embedding_unified"
-path = "examples/02_core_features/embedding_unified.rs"
-
-[[example]]
-name = "embedding_basics"
-path = "examples/02_core_features/embedding_basics.rs"
-
-[[example]]
-name = "embedding_advanced"
-path = "examples/02_core_features/embedding_advanced.rs"
+name = "embedding"
+path = "examples/02_core_features/embedding.rs"
 
 [[example]]
 name = "thinking_models"
@@ -135,8 +127,6 @@ path = "examples/03_advanced_features/custom_provider.rs"
 [[example]]
 name = "tracing_monitoring"
 path = "examples/03_advanced_features/tracing_monitoring.rs"
-
-
 
 [[example]]
 name = "openai_basic_chat"

@@ -4,8 +4,8 @@
 
 ### Added
 
-- **Complete Embedding Interface** - Unified embedding API with `EmbeddingClient`, builder patterns, and provider-specific optimizations for OpenAI, Gemini, and Ollama
-- **Embedding Examples** - `embedding_basics.rs` and `embedding_advanced.rs` demonstrating core concepts and advanced features
+- **Complete Embedding Interface** - Unified embedding API through `Siumai` client with builder patterns and provider-specific optimizations for OpenAI, Gemini, and Ollama
+- **Embedding Example** - Comprehensive `embedding.rs` example demonstrating unified interface, capability detection, provider comparison, and error handling
 - **Comprehensive Testing** - 19 unit tests and 7 integration tests with real API validation
 
 ### Fixed
