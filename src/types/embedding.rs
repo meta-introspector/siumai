@@ -32,6 +32,31 @@ impl EmbeddingRequest {
         }
     }
 
+    /// Create an embedding request for a single text
+    pub fn single(text: impl Into<String>) -> Self {
+        Self::new(vec![text.into()])
+    }
+
+    /// Create an embedding request optimized for retrieval queries
+    pub fn query(text: impl Into<String>) -> Self {
+        Self::single(text).with_task_type(EmbeddingTaskType::RetrievalQuery)
+    }
+
+    /// Create an embedding request optimized for retrieval documents
+    pub fn document(text: impl Into<String>) -> Self {
+        Self::single(text).with_task_type(EmbeddingTaskType::RetrievalDocument)
+    }
+
+    /// Create an embedding request for semantic similarity
+    pub fn similarity(text: impl Into<String>) -> Self {
+        Self::single(text).with_task_type(EmbeddingTaskType::SemanticSimilarity)
+    }
+
+    /// Create an embedding request for classification
+    pub fn classification(text: impl Into<String>) -> Self {
+        Self::single(text).with_task_type(EmbeddingTaskType::Classification)
+    }
+
     /// Set the model to use
     pub fn with_model(mut self, model: impl Into<String>) -> Self {
         self.model = Some(model.into());
@@ -59,6 +84,25 @@ impl EmbeddingRequest {
     /// Add provider-specific parameter
     pub fn with_provider_param(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.provider_params.insert(key.into(), value);
+        self
+    }
+
+    /// Set task type for optimization (provider-specific)
+    pub fn with_task_type(mut self, task_type: EmbeddingTaskType) -> Self {
+        let task_str = match task_type {
+            EmbeddingTaskType::RetrievalQuery => "RETRIEVAL_QUERY",
+            EmbeddingTaskType::RetrievalDocument => "RETRIEVAL_DOCUMENT",
+            EmbeddingTaskType::SemanticSimilarity => "SEMANTIC_SIMILARITY",
+            EmbeddingTaskType::Classification => "CLASSIFICATION",
+            EmbeddingTaskType::Clustering => "CLUSTERING",
+            EmbeddingTaskType::QuestionAnswering => "QUESTION_ANSWERING",
+            EmbeddingTaskType::FactVerification => "FACT_VERIFICATION",
+            EmbeddingTaskType::Unspecified => "TASK_TYPE_UNSPECIFIED",
+        };
+        self.provider_params.insert(
+            "task_type".to_string(),
+            serde_json::Value::String(task_str.to_string()),
+        );
         self
     }
 }

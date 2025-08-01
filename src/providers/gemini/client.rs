@@ -13,6 +13,7 @@ use crate::traits::*;
 use crate::types::*;
 
 use super::chat::GeminiChatCapability;
+use super::embeddings::GeminiEmbeddings;
 use super::files::GeminiFiles;
 use super::models::GeminiModels;
 use super::types::{GeminiConfig, GenerationConfig, SafetySetting};
@@ -26,6 +27,8 @@ pub struct GeminiClient {
     pub config: GeminiConfig,
     /// Chat capability implementation
     pub chat_capability: GeminiChatCapability,
+    /// Embedding capability implementation
+    pub embedding_capability: GeminiEmbeddings,
     /// Models capability implementation
     pub models_capability: GeminiModels,
     /// Files capability implementation
@@ -46,6 +49,8 @@ impl GeminiClient {
 
         let chat_capability = GeminiChatCapability::new(config.clone(), http_client.clone());
 
+        let embedding_capability = GeminiEmbeddings::new(config.clone(), http_client.clone());
+
         let models_capability = GeminiModels::new(config.clone(), http_client.clone());
 
         let files_capability = GeminiFiles::new(config.clone(), http_client.clone());
@@ -54,6 +59,7 @@ impl GeminiClient {
             http_client,
             config,
             chat_capability,
+            embedding_capability,
             models_capability,
             files_capability,
         })
@@ -208,6 +214,25 @@ impl ChatCapability for GeminiClient {
 }
 
 #[async_trait]
+impl EmbeddingCapability for GeminiClient {
+    async fn embed(&self, texts: Vec<String>) -> Result<EmbeddingResponse, LlmError> {
+        self.embedding_capability.embed(texts).await
+    }
+
+    fn embedding_dimension(&self) -> usize {
+        self.embedding_capability.embedding_dimension()
+    }
+
+    fn max_tokens_per_embedding(&self) -> usize {
+        self.embedding_capability.max_tokens_per_embedding()
+    }
+
+    fn supported_embedding_models(&self) -> Vec<String> {
+        self.embedding_capability.supported_embedding_models()
+    }
+}
+
+#[async_trait]
 impl ModelListingCapability for GeminiClient {
     async fn list_models(&self) -> Result<Vec<ModelInfo>, LlmError> {
         self.models_capability.list_models().await
@@ -264,6 +289,7 @@ impl LlmClient for GeminiClient {
             .with_streaming()
             .with_tools()
             .with_vision()
+            .with_embedding()
             .with_file_management()
             .with_custom_feature("code_execution", true)
             .with_custom_feature("thinking_mode", true)

@@ -79,7 +79,6 @@ pub mod benchmarks;
 pub mod builder;
 pub mod client;
 pub mod custom_provider;
-pub mod embedding;
 pub mod error;
 pub mod error_handling;
 pub mod multimodal;

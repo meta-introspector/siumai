@@ -183,6 +183,20 @@ impl EmbeddingCapability for Siumai {
                     ))
                 }
             }
+            "gemini" => {
+                // Try to get Gemini client and call embed
+                if let Some(gemini_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::gemini::GeminiClient>()
+                {
+                    gemini_client.embed(texts).await
+                } else {
+                    Err(LlmError::UnsupportedOperation(
+                        "Gemini provider does not implement embedding functionality".to_string(),
+                    ))
+                }
+            }
             provider_name => Err(LlmError::UnsupportedOperation(format!(
                 "Provider {provider_name} does not support embedding functionality. Consider using OpenAI or Ollama for embeddings."
             ))),
