@@ -1,6 +1,6 @@
 [package]
 name = "siumai"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2024"
 authors = ["Mingzhen Zhuang <superfrankie621@gmail.com>"]
 description = "A unified LLM interface library for Rust"
@@ -23,6 +23,9 @@ async-trait = "0.1"
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Validation
+validator = { version = "0.16", features = ["derive"] }
 
 # HTTP client
 reqwest = { version = "0.12", features = ["json", "stream", "multipart"] }
@@ -56,6 +59,10 @@ rand = "0.8"
 # URL encoding
 urlencoding = "2.1"
 regex = "1.11.1"
+
+[features]
+default = []
+validation = []
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -100,6 +107,14 @@ path = "examples/02_core_features/capability_detection.rs"
 [[example]]
 name = "embedding_unified"
 path = "examples/02_core_features/embedding_unified.rs"
+
+[[example]]
+name = "embedding_basics"
+path = "examples/02_core_features/embedding_basics.rs"
+
+[[example]]
+name = "embedding_advanced"
+path = "examples/02_core_features/embedding_advanced.rs"
 
 [[example]]
 name = "thinking_models"

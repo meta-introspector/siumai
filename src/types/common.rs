@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
+use validator::Validate;
 
 /// Provider type enumeration
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,18 +32,30 @@ impl std::fmt::Display for ProviderType {
 }
 
 /// Common AI parameters
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Validate)]
 pub struct CommonParams {
     /// Model name
+    #[validate(length(min = 1, message = "Model name cannot be empty"))]
     pub model: String,
+
     /// Temperature parameter (0.0-2.0)
+    #[validate(range(
+        min = 0.0,
+        max = 2.0,
+        message = "Temperature must be between 0.0 and 2.0"
+    ))]
     pub temperature: Option<f32>,
+
     /// Maximum output tokens
     pub max_tokens: Option<u32>,
+
     /// `top_p` parameter
+    #[validate(range(min = 0.0, max = 1.0, message = "top_p must be between 0.0 and 1.0"))]
     pub top_p: Option<f32>,
+
     /// Stop sequences
     pub stop_sequences: Option<Vec<String>>,
+
     /// Random seed
     pub seed: Option<u64>,
 }
@@ -96,6 +109,98 @@ impl CommonParams {
         self.max_tokens.hash(&mut hasher);
         self.top_p.map(|t| (t * 1000.0) as u32).hash(&mut hasher);
         hasher.finish()
+    }
+
+    /// Validate common parameters
+    pub fn validate_params(&self) -> Result<(), crate::error::LlmError> {
+        use validator::Validate;
+        self.validate()
+            .map_err(|e| crate::error::LlmError::InvalidParameter(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Create a builder for common parameters
+    pub fn builder() -> CommonParamsBuilder {
+        CommonParamsBuilder::new()
+    }
+}
+
+/// Builder for CommonParams with validation
+#[derive(Debug, Clone, Default)]
+pub struct CommonParamsBuilder {
+    model: String,
+    temperature: Option<f32>,
+    max_tokens: Option<u32>,
+    top_p: Option<f32>,
+    stop_sequences: Option<Vec<String>>,
+    seed: Option<u64>,
+}
+
+impl CommonParamsBuilder {
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the model name
+    pub fn model<S: Into<String>>(mut self, model: S) -> Self {
+        self.model = model.into();
+        self
+    }
+
+    /// Set the temperature with validation
+    pub fn temperature(mut self, temperature: f32) -> Result<Self, crate::error::LlmError> {
+        if !(0.0..=2.0).contains(&temperature) {
+            return Err(crate::error::LlmError::InvalidParameter(
+                "Temperature must be between 0.0 and 2.0".to_string(),
+            ));
+        }
+        self.temperature = Some(temperature);
+        Ok(self)
+    }
+
+    /// Set the max tokens
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set the top_p with validation
+    pub fn top_p(mut self, top_p: f32) -> Result<Self, crate::error::LlmError> {
+        if !(0.0..=1.0).contains(&top_p) {
+            return Err(crate::error::LlmError::InvalidParameter(
+                "top_p must be between 0.0 and 1.0".to_string(),
+            ));
+        }
+        self.top_p = Some(top_p);
+        Ok(self)
+    }
+
+    /// Set stop sequences
+    pub fn stop_sequences(mut self, sequences: Vec<String>) -> Self {
+        self.stop_sequences = Some(sequences);
+        self
+    }
+
+    /// Set the random seed
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+
+    /// Build the CommonParams
+    pub fn build(self) -> Result<CommonParams, crate::error::LlmError> {
+        let params = CommonParams {
+            model: self.model,
+            temperature: self.temperature,
+            max_tokens: self.max_tokens,
+            top_p: self.top_p,
+            stop_sequences: self.stop_sequences,
+            seed: self.seed,
+        };
+
+        params.validate_params()?;
+        Ok(params)
     }
 }
 

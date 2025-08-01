@@ -485,24 +485,25 @@ pub trait VisionCapability {
     }
 }
 
-/// Embedding capability trait for vector embeddings.
+/// Core embedding capability trait for vector embeddings.
 ///
-/// This trait provides text embedding functionality for semantic search,
-/// similarity comparison, and other vector-based operations.
+/// This trait provides essential text embedding functionality for semantic search,
+/// similarity comparison, and other vector-based operations. It follows the
+/// single responsibility principle by focusing on core embedding operations.
 ///
 /// # API References
 /// - OpenAI: https://platform.openai.com/docs/guides/embeddings
 /// - Google: https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings
 /// - Anthropic: Currently not supported
 #[async_trait]
-pub trait EmbeddingCapability {
+pub trait EmbeddingCapability: Send + Sync {
     /// Generates embeddings for the given input texts.
     ///
     /// # Arguments
     /// * `input` - List of strings to generate embeddings for
     ///
     /// # Returns
-    /// List of embedding vectors (one per input text)
+    /// Embedding response with vectors and metadata
     async fn embed(&self, input: Vec<String>) -> Result<EmbeddingResponse, LlmError>;
 
     /// Get the dimension of embeddings produced by this provider.
@@ -525,6 +526,121 @@ pub trait EmbeddingCapability {
     /// List of available embedding model names
     fn supported_embedding_models(&self) -> Vec<String> {
         vec!["default".to_string()]
+    }
+}
+
+/// Extended embedding capabilities providing advanced features.
+///
+/// This trait extends the core EmbeddingCapability with advanced features
+/// that are commonly needed but not essential for basic embedding functionality.
+/// It follows the interface segregation principle by separating optional features.
+#[async_trait]
+pub trait EmbeddingExtensions: EmbeddingCapability {
+    /// Generate embeddings with advanced configuration.
+    ///
+    /// # Arguments
+    /// * `request` - Detailed embedding request with configuration
+    ///
+    /// # Returns
+    /// Embedding response with vectors and metadata
+    async fn embed_with_config(
+        &self,
+        request: EmbeddingRequest,
+    ) -> Result<EmbeddingResponse, LlmError> {
+        // Default implementation falls back to basic embed
+        self.embed(request.input).await
+    }
+
+    /// Process multiple embedding requests in batch.
+    ///
+    /// # Arguments
+    /// * `requests` - Batch of embedding requests
+    ///
+    /// # Returns
+    /// Batch response with individual results
+    async fn embed_batch(
+        &self,
+        requests: BatchEmbeddingRequest,
+    ) -> Result<BatchEmbeddingResponse, LlmError> {
+        // Default implementation processes sequentially
+        let mut responses = Vec::new();
+
+        for request in requests.requests {
+            let result = self
+                .embed_with_config(request)
+                .await
+                .map_err(|e| e.to_string());
+            responses.push(result);
+
+            // Fail fast if enabled
+            if requests.batch_options.fail_fast && responses.last().unwrap().is_err() {
+                break;
+            }
+        }
+
+        Ok(BatchEmbeddingResponse {
+            responses,
+            metadata: HashMap::new(),
+        })
+    }
+
+    /// Get detailed information about available embedding models.
+    ///
+    /// # Returns
+    /// List of embedding model information
+    async fn list_embedding_models(&self) -> Result<Vec<EmbeddingModelInfo>, LlmError> {
+        // Default implementation returns basic info
+        let models = self.supported_embedding_models();
+        let model_infos = models
+            .into_iter()
+            .map(|id| {
+                EmbeddingModelInfo::new(
+                    id.clone(),
+                    id,
+                    self.embedding_dimension(),
+                    self.max_tokens_per_embedding(),
+                )
+            })
+            .collect();
+
+        Ok(model_infos)
+    }
+
+    /// Calculate similarity between two embedding vectors.
+    ///
+    /// # Arguments
+    /// * `embedding1` - First embedding vector
+    /// * `embedding2` - Second embedding vector
+    ///
+    /// # Returns
+    /// Cosine similarity score between -1 and 1
+    fn calculate_similarity(
+        &self,
+        embedding1: &[f32],
+        embedding2: &[f32],
+    ) -> Result<f32, LlmError> {
+        if embedding1.len() != embedding2.len() {
+            return Err(LlmError::InvalidInput(
+                "Embedding vectors must have the same dimension".to_string(),
+            ));
+        }
+
+        let dot_product: f32 = embedding1
+            .iter()
+            .zip(embedding2.iter())
+            .map(|(a, b)| a * b)
+            .sum();
+
+        let norm1: f32 = embedding1.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm2: f32 = embedding2.iter().map(|x| x * x).sum::<f32>().sqrt();
+
+        if norm1 == 0.0 || norm2 == 0.0 {
+            return Err(LlmError::InvalidInput(
+                "Cannot calculate similarity for zero vectors".to_string(),
+            ));
+        }
+
+        Ok(dot_product / (norm1 * norm2))
     }
 }
 
@@ -861,6 +977,38 @@ pub trait AnthropicCapability {
     async fn chat_with_thinking(&self, request: ChatRequest) -> Result<ThinkingResponse, LlmError>;
 }
 
+/// OpenAI-specific embedding capabilities.
+#[async_trait]
+pub trait OpenAiEmbeddingCapability: EmbeddingCapability {
+    /// Generate embeddings with custom dimensions (for text-embedding-3 models).
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `dimensions` - Custom output dimensions (1-3072 for text-embedding-3-large)
+    ///
+    /// # Returns
+    /// Embedding response with custom-sized vectors
+    async fn embed_with_dimensions(
+        &self,
+        input: Vec<String>,
+        dimensions: u32,
+    ) -> Result<EmbeddingResponse, LlmError>;
+
+    /// Generate embeddings with specific encoding format.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `format` - Encoding format (float or base64)
+    ///
+    /// # Returns
+    /// Embedding response in specified format
+    async fn embed_with_format(
+        &self,
+        input: Vec<String>,
+        format: EmbeddingFormat,
+    ) -> Result<EmbeddingResponse, LlmError>;
+}
+
 /// Gemini-specific capabilities.
 #[async_trait]
 pub trait GeminiCapability {
@@ -877,6 +1025,100 @@ pub trait GeminiCapability {
         code: String,
         language: String,
     ) -> Result<ExecutionResponse, LlmError>;
+}
+
+/// Gemini-specific embedding capabilities.
+#[async_trait]
+pub trait GeminiEmbeddingCapability: EmbeddingCapability {
+    /// Generate embeddings with task type optimization.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `task_type` - Task type for optimization
+    ///
+    /// # Returns
+    /// Task-optimized embedding response
+    async fn embed_with_task_type(
+        &self,
+        input: Vec<String>,
+        task_type: EmbeddingTaskType,
+    ) -> Result<EmbeddingResponse, LlmError>;
+
+    /// Generate embeddings with title context.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `title` - Title for context
+    ///
+    /// # Returns
+    /// Context-aware embedding response
+    async fn embed_with_title(
+        &self,
+        input: Vec<String>,
+        title: String,
+    ) -> Result<EmbeddingResponse, LlmError>;
+
+    /// Generate embeddings with custom output dimensions.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `output_dimensionality` - Custom output dimensions
+    ///
+    /// # Returns
+    /// Embedding response with custom dimensions
+    async fn embed_with_output_dimensionality(
+        &self,
+        input: Vec<String>,
+        output_dimensionality: u32,
+    ) -> Result<EmbeddingResponse, LlmError>;
+}
+
+/// Ollama-specific embedding capabilities.
+#[async_trait]
+pub trait OllamaEmbeddingCapability: EmbeddingCapability {
+    /// Generate embeddings with model-specific options.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `model` - Specific model to use
+    /// * `options` - Model-specific options
+    ///
+    /// # Returns
+    /// Embedding response with model-specific processing
+    async fn embed_with_model_options(
+        &self,
+        input: Vec<String>,
+        model: String,
+        options: HashMap<String, serde_json::Value>,
+    ) -> Result<EmbeddingResponse, LlmError>;
+
+    /// Generate embeddings with truncation control.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `truncate` - Whether to truncate input to fit context length
+    ///
+    /// # Returns
+    /// Embedding response with truncation handling
+    async fn embed_with_truncation(
+        &self,
+        input: Vec<String>,
+        truncate: bool,
+    ) -> Result<EmbeddingResponse, LlmError>;
+
+    /// Generate embeddings with keep-alive control.
+    ///
+    /// # Arguments
+    /// * `input` - List of strings to generate embeddings for
+    /// * `keep_alive` - Duration to keep model loaded
+    ///
+    /// # Returns
+    /// Embedding response with model lifecycle control
+    async fn embed_with_keep_alive(
+        &self,
+        input: Vec<String>,
+        keep_alive: String,
+    ) -> Result<EmbeddingResponse, LlmError>;
 }
 
 /// Core provider trait.

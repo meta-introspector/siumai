@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0] - 2025-08-01
+
+### Added
+
+- **Complete Embedding Interface** - Unified embedding API with `EmbeddingClient`, builder patterns, and provider-specific optimizations for OpenAI, Gemini, and Ollama
+- **Embedding Examples** - `embedding_basics.rs` and `embedding_advanced.rs` demonstrating core concepts and advanced features
+- **Comprehensive Testing** - 19 unit tests and 7 integration tests with real API validation
+
+### Fixed
+
+- **API Compliance** - All embedding implementations now fully comply with official provider APIs
+
 ## [0.5.1] - 2025-07-27
 
 ### Added

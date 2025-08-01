@@ -212,7 +212,7 @@ impl OpenAiCompatibleProvider for XAIProvider {
     const DISPLAY_NAME: &'static str = "xAI";
     const DESCRIPTION: &'static str = "xAI Grok models";
     const DEFAULT_BASE_URL: &'static str = "https://api.x.ai/v1";
-    const DEFAULT_MODEL: &'static str = "grok-beta";
+    const DEFAULT_MODEL: &'static str = "grok-3";
 
     fn validate_config(_config: &super::config::OpenAiCompatibleConfig) -> Result<(), LlmError> {
         // xAI-specific validation

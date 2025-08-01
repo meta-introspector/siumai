@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use validator::Validate;
 
 use super::common::{ParameterMapper as CommonMapper, ParameterValidator};
 use super::mapper::{ParameterConstraints, ParameterMapper};
@@ -185,36 +186,52 @@ impl ParameterMapper for OpenAiParameterMapper {
 }
 
 /// OpenAI-specific parameter extensions
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Validate)]
 pub struct OpenAiParams {
     /// Response format
     pub response_format: Option<ResponseFormat>,
+
     /// Tool choice strategy
     pub tool_choice: Option<ToolChoice>,
+
     /// Parallel tool calls
     pub parallel_tool_calls: Option<bool>,
+
     /// User ID
     pub user: Option<String>,
-    /// Frequency penalty
+
+    /// Frequency penalty (-2.0 to 2.0) - OpenAI standard range
+    #[validate(range(min = -2.0, max = 2.0, message = "Frequency penalty must be between -2.0 and 2.0"))]
     pub frequency_penalty: Option<f32>,
-    /// Presence penalty
+
+    /// Presence penalty (-2.0 to 2.0) - OpenAI standard range
+    #[validate(range(min = -2.0, max = 2.0, message = "Presence penalty must be between -2.0 and 2.0"))]
     pub presence_penalty: Option<f32>,
+
     /// Logit bias
     pub logit_bias: Option<HashMap<String, f32>>,
+
     /// Number of choices to return
     pub n: Option<u32>,
+
     /// Whether to stream the response
     pub stream: Option<bool>,
+
     /// Logprobs configuration
     pub logprobs: Option<bool>,
+
     /// Top logprobs to return
     pub top_logprobs: Option<u32>,
+
     /// Response modalities (text, audio)
     pub modalities: Option<Vec<String>>,
+
     /// Reasoning effort level for reasoning models
     pub reasoning_effort: Option<ReasoningEffort>,
+
     /// Maximum completion tokens (replaces `max_tokens` for some models)
     pub max_completion_tokens: Option<u32>,
+
     /// Service tier for prioritized access
     pub service_tier: Option<String>,
 }
@@ -222,6 +239,172 @@ pub struct OpenAiParams {
 impl super::common::ProviderParamsExt for OpenAiParams {
     fn provider_type(&self) -> ProviderType {
         ProviderType::OpenAi
+    }
+}
+
+impl OpenAiParams {
+    /// Validate OpenAI-specific parameters
+    pub fn validate_params(&self) -> Result<(), LlmError> {
+        use validator::Validate;
+        self.validate()
+            .map_err(|e| LlmError::InvalidParameter(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Create a builder for OpenAI parameters
+    pub fn builder() -> OpenAiParamsBuilder {
+        OpenAiParamsBuilder::new()
+    }
+}
+
+/// Builder for OpenAI parameters with validation
+#[derive(Debug, Clone, Default)]
+pub struct OpenAiParamsBuilder {
+    response_format: Option<ResponseFormat>,
+    tool_choice: Option<ToolChoice>,
+    parallel_tool_calls: Option<bool>,
+    user: Option<String>,
+    frequency_penalty: Option<f32>,
+    presence_penalty: Option<f32>,
+    logit_bias: Option<HashMap<String, f32>>,
+    n: Option<u32>,
+    stream: Option<bool>,
+    logprobs: Option<bool>,
+    top_logprobs: Option<u32>,
+    modalities: Option<Vec<String>>,
+    reasoning_effort: Option<ReasoningEffort>,
+    max_completion_tokens: Option<u32>,
+    service_tier: Option<String>,
+}
+
+impl OpenAiParamsBuilder {
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set response format
+    pub fn response_format(mut self, format: ResponseFormat) -> Self {
+        self.response_format = Some(format);
+        self
+    }
+
+    /// Set tool choice
+    pub fn tool_choice(mut self, choice: ToolChoice) -> Self {
+        self.tool_choice = Some(choice);
+        self
+    }
+
+    /// Set parallel tool calls
+    pub fn parallel_tool_calls(mut self, parallel: bool) -> Self {
+        self.parallel_tool_calls = Some(parallel);
+        self
+    }
+
+    /// Set user ID
+    pub fn user<S: Into<String>>(mut self, user: S) -> Self {
+        self.user = Some(user.into());
+        self
+    }
+
+    /// Set frequency penalty with validation
+    pub fn frequency_penalty(mut self, penalty: f32) -> Result<Self, LlmError> {
+        if !(-2.0..=2.0).contains(&penalty) {
+            return Err(LlmError::InvalidParameter(
+                "Frequency penalty must be between -2.0 and 2.0".to_string(),
+            ));
+        }
+        self.frequency_penalty = Some(penalty);
+        Ok(self)
+    }
+
+    /// Set presence penalty with validation
+    pub fn presence_penalty(mut self, penalty: f32) -> Result<Self, LlmError> {
+        if !(-2.0..=2.0).contains(&penalty) {
+            return Err(LlmError::InvalidParameter(
+                "Presence penalty must be between -2.0 and 2.0".to_string(),
+            ));
+        }
+        self.presence_penalty = Some(penalty);
+        Ok(self)
+    }
+
+    /// Set logit bias
+    pub fn logit_bias(mut self, bias: HashMap<String, f32>) -> Self {
+        self.logit_bias = Some(bias);
+        self
+    }
+
+    /// Set number of choices
+    pub fn n(mut self, n: u32) -> Self {
+        self.n = Some(n);
+        self
+    }
+
+    /// Set streaming
+    pub fn stream(mut self, stream: bool) -> Self {
+        self.stream = Some(stream);
+        self
+    }
+
+    /// Set logprobs
+    pub fn logprobs(mut self, logprobs: bool) -> Self {
+        self.logprobs = Some(logprobs);
+        self
+    }
+
+    /// Set top logprobs
+    pub fn top_logprobs(mut self, top_logprobs: u32) -> Self {
+        self.top_logprobs = Some(top_logprobs);
+        self
+    }
+
+    /// Set modalities
+    pub fn modalities(mut self, modalities: Vec<String>) -> Self {
+        self.modalities = Some(modalities);
+        self
+    }
+
+    /// Set reasoning effort
+    pub fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
+        self.reasoning_effort = Some(effort);
+        self
+    }
+
+    /// Set max completion tokens
+    pub fn max_completion_tokens(mut self, tokens: u32) -> Self {
+        self.max_completion_tokens = Some(tokens);
+        self
+    }
+
+    /// Set service tier
+    pub fn service_tier<S: Into<String>>(mut self, tier: S) -> Self {
+        self.service_tier = Some(tier.into());
+        self
+    }
+
+    /// Build the OpenAI parameters
+    pub fn build(self) -> Result<OpenAiParams, LlmError> {
+        let params = OpenAiParams {
+            response_format: self.response_format,
+            tool_choice: self.tool_choice,
+            parallel_tool_calls: self.parallel_tool_calls,
+            user: self.user,
+            frequency_penalty: self.frequency_penalty,
+            presence_penalty: self.presence_penalty,
+            logit_bias: self.logit_bias,
+            n: self.n,
+            stream: self.stream,
+            logprobs: self.logprobs,
+            top_logprobs: self.top_logprobs,
+            modalities: self.modalities,
+            reasoning_effort: self.reasoning_effort,
+            max_completion_tokens: self.max_completion_tokens,
+            service_tier: self.service_tier,
+        };
+
+        params.validate_params()?;
+        Ok(params)
     }
 }
 
@@ -264,100 +447,6 @@ pub enum ReasoningEffort {
     Medium,
     /// High reasoning effort - more thorough reasoning
     High,
-}
-
-/// `OpenAI` parameter builder for convenient parameter construction
-pub struct OpenAiParamsBuilder {
-    params: OpenAiParams,
-}
-
-impl OpenAiParamsBuilder {
-    pub fn new() -> Self {
-        Self {
-            params: OpenAiParams::default(),
-        }
-    }
-
-    pub fn response_format(mut self, format: ResponseFormat) -> Self {
-        self.params.response_format = Some(format);
-        self
-    }
-
-    pub fn tool_choice(mut self, choice: ToolChoice) -> Self {
-        self.params.tool_choice = Some(choice);
-        self
-    }
-
-    pub const fn parallel_tool_calls(mut self, enabled: bool) -> Self {
-        self.params.parallel_tool_calls = Some(enabled);
-        self
-    }
-
-    pub fn user(mut self, user_id: String) -> Self {
-        self.params.user = Some(user_id);
-        self
-    }
-
-    pub const fn frequency_penalty(mut self, penalty: f32) -> Self {
-        self.params.frequency_penalty = Some(penalty);
-        self
-    }
-
-    pub const fn presence_penalty(mut self, penalty: f32) -> Self {
-        self.params.presence_penalty = Some(penalty);
-        self
-    }
-
-    pub const fn n(mut self, choices: u32) -> Self {
-        self.params.n = Some(choices);
-        self
-    }
-
-    pub const fn stream(mut self, enabled: bool) -> Self {
-        self.params.stream = Some(enabled);
-        self
-    }
-
-    pub const fn logprobs(mut self, enabled: bool, top_logprobs: Option<u32>) -> Self {
-        self.params.logprobs = Some(enabled);
-        self.params.top_logprobs = top_logprobs;
-        self
-    }
-
-    pub fn modalities(mut self, modalities: Vec<String>) -> Self {
-        self.params.modalities = Some(modalities);
-        self
-    }
-
-    pub const fn reasoning_effort(mut self, effort: ReasoningEffort) -> Self {
-        self.params.reasoning_effort = Some(effort);
-        self
-    }
-
-    pub const fn max_completion_tokens(mut self, tokens: u32) -> Self {
-        self.params.max_completion_tokens = Some(tokens);
-        self
-    }
-
-    pub fn service_tier(mut self, tier: String) -> Self {
-        self.params.service_tier = Some(tier);
-        self
-    }
-
-    pub fn logit_bias(mut self, bias: HashMap<String, f32>) -> Self {
-        self.params.logit_bias = Some(bias);
-        self
-    }
-
-    pub fn build(self) -> OpenAiParams {
-        self.params
-    }
-}
-
-impl Default for OpenAiParamsBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 #[cfg(test)]
@@ -419,12 +508,16 @@ mod tests {
             .parallel_tool_calls(true)
             .user("test-user".to_string())
             .frequency_penalty(0.5)
+            .unwrap()
             .presence_penalty(-0.2)
+            .unwrap()
             .n(2)
             .stream(false)
-            .logprobs(true, Some(5))
+            .logprobs(true)
+            .top_logprobs(5)
             .build();
 
+        let params = params.unwrap();
         assert!(params.response_format.is_some());
         assert!(params.tool_choice.is_some());
         assert_eq!(params.parallel_tool_calls, Some(true));

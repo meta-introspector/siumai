@@ -15,7 +15,7 @@ use crate::types::*;
 use super::chat::OllamaChatCapability;
 use super::completion::OllamaCompletionCapability;
 use super::config::{OllamaConfig, OllamaParams};
-use super::embeddings::OllamaEmbeddingCapability;
+use super::embeddings::OllamaEmbeddings;
 use super::get_default_models;
 use super::models::OllamaModelsCapability;
 use super::streaming::OllamaStreaming;
@@ -28,7 +28,7 @@ pub struct OllamaClient {
     /// Completion capability implementation
     completion_capability: OllamaCompletionCapability,
     /// Embedding capability implementation
-    embedding_capability: OllamaEmbeddingCapability,
+    embedding_capability: OllamaEmbeddings,
     /// Models capability implementation
     models_capability: OllamaModelsCapability,
     /// Streaming capability implementation
@@ -60,8 +60,13 @@ impl OllamaClient {
             config.ollama_params.clone(),
         );
 
-        let embedding_capability = OllamaEmbeddingCapability::new(
+        let embedding_capability = OllamaEmbeddings::new(
             config.base_url.clone(),
+            if config.common_params.model.is_empty() {
+                "nomic-embed-text".to_string()
+            } else {
+                config.common_params.model.clone()
+            },
             http_client.clone(),
             config.http_config.clone(),
             config.ollama_params.clone(),

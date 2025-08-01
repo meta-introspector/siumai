@@ -4,6 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use validator::Validate;
 
 use super::common::{ParameterMapper as CommonMapper, ParameterValidator};
 use super::mapper::{ParameterConstraints, ParameterMapper};
@@ -135,18 +136,23 @@ pub struct CacheControl {
 }
 
 /// Anthropic-specific parameter extensions
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Validate)]
 pub struct AnthropicParams {
     /// Cache control
     pub cache_control: Option<CacheControl>,
+
     /// Thinking budget
     pub thinking_budget: Option<u32>,
+
     /// System message
     pub system: Option<String>,
+
     /// Metadata
     pub metadata: Option<HashMap<String, String>>,
+
     /// Whether to stream the response
     pub stream: Option<bool>,
+
     /// Beta features
     pub beta_features: Option<Vec<String>>,
 }
@@ -154,6 +160,21 @@ pub struct AnthropicParams {
 impl super::common::ProviderParamsExt for AnthropicParams {
     fn provider_type(&self) -> ProviderType {
         ProviderType::Anthropic
+    }
+}
+
+impl AnthropicParams {
+    /// Validate Anthropic-specific parameters
+    pub fn validate_params(&self) -> Result<(), LlmError> {
+        use validator::Validate;
+        self.validate()
+            .map_err(|e| LlmError::InvalidParameter(e.to_string()))?;
+        Ok(())
+    }
+
+    /// Create a builder for Anthropic parameters
+    pub fn builder() -> AnthropicParamsBuilder {
+        AnthropicParamsBuilder::new()
     }
 }
 

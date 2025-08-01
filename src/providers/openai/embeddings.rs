@@ -1,14 +1,16 @@
-//! `OpenAI` Embeddings Implementation
+//! OpenAI Embeddings Implementation
 //!
-//! This module provides the `OpenAI` implementation of the `EmbeddingCapability` trait.
+//! This module provides the OpenAI implementation of embedding capabilities,
+//! supporting all features including custom dimensions, encoding formats, and batch processing.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::error::LlmError;
-use crate::traits::EmbeddingCapability;
-use crate::types::{EmbeddingResponse, EmbeddingUsage};
+use crate::traits::{EmbeddingCapability, EmbeddingExtensions, OpenAiEmbeddingCapability};
+use crate::types::{
+    EmbeddingFormat, EmbeddingModelInfo, EmbeddingRequest, EmbeddingResponse, EmbeddingUsage,
+};
 
 use super::config::OpenAiConfig;
 
@@ -59,13 +61,13 @@ struct OpenAiEmbeddingUsage {
     total_tokens: u32,
 }
 
-/// `OpenAI` embeddings capability implementation.
+/// OpenAI embeddings capability implementation.
 ///
-/// This struct provides the OpenAI-specific implementation of text embeddings
-/// using the `OpenAI` Embeddings API.
+/// This struct provides a comprehensive implementation of OpenAI's embedding capabilities,
+/// including support for custom dimensions, encoding formats, and advanced features.
 ///
 /// # Supported Models
-/// - text-embedding-3-small (1536 dimensions)
+/// - text-embedding-3-small (1536 dimensions, configurable)
 /// - text-embedding-3-large (3072 dimensions, configurable)
 /// - text-embedding-ada-002 (1536 dimensions, legacy)
 ///
@@ -73,18 +75,14 @@ struct OpenAiEmbeddingUsage {
 /// <https://platform.openai.com/docs/api-reference/embeddings>
 #[derive(Debug, Clone)]
 pub struct OpenAiEmbeddings {
-    /// `OpenAI` configuration
+    /// OpenAI configuration
     config: OpenAiConfig,
     /// HTTP client
     http_client: reqwest::Client,
 }
 
 impl OpenAiEmbeddings {
-    /// Create a new `OpenAI` embeddings instance.
-    ///
-    /// # Arguments
-    /// * `config` - `OpenAI` configuration
-    /// * `http_client` - HTTP client for making requests
+    /// Create a new OpenAI embeddings instance
     pub const fn new(config: OpenAiConfig, http_client: reqwest::Client) -> Self {
         Self {
             config,
@@ -92,9 +90,40 @@ impl OpenAiEmbeddings {
         }
     }
 
-    /// Get the default embedding model.
+    /// Get the default embedding model
     fn default_model(&self) -> String {
         "text-embedding-3-small".to_string()
+    }
+
+    /// Build the request body for OpenAI API
+    fn build_request(&self, request: &EmbeddingRequest) -> OpenAiEmbeddingRequest {
+        let model = request
+            .model
+            .clone()
+            .or_else(|| {
+                if !self.config.common_params.model.is_empty() {
+                    Some(self.config.common_params.model.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_else(|| self.default_model());
+
+        let encoding_format = request.encoding_format.as_ref().map(|f| match f {
+            EmbeddingFormat::Float => "float".to_string(),
+            EmbeddingFormat::Base64 => "base64".to_string(),
+        });
+
+        OpenAiEmbeddingRequest {
+            input: request.input.clone(),
+            model,
+            encoding_format,
+            dimensions: request.dimensions,
+            user: request
+                .user
+                .clone()
+                .or_else(|| self.config.openai_params.user.clone()),
+        }
     }
 
     /// Make an embeddings API request.
@@ -143,7 +172,7 @@ impl OpenAiEmbeddings {
         Ok(openai_response)
     }
 
-    /// Convert `OpenAI` response to our standard format.
+    /// Convert OpenAI response to our standard format
     fn convert_response(&self, openai_response: OpenAiEmbeddingResponse) -> EmbeddingResponse {
         // Sort embeddings by index to maintain order
         let mut embeddings_with_index: Vec<_> = openai_response.data.into_iter().collect();
@@ -154,43 +183,52 @@ impl OpenAiEmbeddings {
             .map(|obj| obj.embedding)
             .collect();
 
-        EmbeddingResponse {
-            embeddings,
-            model: openai_response.model,
-            usage: Some(EmbeddingUsage {
-                prompt_tokens: openai_response.usage.prompt_tokens,
-                total_tokens: openai_response.usage.total_tokens,
-            }),
-            metadata: HashMap::new(),
+        EmbeddingResponse::new(embeddings, openai_response.model).with_usage(EmbeddingUsage::new(
+            openai_response.usage.prompt_tokens,
+            openai_response.usage.total_tokens,
+        ))
+    }
+
+    /// Get model information for OpenAI embedding models
+    fn get_model_info(&self, model_id: &str) -> EmbeddingModelInfo {
+        match model_id {
+            "text-embedding-3-small" => EmbeddingModelInfo::new(
+                model_id.to_string(),
+                "Text Embedding 3 Small".to_string(),
+                1536,
+                8192,
+            )
+            .with_custom_dimensions(),
+
+            "text-embedding-3-large" => EmbeddingModelInfo::new(
+                model_id.to_string(),
+                "Text Embedding 3 Large".to_string(),
+                3072,
+                8192,
+            )
+            .with_custom_dimensions(),
+
+            "text-embedding-ada-002" => EmbeddingModelInfo::new(
+                model_id.to_string(),
+                "Text Embedding Ada 002 (Legacy)".to_string(),
+                1536,
+                8192,
+            ),
+
+            _ => EmbeddingModelInfo::new(model_id.to_string(), model_id.to_string(), 1536, 8192),
         }
     }
 }
 
 #[async_trait]
 impl EmbeddingCapability for OpenAiEmbeddings {
-    /// Generate embeddings for the given input texts.
     async fn embed(&self, input: Vec<String>) -> Result<EmbeddingResponse, LlmError> {
         if input.is_empty() {
             return Err(LlmError::InvalidInput("Input cannot be empty".to_string()));
         }
 
-        // Use model from common params or default
-        let model = if !self.config.common_params.model.is_empty() {
-            self.config.common_params.model.clone()
-        } else {
-            self.default_model()
-        };
-
-        let request = OpenAiEmbeddingRequest {
-            input,
-            model,
-            encoding_format: Some("float".to_string()),
-            dimensions: None, // Let OpenAI use default dimensions
-            user: self.config.openai_params.user.clone(),
-        };
-
-        let openai_response = self.make_request(request).await?;
-        Ok(self.convert_response(openai_response))
+        let request = EmbeddingRequest::new(input);
+        self.embed_with_config(request).await
     }
 
     /// Get the dimension of embeddings produced by this provider.
@@ -215,13 +253,58 @@ impl EmbeddingCapability for OpenAiEmbeddings {
         8192 // OpenAI's current limit
     }
 
-    /// Get supported embedding models for OpenAI.
     fn supported_embedding_models(&self) -> Vec<String> {
         vec![
             "text-embedding-3-small".to_string(),
             "text-embedding-3-large".to_string(),
             "text-embedding-ada-002".to_string(),
         ]
+    }
+}
+
+#[async_trait]
+impl EmbeddingExtensions for OpenAiEmbeddings {
+    async fn embed_with_config(
+        &self,
+        request: EmbeddingRequest,
+    ) -> Result<EmbeddingResponse, LlmError> {
+        if request.input.is_empty() {
+            return Err(LlmError::InvalidInput("Input cannot be empty".to_string()));
+        }
+
+        let openai_request = self.build_request(&request);
+        let openai_response = self.make_request(openai_request).await?;
+        Ok(self.convert_response(openai_response))
+    }
+
+    async fn list_embedding_models(&self) -> Result<Vec<EmbeddingModelInfo>, LlmError> {
+        let models = self.supported_embedding_models();
+        let model_infos = models
+            .into_iter()
+            .map(|id| self.get_model_info(&id))
+            .collect();
+        Ok(model_infos)
+    }
+}
+
+#[async_trait]
+impl OpenAiEmbeddingCapability for OpenAiEmbeddings {
+    async fn embed_with_dimensions(
+        &self,
+        input: Vec<String>,
+        dimensions: u32,
+    ) -> Result<EmbeddingResponse, LlmError> {
+        let request = EmbeddingRequest::new(input).with_dimensions(dimensions);
+        self.embed_with_config(request).await
+    }
+
+    async fn embed_with_format(
+        &self,
+        input: Vec<String>,
+        format: EmbeddingFormat,
+    ) -> Result<EmbeddingResponse, LlmError> {
+        let request = EmbeddingRequest::new(input).with_encoding_format(format);
+        self.embed_with_config(request).await
     }
 }
 
@@ -250,5 +333,34 @@ mod tests {
         assert!(models.contains(&"text-embedding-3-small".to_string()));
         assert!(models.contains(&"text-embedding-3-large".to_string()));
         assert!(models.contains(&"text-embedding-ada-002".to_string()));
+    }
+
+    #[test]
+    fn test_model_info() {
+        let config = OpenAiConfig::new("test-key");
+        let client = reqwest::Client::new();
+        let embeddings = OpenAiEmbeddings::new(config, client);
+
+        let info = embeddings.get_model_info("text-embedding-3-small");
+        assert_eq!(info.id, "text-embedding-3-small");
+        assert_eq!(info.dimension, 1536);
+        assert!(info.supports_custom_dimensions);
+    }
+
+    #[test]
+    fn test_build_request() {
+        let config = OpenAiConfig::new("test-key");
+        let client = reqwest::Client::new();
+        let embeddings = OpenAiEmbeddings::new(config, client);
+
+        let request = EmbeddingRequest::new(vec!["test".to_string()])
+            .with_model("text-embedding-3-large")
+            .with_dimensions(2048)
+            .with_encoding_format(EmbeddingFormat::Float);
+
+        let openai_request = embeddings.build_request(&request);
+        assert_eq!(openai_request.model, "text-embedding-3-large");
+        assert_eq!(openai_request.dimensions, Some(2048));
+        assert_eq!(openai_request.encoding_format, Some("float".to_string()));
     }
 }

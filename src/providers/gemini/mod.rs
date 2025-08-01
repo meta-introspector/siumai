@@ -10,6 +10,7 @@
 //! - `files.rs` - File management capability implementation
 //! - `code_execution.rs` - Code execution feature implementation
 //! - `streaming.rs` - Streaming functionality with JSON buffering
+//! - `embeddings.rs` - Text embedding capability implementation
 //!
 //! # Example Usage
 //! ```rust,no_run
@@ -35,6 +36,7 @@
 // Core modules
 pub mod chat;
 pub mod client;
+pub mod embeddings;
 pub mod files;
 pub mod models;
 pub mod streaming;
@@ -46,6 +48,7 @@ pub mod code_execution;
 // Re-export main types for convenience
 pub use chat::GeminiChatCapability;
 pub use client::{GeminiBuilder, GeminiClient};
+pub use embeddings::GeminiEmbeddings;
 pub use files::GeminiFiles;
 pub use models::GeminiModels;
 pub use types::*;

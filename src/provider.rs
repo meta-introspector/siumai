@@ -157,29 +157,35 @@ impl EmbeddingCapability for Siumai {
         match self.client.provider_name() {
             "openai" => {
                 // Try to get OpenAI client and call embed
-                if let Some(openai_client) = self.client.as_any().downcast_ref::<crate::providers::openai::OpenAiClient>() {
+                if let Some(openai_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::openai::OpenAiClient>()
+                {
                     openai_client.embed(texts).await
                 } else {
                     Err(LlmError::UnsupportedOperation(
-                        "OpenAI provider does not implement embedding functionality".to_string()
+                        "OpenAI provider does not implement embedding functionality".to_string(),
                     ))
                 }
             }
             "ollama" => {
                 // Try to get Ollama client and call embed
-                if let Some(ollama_client) = self.client.as_any().downcast_ref::<crate::providers::ollama::OllamaClient>() {
+                if let Some(ollama_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::ollama::OllamaClient>()
+                {
                     ollama_client.embed(texts).await
                 } else {
                     Err(LlmError::UnsupportedOperation(
-                        "Ollama provider does not implement embedding functionality".to_string()
+                        "Ollama provider does not implement embedding functionality".to_string(),
                     ))
                 }
             }
-            provider_name => {
-                Err(LlmError::UnsupportedOperation(
-                    format!("Provider {provider_name} does not support embedding functionality. Consider using OpenAI or Ollama for embeddings.")
-                ))
-            }
+            provider_name => Err(LlmError::UnsupportedOperation(format!(
+                "Provider {provider_name} does not support embedding functionality. Consider using OpenAI or Ollama for embeddings."
+            ))),
         }
     }
 
@@ -187,20 +193,28 @@ impl EmbeddingCapability for Siumai {
         // Try to get dimension from the underlying client
         match self.client.provider_name() {
             "openai" => {
-                if let Some(openai_client) = self.client.as_any().downcast_ref::<crate::providers::openai::OpenAiClient>() {
+                if let Some(openai_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::openai::OpenAiClient>()
+                {
                     openai_client.embedding_dimension()
                 } else {
                     1536 // Default OpenAI dimension
                 }
             }
             "ollama" => {
-                if let Some(ollama_client) = self.client.as_any().downcast_ref::<crate::providers::ollama::OllamaClient>() {
+                if let Some(ollama_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::ollama::OllamaClient>()
+                {
                     ollama_client.embedding_dimension()
                 } else {
                     384 // Default Ollama dimension
                 }
             }
-            _ => 1536 // Default fallback
+            _ => 1536, // Default fallback
         }
     }
 
@@ -208,20 +222,28 @@ impl EmbeddingCapability for Siumai {
         // Try to get max tokens from the underlying client
         match self.client.provider_name() {
             "openai" => {
-                if let Some(openai_client) = self.client.as_any().downcast_ref::<crate::providers::openai::OpenAiClient>() {
+                if let Some(openai_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::openai::OpenAiClient>()
+                {
                     openai_client.max_tokens_per_embedding()
                 } else {
                     8192 // Default OpenAI limit
                 }
             }
             "ollama" => {
-                if let Some(ollama_client) = self.client.as_any().downcast_ref::<crate::providers::ollama::OllamaClient>() {
+                if let Some(ollama_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::ollama::OllamaClient>()
+                {
                     ollama_client.max_tokens_per_embedding()
                 } else {
                     8192 // Default limit
                 }
             }
-            _ => 8192 // Default fallback
+            _ => 8192, // Default fallback
         }
     }
 
@@ -229,7 +251,11 @@ impl EmbeddingCapability for Siumai {
         // Try to get supported models from the underlying client
         match self.client.provider_name() {
             "openai" => {
-                if let Some(openai_client) = self.client.as_any().downcast_ref::<crate::providers::openai::OpenAiClient>() {
+                if let Some(openai_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::openai::OpenAiClient>()
+                {
                     openai_client.supported_embedding_models()
                 } else {
                     vec![
@@ -240,13 +266,17 @@ impl EmbeddingCapability for Siumai {
                 }
             }
             "ollama" => {
-                if let Some(ollama_client) = self.client.as_any().downcast_ref::<crate::providers::ollama::OllamaClient>() {
+                if let Some(ollama_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::ollama::OllamaClient>()
+                {
                     ollama_client.supported_embedding_models()
                 } else {
                     vec!["nomic-embed-text".to_string()]
                 }
             }
-            _ => vec!["default".to_string()]
+            _ => vec!["default".to_string()],
         }
     }
 }
@@ -995,7 +1025,9 @@ mod tests {
             _messages: Vec<ChatMessage>,
             _tools: Option<Vec<Tool>>,
         ) -> Result<ChatStream, LlmError> {
-            Err(LlmError::UnsupportedOperation("Streaming not supported in mock".to_string()))
+            Err(LlmError::UnsupportedOperation(
+                "Streaming not supported in mock".to_string(),
+            ))
         }
     }
 

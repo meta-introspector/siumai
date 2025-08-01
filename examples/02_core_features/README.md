@@ -152,6 +152,11 @@ ollama serve && ollama pull llama3.2
 - Process responses as they arrive
 - Better user experience for long responses
 
+**Embeddings**: Vector representations of text
+- Convert text to numerical vectors
+- Enable semantic similarity and search
+- Support different models and dimensions
+
 **Error Handling**: Production-ready error management
 - Handle different error types appropriately
 - Implement retry logic and fallbacks

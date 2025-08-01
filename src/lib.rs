@@ -79,6 +79,7 @@ pub mod benchmarks;
 pub mod builder;
 pub mod client;
 pub mod custom_provider;
+pub mod embedding;
 pub mod error;
 pub mod error_handling;
 pub mod multimodal;
@@ -130,7 +131,8 @@ pub mod prelude {
     pub use crate::traits::*;
     pub use crate::types::*;
     pub use crate::web_search::*;
-    pub use crate::{Provider, assistant, provider, system, tool, user};
+    pub use crate::{Provider, assistant, provider, system, tool, user, user_with_image};
+    pub use crate::{conversation, conversation_with_system, messages, quick_chat};
     pub use crate::{
         quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
         quick_groq, quick_groq_with_model, quick_ollama, quick_ollama_with_model, quick_openai,
@@ -352,6 +354,96 @@ macro_rules! user_with_image {
     ($text:expr, $image_url:expr, detail: $detail:expr) => {
         $crate::types::ChatMessage::user($text)
             .with_image($image_url.to_string(), Some($detail.to_string()))
+    };
+}
+
+/// Creates a collection of messages with convenient syntax
+///
+/// # Example
+/// ```rust
+/// use siumai::prelude::*;
+///
+/// let conversation = messages![
+///     system!("You are a helpful assistant"),
+///     user!("Hello!"),
+///     assistant!("Hi there! How can I help you?"),
+///     user!("What's the weather like?")
+/// ];
+/// ```
+#[macro_export]
+macro_rules! messages {
+    ($($msg:expr),* $(,)?) => {
+        vec![$($msg),*]
+    };
+}
+
+/// Creates a conversation with alternating user and assistant messages
+///
+/// # Example
+/// ```rust
+/// use siumai::prelude::*;
+///
+/// let conversation = conversation![
+///     "Hello!" => "Hi there!",
+///     "How are you?" => "I'm doing well, thank you!"
+/// ];
+/// ```
+#[macro_export]
+macro_rules! conversation {
+    ($($user:expr => $assistant:expr),* $(,)?) => {
+        {
+            let mut msgs = Vec::new();
+            $(
+                msgs.push($crate::user!($user));
+                msgs.push($crate::assistant!($assistant));
+            )*
+            msgs
+        }
+    };
+}
+
+/// Creates a conversation with a system prompt
+///
+/// # Example
+/// ```rust
+/// use siumai::prelude::*;
+///
+/// let conversation = conversation_with_system![
+///     "You are a helpful assistant",
+///     "Hello!" => "Hi there!",
+///     "How are you?" => "I'm doing well!"
+/// ];
+/// ```
+#[macro_export]
+macro_rules! conversation_with_system {
+    ($system:expr, $($user:expr => $assistant:expr),* $(,)?) => {
+        {
+            let mut msgs = vec![$crate::system!($system)];
+            $(
+                msgs.push($crate::user!($user));
+                msgs.push($crate::assistant!($assistant));
+            )*
+            msgs
+        }
+    };
+}
+
+/// Creates a quick chat request with a single user message
+///
+/// # Example
+/// ```rust
+/// use siumai::prelude::*;
+///
+/// let request = quick_chat!("What is the capital of France?");
+/// // Equivalent to: vec![user!("What is the capital of France?")]
+/// ```
+#[macro_export]
+macro_rules! quick_chat {
+    ($msg:expr) => {
+        vec![$crate::user!($msg)]
+    };
+    (system: $system:expr, $msg:expr) => {
+        vec![$crate::system!($system), $crate::user!($msg)]
     };
 }
 
