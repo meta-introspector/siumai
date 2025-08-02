@@ -432,9 +432,12 @@ pub mod optimization {
     }
 
     /// Memory-efficient string interning for common values
+    ///
+    /// Note: This is a simplified implementation that uses a HashMap for deduplication.
+    /// For production use, consider using a proper string interner library like `string-interner`.
     #[allow(dead_code)]
     pub struct StringInterner {
-        strings: std::collections::HashMap<String, &'static str>,
+        strings: std::collections::HashMap<String, String>,
     }
 
     impl Default for StringInterner {
@@ -450,11 +453,28 @@ pub mod optimization {
             }
         }
 
-        /// Intern a string (simplified implementation)
-        pub fn intern(&mut self, s: String) -> &'static str {
-            // Note: This is a simplified implementation
-            // In production, you'd use a proper string interner
-            Box::leak(s.into_boxed_str())
+        /// Intern a string (safe implementation without memory leaks)
+        ///
+        /// Returns a reference to the interned string. The string will be kept
+        /// alive as long as this StringInterner instance exists.
+        pub fn intern(&mut self, s: String) -> &str {
+            // Use entry API to avoid cloning if the string already exists
+            self.strings.entry(s.clone()).or_insert(s).as_str()
+        }
+
+        /// Get the number of interned strings
+        pub fn len(&self) -> usize {
+            self.strings.len()
+        }
+
+        /// Check if the interner is empty
+        pub fn is_empty(&self) -> bool {
+            self.strings.is_empty()
+        }
+
+        /// Clear all interned strings
+        pub fn clear(&mut self) {
+            self.strings.clear();
         }
     }
 

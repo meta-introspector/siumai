@@ -155,20 +155,23 @@ impl XaiBuilder {
             .map_err(|e| LlmError::InvalidInput(format!("Invalid xAI configuration: {e}")))?;
 
         // Initialize tracing if configured
-        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
-            Some(crate::tracing::init_tracing(tracing_config)?)
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
         } else {
             None
         };
 
         // Set default model if not specified
-        if self.config.common_params.model.is_empty() {
-            let mut config = self.config;
+        let mut config = self.config;
+        if config.common_params.model.is_empty() {
             config.common_params.model = "grok-3-latest".to_string();
-            return XaiClient::new(config).await;
         }
 
-        XaiClient::new(self.config).await
+        let mut client = XaiClient::new(config).await?;
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
+
+        Ok(client)
     }
 
     /// Build the `xAI` client with a custom HTTP client
@@ -182,8 +185,8 @@ impl XaiBuilder {
             .map_err(|e| LlmError::InvalidInput(format!("Invalid xAI configuration: {e}")))?;
 
         // Initialize tracing if configured
-        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
-            Some(crate::tracing::init_tracing(tracing_config)?)
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
         } else {
             None
         };
@@ -194,7 +197,11 @@ impl XaiBuilder {
             config.common_params.model = "grok-3-latest".to_string();
         }
 
-        XaiClient::with_http_client(config, http_client).await
+        let mut client = XaiClient::with_http_client(config, http_client).await?;
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
+
+        Ok(client)
     }
 }
 

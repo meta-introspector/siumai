@@ -4,10 +4,12 @@
 
 use async_trait::async_trait;
 use std::collections::HashMap;
+use std::time::Instant;
 
 use crate::error::LlmError;
 use crate::params::{OpenAiParameterMapper, ParameterMapper};
 use crate::stream::ChatStream;
+use crate::tracing::ProviderTracer;
 use crate::traits::ChatCapability;
 use crate::types::*;
 
@@ -154,6 +156,8 @@ impl ChatCapability for GroqChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
+        let start_time = Instant::now();
+
         // Create a ChatRequest from messages and tools
         let request = ChatRequest {
             messages,
@@ -165,10 +169,16 @@ impl ChatCapability for GroqChatCapability {
             stream: false,
         };
 
-        let headers = build_headers(&self.api_key, &self.http_config.headers)?;
+        // Extract model name for tracing
+        let model = request.common_params.model.clone();
+        let tracer = ProviderTracer::new("groq").with_model(model);
 
+        let headers = build_headers(&self.api_key, &self.http_config.headers)?;
         let body = self.build_chat_request_body(&request)?;
         let url = format!("{}/chat/completions", self.base_url);
+
+        tracer.trace_request_start("POST", &url);
+        tracer.trace_request_details(&headers, &body);
 
         let response = self
             .http_client
@@ -183,6 +193,8 @@ impl ChatCapability for GroqChatCapability {
             let error_text = response.text().await.unwrap_or_default();
             let error_message = extract_error_message(&error_text);
 
+            tracer.trace_request_error(status.as_u16(), &error_text, start_time);
+
             return Err(LlmError::ApiError {
                 code: status.as_u16(),
                 message: format!("Groq API error: {error_message}"),
@@ -190,8 +202,18 @@ impl ChatCapability for GroqChatCapability {
             });
         }
 
-        let groq_response: GroqChatResponse = response.json().await?;
-        self.parse_chat_response(groq_response)
+        tracer.trace_response_success(response.status().as_u16(), start_time, response.headers());
+
+        // Get response body as text first for logging
+        let response_text = response.text().await?;
+        tracer.trace_response_body(&response_text);
+
+        let groq_response: GroqChatResponse = serde_json::from_str(&response_text)?;
+        let chat_response = self.parse_chat_response(groq_response)?;
+
+        tracer.trace_request_complete(start_time, chat_response.content.all_text().len());
+
+        Ok(chat_response)
     }
 
     async fn chat_stream(

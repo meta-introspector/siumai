@@ -14,7 +14,6 @@ use super::chat::GroqChatCapability;
 use super::config::GroqConfig;
 
 /// `Groq` client that implements all capabilities
-#[derive(Clone)]
 pub struct GroqClient {
     /// Configuration
     config: GroqConfig,
@@ -22,6 +21,10 @@ pub struct GroqClient {
     http_client: reqwest::Client,
     /// Chat capability
     chat_capability: GroqChatCapability,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Tracing guard to keep tracing system active
+    _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
 impl GroqClient {
@@ -38,6 +41,8 @@ impl GroqClient {
             config,
             http_client,
             chat_capability,
+            tracing_config: None,
+            _tracing_guard: None,
         }
     }
 
@@ -98,5 +103,20 @@ impl ChatCapability for GroqClient {
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
         self.chat_capability.chat_stream(messages, tools).await
+    }
+}
+
+impl GroqClient {
+    /// Set the tracing guard to keep tracing system active
+    pub(crate) fn set_tracing_guard(
+        &mut self,
+        guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    ) {
+        self._tracing_guard = guard;
+    }
+
+    /// Set the tracing configuration
+    pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
+        self.tracing_config = config;
     }
 }

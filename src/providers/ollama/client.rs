@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 
-use crate::LlmClient;
+use crate::client::LlmClient;
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::traits::{
@@ -41,6 +41,10 @@ pub struct OllamaClient {
     http_client: reqwest::Client,
     /// Base URL for Ollama API
     base_url: String,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Tracing guard to keep tracing system active
+    _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
 impl OllamaClient {
@@ -90,6 +94,8 @@ impl OllamaClient {
             ollama_params: config.ollama_params,
             http_client,
             base_url: config.base_url,
+            tracing_config: None,
+            _tracing_guard: None,
         }
     }
 
@@ -102,6 +108,19 @@ impl OllamaClient {
     /// Get the base URL
     pub fn base_url(&self) -> &str {
         &self.base_url
+    }
+
+    /// Set the tracing guard to keep tracing system active
+    pub(crate) fn set_tracing_guard(
+        &mut self,
+        guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    ) {
+        self._tracing_guard = guard;
+    }
+
+    /// Set the tracing configuration
+    pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
+        self.tracing_config = config;
     }
 
     /// Get common parameters

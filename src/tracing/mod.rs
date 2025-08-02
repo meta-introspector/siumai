@@ -55,8 +55,8 @@ pub use subscriber::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, SystemTime};
-use tracing::Span;
+use std::time::{Duration, Instant, SystemTime};
+use tracing::{Span, debug, error, info};
 use uuid::Uuid;
 
 /// Unique identifier for a tracing session
@@ -272,4 +272,170 @@ pub fn set_mask_sensitive_values(mask: bool) {
 /// Get the global mask sensitive values flag
 pub fn get_mask_sensitive_values() -> bool {
     MASK_SENSITIVE_VALUES.load(Ordering::Relaxed)
+}
+
+/// Format JSON for logging based on global configuration
+pub fn format_json_for_logging(value: &serde_json::Value) -> String {
+    if get_pretty_json() {
+        serde_json::to_string_pretty(value).unwrap_or_else(|_| value.to_string())
+    } else {
+        serde_json::to_string(value).unwrap_or_else(|_| value.to_string())
+    }
+}
+
+/// Mask sensitive values in strings for security
+pub fn mask_sensitive_value(value: &str) -> String {
+    if !get_mask_sensitive_values() {
+        return value.to_string();
+    }
+
+    // Check if this looks like an API key or token
+    if let Some(token) = value.strip_prefix("Bearer ") {
+        if token.len() > 8 {
+            return format!("Bearer {}...{}", &token[..4], &token[token.len() - 4..]);
+        }
+    }
+
+    // Check for API key patterns
+    if (value.starts_with("sk-") || value.starts_with("sk-ant-") || value.starts_with("gsk-"))
+        && value.len() > 12
+    {
+        return format!("{}...{}", &value[..8], &value[value.len() - 4..]);
+    }
+
+    // For other potentially sensitive values
+    if value.len() > 16 {
+        format!("{}...{}", &value[..6], &value[value.len() - 4..])
+    } else {
+        value.to_string()
+    }
+}
+
+/// Format headers for logging with sensitive value masking
+pub fn format_headers_for_logging(headers: &reqwest::header::HeaderMap) -> String {
+    let header_map: std::collections::HashMap<&str, String> = headers
+        .iter()
+        .map(|(k, v)| {
+            let value = v.to_str().unwrap_or("<invalid>");
+            let masked_value = if k.as_str().to_lowercase().contains("authorization")
+                || k.as_str().to_lowercase().contains("key")
+                || k.as_str().to_lowercase().contains("token")
+            {
+                mask_sensitive_value(value)
+            } else {
+                value.to_string()
+            };
+            (k.as_str(), masked_value)
+        })
+        .collect();
+
+    if get_pretty_json() {
+        serde_json::to_string_pretty(&header_map).unwrap_or_else(|_| format!("{header_map:?}"))
+    } else {
+        serde_json::to_string(&header_map).unwrap_or_else(|_| format!("{header_map:?}"))
+    }
+}
+
+/// Unified provider tracing utility
+///
+/// This provides a consistent tracing interface across all providers,
+/// ensuring uniform logging format and behavior.
+pub struct ProviderTracer {
+    provider: String,
+    model: Option<String>,
+}
+
+impl ProviderTracer {
+    /// Create a new provider tracer
+    pub fn new(provider: impl Into<String>) -> Self {
+        Self {
+            provider: provider.into(),
+            model: None,
+        }
+    }
+
+    /// Set the model name for this tracer
+    pub fn with_model(mut self, model: impl Into<String>) -> Self {
+        self.model = Some(model.into());
+        self
+    }
+
+    /// Trace the start of a request
+    pub fn trace_request_start(&self, method: &str, url: &str) {
+        info!(
+            provider = %self.provider,
+            model = ?self.model,
+            method = %method,
+            url = %url,
+            "Request started"
+        );
+    }
+
+    /// Trace request details (debug level)
+    pub fn trace_request_details(
+        &self,
+        headers: &reqwest::header::HeaderMap,
+        body: &serde_json::Value,
+    ) {
+        debug!(
+            provider = %self.provider,
+            model = ?self.model,
+            request_headers = %format_headers_for_logging(headers),
+            request_body = %format_json_for_logging(body),
+            "Request details"
+        );
+    }
+
+    /// Trace successful response
+    pub fn trace_response_success(
+        &self,
+        status_code: u16,
+        duration: Instant,
+        headers: &reqwest::header::HeaderMap,
+    ) {
+        let duration_ms = duration.elapsed().as_millis();
+        debug!(
+            provider = %self.provider,
+            model = ?self.model,
+            status_code = status_code,
+            duration_ms = duration_ms,
+            response_headers = %format_headers_for_logging(headers),
+            "Request completed successfully"
+        );
+    }
+
+    /// Trace response body (debug level)
+    pub fn trace_response_body(&self, body: &str) {
+        debug!(
+            provider = %self.provider,
+            model = ?self.model,
+            response_body = %body,
+            "Response body"
+        );
+    }
+
+    /// Trace request completion
+    pub fn trace_request_complete(&self, duration: Instant, response_length: usize) {
+        let duration_ms = duration.elapsed().as_millis();
+        info!(
+            provider = %self.provider,
+            model = ?self.model,
+            duration_ms = duration_ms,
+            response_length = response_length,
+            "Request completed"
+        );
+    }
+
+    /// Trace request failure
+    pub fn trace_request_error(&self, status_code: u16, error_text: &str, duration: Instant) {
+        let duration_ms = duration.elapsed().as_millis();
+        error!(
+            provider = %self.provider,
+            model = ?self.model,
+            status_code = status_code,
+            error_text = %error_text,
+            duration_ms = duration_ms,
+            "Request failed"
+        );
+    }
 }

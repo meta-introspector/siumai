@@ -177,8 +177,8 @@ impl GroqBuilder {
         self.config.validate()?;
 
         // Initialize tracing if configured
-        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
-            Some(crate::tracing::init_tracing(tracing_config)?)
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
         } else {
             None
         };
@@ -210,7 +210,11 @@ impl GroqBuilder {
             LlmError::ConfigurationError(format!("Failed to create HTTP client: {e}"))
         })?;
 
-        Ok(GroqClient::new(self.config, http_client))
+        let mut client = GroqClient::new(self.config, http_client);
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
+
+        Ok(client)
     }
 
     /// Get the current configuration (for inspection)

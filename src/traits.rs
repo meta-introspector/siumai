@@ -16,9 +16,9 @@ use crate::types::*;
 /// It follows the single responsibility principle by focusing solely on core chat operations.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/guides/tools
-/// - Anthropic: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview
-/// - xAI: https://docs.x.ai/docs/guides/function-calling
+/// - OpenAI: <https://platform.openai.com/docs/guides/tools>
+/// - Anthropic: <https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview>
+/// - xAI: <https://docs.x.ai/docs/guides/function-calling>
 #[async_trait]
 pub trait ChatCapability: Send + Sync {
     /// Sends a chat request to the provider with a sequence of messages.
@@ -274,8 +274,8 @@ impl<T: ChatCapability> ChatExtensions for T {}
 /// the provider supports the desired functionality.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/guides/speech-to-text
-/// - Google: https://cloud.google.com/speech-to-text/docs
+/// - OpenAI: <https://platform.openai.com/docs/guides/speech-to-text>
+/// - Google: <https://cloud.google.com/speech-to-text/docs>
 #[async_trait]
 pub trait AudioCapability: Send + Sync {
     /// Get all audio features supported by this provider.
@@ -451,9 +451,9 @@ pub trait AudioCapability: Send + Sync {
 /// Different providers may support different aspects of vision processing.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/guides/vision
-/// - Google: https://cloud.google.com/vision/docs
-/// - Anthropic: https://docs.anthropic.com/en/docs/vision
+/// - OpenAI: <https://platform.openai.com/docs/guides/vision>
+/// - Google: <https://cloud.google.com/vision/docs>
+/// - Anthropic: <https://docs.anthropic.com/en/docs/vision>
 #[async_trait]
 pub trait VisionCapability: Send + Sync {
     /// Analyzes an image with optional text prompt.
@@ -492,8 +492,8 @@ pub trait VisionCapability: Send + Sync {
 /// single responsibility principle by focusing on core embedding operations.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/guides/embeddings
-/// - Google: https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings
+/// - OpenAI: <https://platform.openai.com/docs/guides/embeddings>
+/// - Google: <https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings>
 /// - Anthropic: Currently not supported
 #[async_trait]
 pub trait EmbeddingCapability: Send + Sync {
@@ -650,8 +650,8 @@ pub trait EmbeddingExtensions: EmbeddingCapability {
 /// capabilities across different providers.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/api-reference/images
-/// - Stability AI: https://platform.stability.ai/docs/api-reference
+/// - OpenAI: <https://platform.openai.com/docs/api-reference/images>
+/// - Stability AI: <https://platform.stability.ai/docs/api-reference>
 #[async_trait]
 pub trait ImageGenerationCapability: Send + Sync {
     /// Generate images from text prompts.
@@ -751,8 +751,8 @@ pub trait ImageGenerationCapability: Send + Sync {
 /// providers (OpenAI, Anthropic, etc.).
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/api-reference/files
-/// - Anthropic: https://docs.anthropic.com/en/api/messages
+/// - OpenAI: <https://platform.openai.com/docs/api-reference/files>
+/// - Anthropic: <https://docs.anthropic.com/en/api/messages>
 #[async_trait]
 pub trait FileManagementCapability: Send + Sync {
     /// Upload a file to the provider's storage.
@@ -807,7 +807,7 @@ pub trait FileManagementCapability: Send + Sync {
 /// policy violations, harmful content, etc.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/api-reference/moderations
+/// - OpenAI: <https://platform.openai.com/docs/api-reference/moderations>
 #[async_trait]
 pub trait ModerationCapability: Send + Sync {
     /// Moderate content for policy violations.
@@ -846,7 +846,7 @@ pub trait ModerationCapability: Send + Sync {
 /// available models from the provider.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/api-reference/models
+/// - OpenAI: <https://platform.openai.com/docs/api-reference/models>
 /// - Anthropic: Models are typically hardcoded
 #[async_trait]
 pub trait ModelListingCapability: Send + Sync {
@@ -887,7 +887,7 @@ pub trait ModelListingCapability: Send + Sync {
 /// as opposed to conversational chat.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/api-reference/completions
+/// - OpenAI: <https://platform.openai.com/docs/api-reference/completions>
 #[async_trait]
 pub trait CompletionCapability: Send + Sync {
     /// Generate text completion from a prompt.
@@ -922,7 +922,7 @@ pub trait CompletionCapability: Send + Sync {
 /// in other providers.
 ///
 /// # API References
-/// - OpenAI: https://platform.openai.com/docs/api-reference
+/// - OpenAI: <https://platform.openai.com/docs/api-reference>
 #[async_trait]
 pub trait OpenAiCapability: Send + Sync {
     /// Chat with structured output using JSON schema.

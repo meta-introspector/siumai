@@ -321,13 +321,13 @@ impl HttpMcpLlmDemo {
                                 // Execute the tool via MCP
                                 match self.mcp_client.call_tool(tool_call).await {
                                     Ok(result) => {
-                                        println!("   ✅ Result: {}", result);
+                                        println!("   ✅ Result: {result}");
                                         tool_results.push((tool_call.clone(), result));
                                     }
                                     Err(e) => {
-                                        println!("   ❌ Error: {}", e);
+                                        println!("   ❌ Error: {e}");
                                         tool_results
-                                            .push((tool_call.clone(), format!("Error: {}", e)));
+                                            .push((tool_call.clone(), format!("Error: {e}")));
                                     }
                                 }
                             }
@@ -355,11 +355,11 @@ impl HttpMcpLlmDemo {
                         match llm_client.chat(follow_up_messages).await {
                             Ok(final_response) => {
                                 if let MessageContent::Text(content) = &final_response.content {
-                                    println!("🎯 Final LLM response: {}", content);
+                                    println!("🎯 Final LLM response: {content}");
                                 }
                             }
                             Err(e) => {
-                                println!("⚠️ Error getting final response: {}", e);
+                                println!("⚠️ Error getting final response: {e}");
                             }
                         }
                     } else {
@@ -431,15 +431,15 @@ impl HttpMcpLlmDemo {
                                             // Execute the tool via MCP
                                             match self.mcp_client.call_tool(tool_call).await {
                                                 Ok(result) => {
-                                                    println!("   ✅ Result: {}", result);
+                                                    println!("   ✅ Result: {result}");
                                                     stream_tool_results
                                                         .push((tool_call.clone(), result));
                                                 }
                                                 Err(e) => {
-                                                    println!("   ❌ Error: {}", e);
+                                                    println!("   ❌ Error: {e}");
                                                     stream_tool_results.push((
                                                         tool_call.clone(),
-                                                        format!("Error: {}", e),
+                                                        format!("Error: {e}"),
                                                     ));
                                                 }
                                             }
@@ -473,22 +473,20 @@ impl HttpMcpLlmDemo {
                                                 &final_response.content
                                             {
                                                 println!(
-                                                    "🎯 Final LLM response (streaming): {}",
-                                                    content
+                                                    "🎯 Final LLM response (streaming): {content}"
                                                 );
                                             }
                                         }
                                         Err(e) => {
                                             println!(
-                                                "⚠️ Error getting final response (streaming): {}",
-                                                e
+                                                "⚠️ Error getting final response (streaming): {e}"
                                             );
                                         }
                                     }
                                 } else {
                                     println!("📝 No tool calls in streaming response");
                                     if !content_buffer.is_empty() {
-                                        println!("💬 Direct response: {}", content_buffer);
+                                        println!("💬 Direct response: {content_buffer}");
                                     }
                                 }
                                 break;

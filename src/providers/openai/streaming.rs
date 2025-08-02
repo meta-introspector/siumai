@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::Mutex;
 
-use crate::{ChatResponse, FinishReason, MessageContent};
+use crate::types::{ChatResponse, FinishReason, MessageContent};
 
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};

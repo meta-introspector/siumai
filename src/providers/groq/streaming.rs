@@ -6,12 +6,10 @@ use futures::{Stream, StreamExt};
 use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::Mutex;
 
-use crate::{ChatResponse, FinishReason, MessageContent};
-
-use crate::ResponseMetadata;
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, Usage};
+use crate::types::{ChatResponse, FinishReason, MessageContent, ResponseMetadata};
 use crate::utils::Utf8StreamDecoder;
 
 use super::config::GroqConfig;

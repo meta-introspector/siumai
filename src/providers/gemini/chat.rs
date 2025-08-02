@@ -5,9 +5,11 @@
 use async_trait::async_trait;
 use reqwest::Client as HttpClient;
 use serde_json::json;
+use std::time::Instant;
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
+use crate::tracing::ProviderTracer;
 use crate::traits::ChatCapability;
 use crate::types::{
     ChatMessage, ChatResponse, FinishReason, MessageContent, ResponseMetadata, Tool, ToolCall,
@@ -308,10 +310,28 @@ impl GeminiChatCapability {
         &self,
         request: GenerateContentRequest,
     ) -> Result<GenerateContentResponse, LlmError> {
+        let start_time = Instant::now();
+
+        // Create tracer with model information
+        let tracer = ProviderTracer::new("gemini").with_model(&self.config.model);
+
         let url = format!(
             "{}/models/{}:generateContent",
             self.config.base_url, self.config.model
         );
+
+        tracer.trace_request_start("POST", &url);
+
+        // Create headers for tracing
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Content-Type", "application/json".parse().unwrap());
+        headers.insert("x-goog-api-key", self.config.api_key.parse().unwrap());
+
+        // Convert request to JSON for tracing
+        let request_json = serde_json::to_value(&request)
+            .map_err(|e| LlmError::ParseError(format!("Failed to serialize request: {e}")))?;
+
+        tracer.trace_request_details(&headers, &request_json);
 
         let response = self
             .http_client
@@ -326,16 +346,31 @@ impl GeminiChatCapability {
         if !response.status().is_success() {
             let status_code = response.status().as_u16();
             let error_text = response.text().await.unwrap_or_default();
+
+            tracer.trace_request_error(status_code, &error_text, start_time);
+
             return Err(LlmError::api_error(
                 status_code,
                 format!("Gemini API error: {status_code} - {error_text}"),
             ));
         }
 
-        let gemini_response: GenerateContentResponse = response
-            .json()
+        tracer.trace_response_success(response.status().as_u16(), start_time, response.headers());
+
+        // Get response body as text first for logging
+        let response_text = response
+            .text()
             .await
+            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+
+        tracer.trace_response_body(&response_text);
+
+        let gemini_response: GenerateContentResponse = serde_json::from_str(&response_text)
             .map_err(|e| LlmError::ParseError(format!("Failed to parse response: {e}")))?;
+
+        // Calculate response length for completion tracing
+        let response_length = response_text.len();
+        tracer.trace_request_complete(start_time, response_length);
 
         Ok(gemini_response)
     }

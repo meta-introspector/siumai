@@ -19,7 +19,7 @@ use super::models::GeminiModels;
 use super::types::{GeminiConfig, GenerationConfig, SafetySetting};
 
 /// Gemini client that implements the `LlmClient` trait
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GeminiClient {
     /// HTTP client for making requests
     pub http_client: HttpClient,
@@ -33,6 +33,10 @@ pub struct GeminiClient {
     pub models_capability: GeminiModels,
     /// Files capability implementation
     pub files_capability: GeminiFiles,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Tracing guard to keep tracing system active
+    _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
 impl GeminiClient {
@@ -62,6 +66,8 @@ impl GeminiClient {
             embedding_capability,
             models_capability,
             files_capability,
+            tracing_config: None,
+            _tracing_guard: None,
         })
     }
 
@@ -376,6 +382,21 @@ impl GeminiBuilder {
         }
 
         GeminiClient::new(self.config)
+    }
+}
+
+impl GeminiClient {
+    /// Set the tracing guard to keep tracing system active
+    pub(crate) fn set_tracing_guard(
+        &mut self,
+        guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    ) {
+        self._tracing_guard = guard;
+    }
+
+    /// Set the tracing configuration
+    pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
+        self.tracing_config = config;
     }
 }
 

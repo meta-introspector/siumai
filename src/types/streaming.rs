@@ -29,7 +29,7 @@ pub enum ChatStreamEvent {
         index: Option<usize>,
     },
     /// Thinking/reasoning content delta (for models that support internal reasoning)
-    /// This includes content from <think> tags, reasoning fields, and thinking modes
+    /// This includes content from `<think>` tags, reasoning fields, and thinking modes
     ThinkingDelta {
         /// The incremental thinking/reasoning content
         delta: String,

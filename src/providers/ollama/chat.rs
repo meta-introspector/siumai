@@ -3,9 +3,11 @@
 //! Implements the `ChatCapability` trait for Ollama using the /api/chat endpoint.
 
 use async_trait::async_trait;
+use std::time::Instant;
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
+use crate::tracing::ProviderTracer;
 use crate::traits::ChatCapability;
 use crate::types::*;
 
@@ -201,9 +203,21 @@ impl ChatCapability for OllamaChatCapability {
 impl OllamaChatCapability {
     /// Chat implementation (internal)
     pub async fn chat(&self, request: ChatRequest) -> Result<ChatResponse, LlmError> {
+        let start_time = Instant::now();
+
+        // Extract model name for tracing
+        let model = request.common_params.model.clone();
+        let tracer = ProviderTracer::new("ollama").with_model(model);
+
         let headers = build_headers(&self.http_config.headers)?;
         let body = self.build_chat_request_body(&request)?;
         let url = format!("{}/api/chat", self.base_url);
+
+        tracer.trace_request_start("POST", &url);
+
+        // Convert OllamaChatRequest to JSON for tracing
+        let body_json = serde_json::to_value(&body)?;
+        tracer.trace_request_details(&headers, &body_json);
 
         let response = self
             .http_client
@@ -216,13 +230,24 @@ impl OllamaChatCapability {
         let status = response.status();
         if !status.is_success() {
             let error_text = response.text().await.unwrap_or_default();
+            tracer.trace_request_error(status.as_u16(), &error_text, start_time);
             return Err(LlmError::HttpError(format!(
                 "Chat request failed: {status} - {error_text}"
             )));
         }
 
-        let ollama_response: OllamaChatResponse = response.json().await?;
-        Ok(self.parse_chat_response(ollama_response))
+        tracer.trace_response_success(status.as_u16(), start_time, response.headers());
+
+        // Get response body as text first for logging
+        let response_text = response.text().await?;
+        tracer.trace_response_body(&response_text);
+
+        let ollama_response: OllamaChatResponse = serde_json::from_str(&response_text)?;
+        let chat_response = self.parse_chat_response(ollama_response);
+
+        tracer.trace_request_complete(start_time, chat_response.content.all_text().len());
+
+        Ok(chat_response)
     }
 }
 

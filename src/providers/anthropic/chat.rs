@@ -6,11 +6,13 @@ use async_trait::async_trait;
 use futures_util::StreamExt;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex as StdMutex};
+use std::time::Instant;
 use tokio::sync::Mutex;
 
 use crate::error::LlmError;
 use crate::params::{AnthropicParameterMapper, ParameterMapper};
 use crate::stream::{ChatStream, ChatStreamEvent};
+use crate::tracing::ProviderTracer;
 use crate::traits::ChatCapability;
 use crate::types::*;
 use crate::utils::Utf8StreamDecoder;
@@ -162,6 +164,8 @@ impl ChatCapability for AnthropicChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
+        let start_time = Instant::now();
+
         // Create a ChatRequest from messages and tools
         let request = ChatRequest {
             messages,
@@ -173,9 +177,16 @@ impl ChatCapability for AnthropicChatCapability {
             stream: false,
         };
 
+        // Extract model name for tracing
+        let model = request.common_params.model.clone();
+        let tracer = ProviderTracer::new("anthropic").with_model(model);
+
         let headers = build_headers(&self.api_key, &self.http_config.headers)?;
         let body = self.build_chat_request_body(&request, Some(&self.anthropic_params))?;
         let url = format!("{}/v1/messages", self.base_url);
+
+        tracer.trace_request_start("POST", &url);
+        tracer.trace_request_details(&headers, &body);
 
         let response = self
             .http_client
@@ -188,6 +199,8 @@ impl ChatCapability for AnthropicChatCapability {
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
+
+            tracer.trace_request_error(status.as_u16(), &error_text, start_time);
 
             // Parse Anthropic error response according to official documentation
             // https://docs.anthropic.com/en/api/errors
@@ -218,8 +231,18 @@ impl ChatCapability for AnthropicChatCapability {
             });
         }
 
-        let anthropic_response: AnthropicChatResponse = response.json().await?;
-        self.parse_chat_response(anthropic_response)
+        tracer.trace_response_success(response.status().as_u16(), start_time, response.headers());
+
+        // Get response body as text first for logging
+        let response_text = response.text().await?;
+        tracer.trace_response_body(&response_text);
+
+        let anthropic_response: AnthropicChatResponse = serde_json::from_str(&response_text)?;
+        let chat_response = self.parse_chat_response(anthropic_response)?;
+
+        tracer.trace_request_complete(start_time, chat_response.content.all_text().len());
+
+        Ok(chat_response)
     }
 
     async fn chat_stream(

@@ -97,20 +97,52 @@ pub mod utils;
 pub mod web_search;
 
 // Re-export main types and traits
-pub use benchmarks::*;
-pub use builder::*;
-pub use client::*;
-pub use custom_provider::*;
 pub use error::LlmError;
-pub use multimodal::*;
-pub use performance::*;
-pub use provider_features::*;
-pub use retry_strategy::*;
-pub use stream::*;
-pub use tracing::*;
-pub use traits::*;
-pub use types::*;
-pub use web_search::*;
+
+// Core traits
+pub use traits::{
+    AudioCapability, ChatCapability, CompletionCapability, EmbeddingCapability,
+    FileManagementCapability, ImageGenerationCapability, ModelListingCapability,
+    ModerationCapability, ProviderCapabilities, VisionCapability,
+};
+
+// Client trait
+pub use client::LlmClient;
+
+// Core types (only re-export commonly used types)
+pub use types::{
+    ChatMessage, ChatResponse, CommonParams, CompletionRequest, CompletionResponse,
+    EmbeddingRequest, EmbeddingResponse, FinishReason, HttpConfig, ImageGenerationRequest,
+    ImageGenerationResponse, MessageContent, MessageRole, ModelInfo, ModerationRequest,
+    ModerationResponse, ProviderType, ResponseMetadata, Tool, ToolCall, Usage,
+};
+
+// Builders
+pub use builder::{AnthropicBuilder, GeminiBuilder, LlmBuilder, OllamaBuilder, OpenAiBuilder};
+
+// Streaming
+pub use stream::{ChatStream, ChatStreamEvent};
+
+// Web search (use types re-export)
+pub use types::{WebSearchConfig, WebSearchResult};
+
+// Performance monitoring
+pub use performance::{PerformanceMetrics, PerformanceMonitor};
+
+// Retry strategy
+pub use retry_strategy::RetryStrategy;
+
+// Benchmarks
+pub use benchmarks::{BenchmarkConfig, BenchmarkResults, BenchmarkRunner};
+
+// Custom provider support
+pub use custom_provider::{CustomProvider, CustomProviderConfig};
+
+// Provider features
+pub use provider_features::ProviderFeatures;
+
+// Tracing (selective re-export)
+pub use tracing::{OutputFormat, TracingConfig, init_debug_tracing, init_tracing};
 
 /// Convenient pre-import module
 pub mod prelude {
@@ -134,8 +166,7 @@ pub mod prelude {
     pub use crate::{conversation, conversation_with_system, messages, quick_chat};
     pub use crate::{
         quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
-        quick_groq, quick_groq_with_model, quick_ollama, quick_ollama_with_model, quick_openai,
-        quick_openai_with_model,
+        quick_groq, quick_groq_with_model, quick_openai, quick_openai_with_model,
     };
 }
 
@@ -181,6 +212,11 @@ impl Provider {
     /// Create a Gemini client builder
     pub fn gemini() -> crate::builder::GeminiBuilder {
         crate::builder::LlmBuilder::new().gemini()
+    }
+
+    /// Create an Ollama client builder
+    pub fn ollama() -> crate::builder::OllamaBuilder {
+        crate::builder::LlmBuilder::new().ollama()
     }
 
     /// Create an xAI client builder
@@ -245,10 +281,10 @@ impl crate::provider::Siumai {
     }
 }
 
-// Re-export convenience functions and builder
+// Re-export convenience functions
 pub use crate::builder::{
-    LlmBuilder, quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
-    quick_groq, quick_groq_with_model, quick_openai, quick_openai_with_model,
+    quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model, quick_groq,
+    quick_groq_with_model, quick_openai, quick_openai_with_model,
 };
 
 // Convenient macro definitions

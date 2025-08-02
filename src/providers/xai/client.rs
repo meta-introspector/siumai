@@ -5,7 +5,7 @@
 use async_trait::async_trait;
 use std::time::Duration;
 
-use crate::LlmClient;
+use crate::client::LlmClient;
 use crate::error::LlmError;
 use crate::stream::ChatStream;
 use crate::traits::{ChatCapability, ProviderCapabilities};
@@ -19,7 +19,7 @@ use super::config::XaiConfig;
 /// Main client that provides access to all `xAI` capabilities.
 /// This client implements the `LlmClient` trait for unified access
 /// and also provides `xAI`-specific functionality.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct XaiClient {
     /// Chat capability
     pub chat_capability: XaiChatCapability,
@@ -27,6 +27,10 @@ pub struct XaiClient {
     pub common_params: CommonParams,
     /// HTTP client
     pub http_client: reqwest::Client,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Tracing guard to keep tracing system active
+    _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
 impl XaiClient {
@@ -73,6 +77,8 @@ impl XaiClient {
             chat_capability,
             common_params: config.common_params,
             http_client,
+            tracing_config: None,
+            _tracing_guard: None,
         })
     }
 
@@ -278,5 +284,18 @@ impl XaiClient {
                 })
             }
         }
+    }
+
+    /// Set the tracing guard to keep tracing system active
+    pub(crate) fn set_tracing_guard(
+        &mut self,
+        guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    ) {
+        self._tracing_guard = guard;
+    }
+
+    /// Set the tracing configuration
+    pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
+        self.tracing_config = config;
     }
 }

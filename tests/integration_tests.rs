@@ -2,10 +2,10 @@
 //!
 //! These tests verify the core functionality of the unified LLM interface
 
-use siumai::*;
-// use siumai::types::*;
-// use siumai::error::*;
-// use siumai::traits::*;
+use siumai::prelude::*;
+use siumai::stream::{ProcessedEvent, StreamProcessor};
+use siumai::types::{ChatRequest, ContentPart, ProviderParams};
+use siumai::user_builder;
 use std::time::Duration;
 
 #[cfg(test)]

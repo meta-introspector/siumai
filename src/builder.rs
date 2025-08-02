@@ -989,8 +989,8 @@ impl AnthropicBuilder {
             .unwrap_or_else(|| "https://api.anthropic.com".to_string());
 
         // Initialize tracing if configured
-        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
-            Some(crate::tracing::init_tracing(tracing_config)?)
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
         } else {
             None
         };
@@ -1035,8 +1035,10 @@ impl AnthropicBuilder {
             self.http_config,
         );
 
-        // Update the client with the specific params
+        // Update the client with the specific params and tracing
         client = client.with_specific_params(specific_params);
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
 
         Ok(client)
     }
@@ -1285,8 +1287,8 @@ impl GeminiBuilder {
         })?;
 
         // Initialize tracing if configured
-        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
-            Some(crate::tracing::init_tracing(tracing_config)?)
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
         } else {
             None
         };
@@ -1359,7 +1361,11 @@ impl GeminiBuilder {
             config = config.with_timeout(timeout.as_secs());
         }
 
-        crate::providers::gemini::GeminiClient::new(config)
+        let mut client = crate::providers::gemini::GeminiClient::new(config)?;
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
+
+        Ok(client)
     }
 }
 
@@ -1608,8 +1614,8 @@ impl OllamaBuilder {
             .unwrap_or_else(|| "http://localhost:11434".to_string());
 
         // Initialize tracing if configured
-        let _tracing_guard = if let Some(tracing_config) = self.tracing_config {
-            Some(crate::tracing::init_tracing(tracing_config)?)
+        let _tracing_guard = if let Some(ref tracing_config) = self.tracing_config {
+            Some(crate::tracing::init_tracing(tracing_config.clone())?)
         } else {
             None
         };
@@ -1627,10 +1633,11 @@ impl OllamaBuilder {
         let config = config.build()?;
         let http_client = self.base.build_http_client()?;
 
-        Ok(crate::providers::ollama::OllamaClient::new(
-            config,
-            http_client,
-        ))
+        let mut client = crate::providers::ollama::OllamaClient::new(config, http_client);
+        client.set_tracing_guard(_tracing_guard);
+        client.set_tracing_config(self.tracing_config);
+
+        Ok(client)
     }
 }
 

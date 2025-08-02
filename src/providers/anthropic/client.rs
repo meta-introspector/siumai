@@ -29,6 +29,10 @@ pub struct AnthropicClient {
     anthropic_params: AnthropicParams,
     /// Anthropic-specific configuration
     specific_params: AnthropicSpecificParams,
+    /// Tracing configuration
+    tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Tracing guard to keep tracing system active
+    _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
 impl AnthropicClient {
@@ -59,6 +63,8 @@ impl AnthropicClient {
             common_params,
             anthropic_params,
             specific_params,
+            tracing_config: None,
+            _tracing_guard: None,
         }
     }
 
@@ -75,6 +81,19 @@ impl AnthropicClient {
     /// Get chat capability (for testing and debugging)
     pub const fn chat_capability(&self) -> &AnthropicChatCapability {
         &self.chat_capability
+    }
+
+    /// Set the tracing guard to keep tracing system active
+    pub(crate) fn set_tracing_guard(
+        &mut self,
+        guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    ) {
+        self._tracing_guard = guard;
+    }
+
+    /// Set the tracing configuration
+    pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
+        self.tracing_config = config;
     }
 
     /// Update Anthropic-specific parameters
