@@ -321,6 +321,7 @@ impl LlmError {
             Self::AuthenticationError(_) | Self::MissingApiKey(_) => ErrorCategory::Authentication,
             Self::RateLimitError(_) | Self::QuotaExceededError(_) => ErrorCategory::RateLimit,
             Self::ApiError { code, .. } => match *code {
+                429 => ErrorCategory::RateLimit,
                 400..=499 => ErrorCategory::Client,
                 500..=599 => ErrorCategory::Server,
                 _ => ErrorCategory::Unknown,

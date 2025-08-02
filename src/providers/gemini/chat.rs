@@ -402,6 +402,7 @@ impl ChatCapability for GeminiChatCapability {
 
         // Use the dedicated streaming capability
         self.streaming
+            .clone()
             .create_chat_stream(url, self.config.api_key.clone(), request)
             .await
     }

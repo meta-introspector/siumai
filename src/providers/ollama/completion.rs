@@ -140,6 +140,7 @@ impl OllamaCompletionCapability {
 
         // Use the dedicated streaming capability
         self.streaming
+            .clone()
             .create_completion_stream(url, headers, body)
             .await
     }

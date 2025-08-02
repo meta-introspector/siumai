@@ -1,43 +1,136 @@
-//! Ollama Streaming Implementation
+//! Ollama streaming implementation using eventsource-stream
 //!
-//! This module provides Ollama-specific streaming functionality for chat and completion.
-
-use futures::{Stream, StreamExt};
-use std::sync::{Arc, Mutex as StdMutex};
-use tokio::sync::Mutex;
+//! This module provides Ollama streaming functionality using the
+//! eventsource-stream infrastructure for JSON streaming.
 
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
-use crate::utils::Utf8StreamDecoder;
+use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
+use crate::utils::streaming::{JsonEventConverter, StreamProcessor};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
-use super::types::*;
-use super::utils::parse_streaming_line;
+/// Ollama stream response structure
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+struct OllamaStreamResponse {
+    model: Option<String>,
+    message: Option<OllamaMessage>,
+    done: Option<bool>,
+    total_duration: Option<u64>,
+    load_duration: Option<u64>,
+    prompt_eval_count: Option<u32>,
+    eval_count: Option<u32>,
+}
 
-/// Ollama streaming client for handling JSON Lines format
+/// Ollama message structure
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+struct OllamaMessage {
+    role: Option<String>,
+    content: Option<String>,
+}
+
+/// Ollama event converter
+#[derive(Clone)]
+pub struct OllamaEventConverter;
+
+impl Default for OllamaEventConverter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl OllamaEventConverter {
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Convert Ollama stream response to ChatStreamEvent
+    fn convert_ollama_response(&self, response: OllamaStreamResponse) -> Option<ChatStreamEvent> {
+        // Handle completion
+        if response.done == Some(true) {
+            // Handle usage information
+            if let (Some(prompt_tokens), Some(completion_tokens)) =
+                (response.prompt_eval_count, response.eval_count)
+            {
+                let usage_info = Usage {
+                    prompt_tokens,
+                    completion_tokens,
+                    total_tokens: prompt_tokens + completion_tokens,
+                    cached_tokens: None,
+                    reasoning_tokens: None,
+                };
+                return Some(ChatStreamEvent::UsageUpdate { usage: usage_info });
+            }
+
+            // Stream end
+            let response = ChatResponse {
+                id: None,
+                model: response.model,
+                content: MessageContent::Text("".to_string()),
+                usage: None,
+                finish_reason: Some(FinishReason::Stop),
+                tool_calls: None,
+                thinking: None,
+                metadata: HashMap::new(),
+            };
+            return Some(ChatStreamEvent::StreamEnd { response });
+        }
+
+        // Handle content delta
+        if let Some(message) = response.message {
+            if let Some(content) = message.content {
+                return Some(ChatStreamEvent::ContentDelta {
+                    delta: content,
+                    index: None,
+                });
+            }
+        }
+
+        None
+    }
+}
+
+impl JsonEventConverter for OllamaEventConverter {
+    fn convert_json<'a>(
+        &'a self,
+        json_data: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + 'a>>
+    {
+        Box::pin(async move {
+            match serde_json::from_str::<OllamaStreamResponse>(json_data) {
+                Ok(ollama_response) => self.convert_ollama_response(ollama_response).map(Ok),
+                Err(e) => Some(Err(LlmError::ParseError(format!(
+                    "Failed to parse Ollama JSON: {e}"
+                )))),
+            }
+        })
+    }
+}
+
+/// Ollama streaming client
 #[derive(Clone)]
 pub struct OllamaStreaming {
-    /// HTTP client
     http_client: reqwest::Client,
-    /// JSON line buffer for handling incomplete lines
-    json_buffer: Arc<Mutex<String>>,
 }
 
 impl OllamaStreaming {
     /// Create a new Ollama streaming client
     pub fn new(http_client: reqwest::Client) -> Self {
-        Self {
-            http_client,
-            json_buffer: Arc::new(Mutex::new(String::new())),
-        }
+        Self { http_client }
     }
 
-    /// Create a streaming chat completion request
+    /// Create a chat stream from URL, headers, and body
     pub async fn create_chat_stream(
-        &self,
+        self,
         url: String,
         headers: reqwest::header::HeaderMap,
-        body: OllamaChatRequest,
+        body: crate::providers::ollama::types::OllamaChatRequest,
     ) -> Result<ChatStream, LlmError> {
+        // Make the HTTP request
         let response = self
             .http_client
             .post(&url)
@@ -53,23 +146,26 @@ impl OllamaStreaming {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(LlmError::HttpError(format!(
-                "Ollama API error {status}: {error_text}"
-            )));
+            return Err(LlmError::ApiError {
+                code: status.as_u16(),
+                message: format!("Ollama API error {status}: {error_text}"),
+                details: None,
+            });
         }
 
-        // Create the stream
-        let stream = self.clone().create_event_stream(response).await?;
-        Ok(Box::pin(stream))
+        // Create the stream using our new infrastructure
+        let converter = OllamaEventConverter::new();
+        StreamProcessor::create_json_stream(response, converter).await
     }
 
-    /// Create a streaming completion request
+    /// Create a completion stream from URL, headers, and body
     pub async fn create_completion_stream(
-        &self,
+        self,
         url: String,
         headers: reqwest::header::HeaderMap,
-        body: OllamaGenerateRequest,
+        body: crate::providers::ollama::types::OllamaGenerateRequest,
     ) -> Result<ChatStream, LlmError> {
+        // Make the HTTP request
         let response = self
             .http_client
             .post(&url)
@@ -85,293 +181,56 @@ impl OllamaStreaming {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(LlmError::HttpError(format!(
-                "Ollama API error {status}: {error_text}"
-            )));
+            return Err(LlmError::ApiError {
+                code: status.as_u16(),
+                message: format!("Ollama API error {status}: {error_text}"),
+                details: None,
+            });
         }
 
-        // Create the stream
-        let stream = self
-            .clone()
-            .create_completion_event_stream(response)
-            .await?;
-        Ok(Box::pin(stream))
+        // Create the stream using our new infrastructure
+        let converter = OllamaEventConverter::new();
+        StreamProcessor::create_json_stream(response, converter).await
     }
+}
 
-    /// Create an event stream from the HTTP response for chat
-    async fn create_event_stream(
-        self,
-        response: reqwest::Response,
-    ) -> Result<impl Stream<Item = Result<ChatStreamEvent, LlmError>>, LlmError> {
-        let stream = response
-            .bytes_stream()
-            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        // Create a UTF-8 decoder for this stream
-        let decoder = Arc::new(StdMutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-        let streaming_for_flush = self.clone();
+    #[tokio::test]
+    async fn test_ollama_streaming_conversion() {
+        let converter = OllamaEventConverter::new();
 
-        // Create a stream that handles UTF-8 decoding
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let streaming = self.clone();
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
+        // Test content delta conversion
+        let json_data =
+            r#"{"model":"llama2","message":{"role":"assistant","content":"Hello"},"done":false}"#;
 
-                        if !decoded_chunk.is_empty() {
-                            streaming.parse_json_lines_buffered(&decoded_chunk).await
-                        } else {
-                            None
-                        }
-                    }
-                    Err(e) => Some(Err(e)),
-                }
-            }
-        });
+        let result = converter.convert_json(json_data).await;
+        assert!(result.is_some());
 
-        // Add a final flush operation
-        let flush_stream = futures::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                streaming_for_flush
-                    .parse_json_lines_buffered(&remaining)
-                    .await
-            } else {
-                // Also flush any remaining JSON buffer content
-                streaming_for_flush.flush_json_buffer().await
-            }
-        })
-        .filter_map(|result| async move { result });
-
-        Ok(decoded_stream.chain(flush_stream))
-    }
-
-    /// Create an event stream from the HTTP response for completion
-    async fn create_completion_event_stream(
-        self,
-        response: reqwest::Response,
-    ) -> Result<impl Stream<Item = Result<ChatStreamEvent, LlmError>>, LlmError> {
-        let stream = response
-            .bytes_stream()
-            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
-
-        // Create a UTF-8 decoder for this stream
-        let decoder = Arc::new(StdMutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-        let streaming_for_flush = self.clone();
-
-        // Create a stream that handles UTF-8 decoding
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let streaming = self.clone();
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
-
-                        if !decoded_chunk.is_empty() {
-                            streaming
-                                .parse_completion_lines_buffered(&decoded_chunk)
-                                .await
-                        } else {
-                            None
-                        }
-                    }
-                    Err(e) => Some(Err(e)),
-                }
-            }
-        });
-
-        // Add a final flush operation
-        let flush_stream = futures::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                streaming_for_flush
-                    .parse_completion_lines_buffered(&remaining)
-                    .await
-            } else {
-                // Also flush any remaining JSON buffer content
-                streaming_for_flush.flush_json_buffer().await
-            }
-        })
-        .filter_map(|result| async move { result });
-
-        Ok(decoded_stream.chain(flush_stream))
-    }
-
-    /// Parse JSON Lines with buffering for incomplete lines (chat)
-    async fn parse_json_lines_buffered(
-        &self,
-        chunk: &str,
-    ) -> Option<Result<ChatStreamEvent, LlmError>> {
-        // Add chunk to buffer
-        {
-            let mut buffer = self.json_buffer.lock().await;
-            buffer.push_str(chunk);
-        }
-
-        // Process complete lines from buffer
-        self.process_buffered_chat_lines().await
-    }
-
-    /// Parse JSON Lines with buffering for incomplete lines (completion)
-    async fn parse_completion_lines_buffered(
-        &self,
-        chunk: &str,
-    ) -> Option<Result<ChatStreamEvent, LlmError>> {
-        // Add chunk to buffer
-        {
-            let mut buffer = self.json_buffer.lock().await;
-            buffer.push_str(chunk);
-        }
-
-        // Process complete lines from buffer
-        self.process_buffered_completion_lines().await
-    }
-
-    /// Process complete lines from the JSON buffer (chat)
-    async fn process_buffered_chat_lines(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let mut buffer = self.json_buffer.lock().await;
-
-        // Find the last complete line (ending with \n)
-        if let Some(last_newline_pos) = buffer.rfind('\n') {
-            // Extract complete lines
-            let complete_lines = buffer[..=last_newline_pos].to_string();
-            // Keep incomplete line in buffer
-            let remaining = buffer[last_newline_pos + 1..].to_string();
-            *buffer = remaining;
-
-            // Release the lock before processing
-            drop(buffer);
-
-            // Process the complete lines
-            return Self::parse_chat_json_lines(&complete_lines);
-        }
-
-        // No complete lines yet
-        None
-    }
-
-    /// Process complete lines from the JSON buffer (completion)
-    async fn process_buffered_completion_lines(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let mut buffer = self.json_buffer.lock().await;
-
-        // Find the last complete line (ending with \n)
-        if let Some(last_newline_pos) = buffer.rfind('\n') {
-            // Extract complete lines
-            let complete_lines = buffer[..=last_newline_pos].to_string();
-            // Keep incomplete line in buffer
-            let remaining = buffer[last_newline_pos + 1..].to_string();
-            *buffer = remaining;
-
-            // Release the lock before processing
-            drop(buffer);
-
-            // Process the complete lines
-            return Self::parse_completion_json_lines(&complete_lines);
-        }
-
-        // No complete lines yet
-        None
-    }
-
-    /// Flush any remaining content in the JSON buffer
-    async fn flush_json_buffer(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let remaining = {
-            let mut buffer = self.json_buffer.lock().await;
-            let content = buffer.clone();
-            buffer.clear();
-            content
-        };
-
-        if !remaining.is_empty() {
-            // Try to parse remaining content as if it were complete
-            Self::parse_chat_json_lines(&remaining)
+        if let Some(Ok(ChatStreamEvent::ContentDelta { delta, .. })) = result {
+            assert_eq!(delta, "Hello");
         } else {
-            None
+            panic!("Expected ContentDelta event");
         }
     }
 
-    /// Parse JSON Lines for chat (original method for complete lines)
-    fn parse_chat_json_lines(chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
-        for line in chunk.lines() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
+    #[tokio::test]
+    async fn test_ollama_stream_end() {
+        let converter = OllamaEventConverter::new();
 
-            match parse_streaming_line(line) {
-                Ok(Some(json_value)) => {
-                    match serde_json::from_value::<OllamaChatResponse>(json_value) {
-                        Ok(ollama_response) => {
-                            let content_delta = ollama_response.message.content;
-                            return Some(Ok(ChatStreamEvent::ContentDelta {
-                                delta: content_delta,
-                                index: Some(0),
-                            }));
-                        }
-                        Err(e) => {
-                            return Some(Err(LlmError::ParseError(format!(
-                                "Failed to parse chat response: {e}"
-                            ))));
-                        }
-                    }
-                }
-                Ok(None) => continue,
-                Err(e) => return Some(Err(e)),
-            }
+        // Test stream end conversion
+        let json_data = r#"{"model":"llama2","done":true,"prompt_eval_count":10,"eval_count":20}"#;
+
+        let result = converter.convert_json(json_data).await;
+        assert!(result.is_some());
+
+        if let Some(Ok(ChatStreamEvent::UsageUpdate { usage })) = result {
+            assert_eq!(usage.prompt_tokens, 10);
+            assert_eq!(usage.completion_tokens, 20);
+        } else {
+            panic!("Expected UsageUpdate event");
         }
-        None
-    }
-
-    /// Parse JSON Lines for completion (original method for complete lines)
-    fn parse_completion_json_lines(chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
-        for line in chunk.lines() {
-            let line = line.trim();
-            if line.is_empty() {
-                continue;
-            }
-
-            match parse_streaming_line(line) {
-                Ok(Some(json_value)) => {
-                    match serde_json::from_value::<OllamaGenerateResponse>(json_value) {
-                        Ok(ollama_response) => {
-                            let content = ollama_response.response;
-                            return Some(Ok(ChatStreamEvent::ContentDelta {
-                                delta: content,
-                                index: Some(0),
-                            }));
-                        }
-                        Err(e) => {
-                            return Some(Err(LlmError::ParseError(format!(
-                                "Failed to parse completion response: {e}"
-                            ))));
-                        }
-                    }
-                }
-                Ok(None) => continue,
-                Err(e) => return Some(Err(e)),
-            }
-        }
-        None
     }
 }

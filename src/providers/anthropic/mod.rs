@@ -6,6 +6,7 @@ pub mod cache;
 pub mod chat;
 pub mod client;
 pub mod models;
+pub mod streaming;
 pub mod thinking;
 pub mod types;
 pub mod utils;

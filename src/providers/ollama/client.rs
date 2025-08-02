@@ -278,6 +278,7 @@ impl ChatCapability for OllamaClient {
 
         // Use the dedicated streaming capability
         self.streaming_capability
+            .clone()
             .create_chat_stream(url, headers, body)
             .await
     }

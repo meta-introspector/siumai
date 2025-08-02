@@ -1,242 +1,249 @@
-//! Gemini Streaming Implementation
+//! Gemini streaming implementation using eventsource-stream
 //!
-//! This module provides Gemini-specific streaming functionality for chat.
-
-use futures::{Stream, StreamExt};
-use std::sync::{Arc, Mutex as StdMutex};
-use tokio::sync::Mutex;
+//! This module provides Gemini streaming functionality using the
+//! eventsource-stream infrastructure for JSON streaming.
 
 use crate::error::LlmError;
+use crate::providers::gemini::types::GeminiConfig;
 use crate::stream::{ChatStream, ChatStreamEvent};
-use crate::utils::Utf8StreamDecoder;
+use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
+use crate::utils::streaming::{JsonEventConverter, StreamProcessor};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
-use super::types::{GenerateContentRequest, GenerateContentResponse, Part};
+/// Gemini stream response structure
+#[derive(Debug, Clone, Deserialize)]
+struct GeminiStreamResponse {
+    candidates: Option<Vec<GeminiCandidate>>,
+    #[serde(rename = "usageMetadata")]
+    usage_metadata: Option<GeminiUsageMetadata>,
+}
 
-/// Gemini streaming client for handling JSON format
+/// Gemini candidate structure
+#[derive(Debug, Clone, Deserialize)]
+struct GeminiCandidate {
+    content: Option<GeminiContent>,
+    #[serde(rename = "finishReason")]
+    finish_reason: Option<String>,
+}
+
+/// Gemini content structure
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+struct GeminiContent {
+    parts: Option<Vec<GeminiPart>>,
+    role: Option<String>,
+}
+
+/// Gemini part structure
+#[derive(Debug, Clone, Deserialize)]
+struct GeminiPart {
+    text: Option<String>,
+}
+
+/// Gemini usage metadata
+#[derive(Debug, Clone, Deserialize)]
+struct GeminiUsageMetadata {
+    #[serde(rename = "promptTokenCount")]
+    prompt_token_count: Option<u32>,
+    #[serde(rename = "candidatesTokenCount")]
+    candidates_token_count: Option<u32>,
+    #[serde(rename = "totalTokenCount")]
+    total_token_count: Option<u32>,
+}
+
+/// Gemini event converter
+#[derive(Clone)]
+pub struct GeminiEventConverter {
+    #[allow(dead_code)]
+    config: GeminiConfig,
+}
+
+impl GeminiEventConverter {
+    pub fn new(config: GeminiConfig) -> Self {
+        Self { config }
+    }
+
+    /// Convert Gemini stream response to ChatStreamEvent
+    fn convert_gemini_response(&self, response: GeminiStreamResponse) -> Option<ChatStreamEvent> {
+        // Handle usage metadata
+        if let Some(usage) = response.usage_metadata {
+            let usage_info = Usage {
+                prompt_tokens: usage.prompt_token_count.unwrap_or(0),
+                completion_tokens: usage.candidates_token_count.unwrap_or(0),
+                total_tokens: usage.total_token_count.unwrap_or(0),
+                cached_tokens: None,
+                reasoning_tokens: None,
+            };
+            return Some(ChatStreamEvent::UsageUpdate { usage: usage_info });
+        }
+
+        // Handle candidates
+        if let Some(candidates) = response.candidates {
+            for candidate in candidates {
+                // Handle finish reason
+                if let Some(finish_reason) = candidate.finish_reason {
+                    let reason = match finish_reason.as_str() {
+                        "STOP" => FinishReason::Stop,
+                        "MAX_TOKENS" => FinishReason::Length,
+                        "SAFETY" => FinishReason::ContentFilter,
+                        _ => FinishReason::Other(finish_reason),
+                    };
+
+                    let response = ChatResponse {
+                        id: None,
+                        model: None,
+                        content: MessageContent::Text("".to_string()),
+                        usage: None,
+                        finish_reason: Some(reason),
+                        tool_calls: None,
+                        thinking: None,
+                        metadata: HashMap::new(),
+                    };
+
+                    return Some(ChatStreamEvent::StreamEnd { response });
+                }
+
+                // Handle content
+                if let Some(content) = candidate.content {
+                    if let Some(parts) = content.parts {
+                        for part in parts {
+                            if let Some(text) = part.text {
+                                return Some(ChatStreamEvent::ContentDelta {
+                                    delta: text,
+                                    index: None,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+}
+
+impl JsonEventConverter for GeminiEventConverter {
+    fn convert_json<'a>(
+        &'a self,
+        json_data: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + 'a>>
+    {
+        Box::pin(async move {
+            match serde_json::from_str::<GeminiStreamResponse>(json_data) {
+                Ok(gemini_response) => self.convert_gemini_response(gemini_response).map(Ok),
+                Err(e) => Some(Err(LlmError::ParseError(format!(
+                    "Failed to parse Gemini JSON: {e}"
+                )))),
+            }
+        })
+    }
+}
+
+/// Gemini streaming client
 #[derive(Debug, Clone)]
 pub struct GeminiStreaming {
-    /// HTTP client
+    config: GeminiConfig,
     http_client: reqwest::Client,
-    /// JSON buffer for handling incomplete JSON objects
-    json_buffer: Arc<Mutex<String>>,
 }
 
 impl GeminiStreaming {
     /// Create a new Gemini streaming client
     pub fn new(http_client: reqwest::Client) -> Self {
         Self {
+            config: GeminiConfig::default(),
             http_client,
-            json_buffer: Arc::new(Mutex::new(String::new())),
         }
     }
 
-    /// Create a streaming chat completion request
+    /// Create a chat stream from URL, API key, and request
     pub async fn create_chat_stream(
-        &self,
+        self,
         url: String,
         api_key: String,
-        body: GenerateContentRequest,
+        request: crate::providers::gemini::types::GenerateContentRequest,
     ) -> Result<ChatStream, LlmError> {
+        // Make the HTTP request
         let response = self
             .http_client
             .post(&url)
             .header("Content-Type", "application/json")
             .header("x-goog-api-key", &api_key)
-            .json(&body)
+            .json(&request)
             .send()
             .await
-            .map_err(|e| LlmError::HttpError(e.to_string()))?;
+            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
 
         if !response.status().is_success() {
-            let status_code = response.status().as_u16();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(LlmError::api_error(
-                status_code,
-                format!("Gemini streaming API error: {status_code} - {error_text}"),
-            ));
+            let status = response.status();
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(LlmError::ApiError {
+                code: status.as_u16(),
+                message: format!("Gemini API error {status}: {error_text}"),
+                details: None,
+            });
         }
 
-        // Create the stream
-        let stream = self.clone().create_event_stream(response).await?;
-        Ok(Box::pin(stream))
+        // Create the stream using our new infrastructure
+        let mut config = self.config;
+        config.api_key = api_key;
+        let converter = GeminiEventConverter::new(config);
+        StreamProcessor::create_json_stream(response, converter).await
     }
+}
 
-    /// Create an event stream from the HTTP response
-    async fn create_event_stream(
-        self,
-        response: reqwest::Response,
-    ) -> Result<impl Stream<Item = Result<ChatStreamEvent, LlmError>>, LlmError> {
-        let stream = response
-            .bytes_stream()
-            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(e.to_string())));
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::providers::gemini::types::GeminiConfig;
 
-        // Create a UTF-8 decoder for this stream
-        let decoder = Arc::new(StdMutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-        let streaming_for_flush = self.clone();
-
-        // Create a stream that handles UTF-8 decoding
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let streaming = self.clone();
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
-
-                        if !decoded_chunk.is_empty() {
-                            streaming.parse_json_buffered(&decoded_chunk).await
-                        } else {
-                            None
-                        }
-                    }
-                    Err(e) => Some(Err(e)),
-                }
-            }
-        });
-
-        // Add a final flush operation
-        let flush_stream = futures::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                streaming_for_flush.parse_json_buffered(&remaining).await
-            } else {
-                // Also flush any remaining JSON buffer content
-                streaming_for_flush.flush_json_buffer().await
-            }
-        })
-        .filter_map(|result| async move { result });
-
-        Ok(decoded_stream.chain(flush_stream))
-    }
-
-    /// Parse JSON with buffering for incomplete JSON objects
-    async fn parse_json_buffered(&self, chunk: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
-        // Add chunk to buffer
-        {
-            let mut buffer = self.json_buffer.lock().await;
-            buffer.push_str(chunk);
+    fn create_test_config() -> GeminiConfig {
+        GeminiConfig {
+            api_key: "test-key".to_string(),
+            base_url: "https://generativelanguage.googleapis.com/v1beta".to_string(),
+            ..Default::default()
         }
-
-        // Try to extract complete JSON objects from buffer
-        self.process_buffered_json().await
     }
 
-    /// Process complete JSON objects from the buffer
-    async fn process_buffered_json(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let mut buffer = self.json_buffer.lock().await;
+    #[tokio::test]
+    async fn test_gemini_streaming_conversion() {
+        let config = create_test_config();
+        let converter = GeminiEventConverter::new(config);
 
-        // Gemini sends JSON objects separated by newlines, but they can be multi-line
-        // We need to find complete JSON objects by counting braces
-        let mut brace_count = 0;
-        let mut start_pos = 0;
-        let mut in_string = false;
-        let mut escape_next = false;
+        // Test content delta conversion
+        let json_data = r#"{"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}"#;
 
-        for (i, ch) in buffer.char_indices() {
-            if escape_next {
-                escape_next = false;
-                continue;
-            }
+        let result = converter.convert_json(json_data).await;
+        assert!(result.is_some());
 
-            match ch {
-                '"' if !escape_next => in_string = !in_string,
-                '\\' if in_string => escape_next = true,
-                '{' if !in_string => {
-                    if brace_count == 0 {
-                        start_pos = i;
-                    }
-                    brace_count += 1;
-                }
-                '}' if !in_string => {
-                    brace_count -= 1;
-                    if brace_count == 0 {
-                        // Found a complete JSON object
-                        let json_str = buffer[start_pos..=i].to_string();
-                        let remaining = buffer[i + 1..].to_string();
-                        *buffer = remaining;
-
-                        // Release the lock before processing
-                        drop(buffer);
-
-                        // Process the complete JSON object
-                        return Self::parse_json_object(&json_str);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // No complete JSON objects yet
-        None
-    }
-
-    /// Flush any remaining content in the JSON buffer
-    async fn flush_json_buffer(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let remaining = {
-            let mut buffer = self.json_buffer.lock().await;
-            let content = buffer.clone();
-            buffer.clear();
-            content
-        };
-
-        if !remaining.trim().is_empty() {
-            // Try to parse remaining content as if it were complete
-            Self::parse_json_object(&remaining)
+        if let Some(Ok(ChatStreamEvent::ContentDelta { delta, .. })) = result {
+            assert_eq!(delta, "Hello");
         } else {
-            None
+            panic!("Expected ContentDelta event");
         }
     }
 
-    /// Parse a complete JSON object
-    fn parse_json_object(json_str: &str) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let json_str = json_str.trim();
-        if json_str.is_empty() {
-            return None;
-        }
+    #[tokio::test]
+    async fn test_gemini_finish_reason() {
+        let config = create_test_config();
+        let converter = GeminiEventConverter::new(config);
 
-        match serde_json::from_str::<GenerateContentResponse>(json_str) {
-            Ok(response) => {
-                if let Some(candidate) = response.candidates.first() {
-                    if let Some(content) = &candidate.content {
-                        for part in &content.parts {
-                            if let Part::Text { text, thought } = part {
-                                // Handle both regular text and thought summaries
-                                let event = if thought.unwrap_or(false) {
-                                    ChatStreamEvent::ThinkingDelta {
-                                        delta: text.clone(),
-                                    }
-                                } else {
-                                    ChatStreamEvent::ContentDelta {
-                                        delta: text.clone(),
-                                        index: None,
-                                    }
-                                };
-                                return Some(Ok(event));
-                            }
-                        }
-                    }
-                }
-                // Return empty delta if no content found
-                Some(Ok(ChatStreamEvent::ContentDelta {
-                    delta: String::new(),
-                    index: None,
-                }))
-            }
-            Err(e) => {
-                // Return parse error
-                Some(Err(LlmError::ParseError(format!(
-                    "Failed to parse Gemini response: {e}"
-                ))))
-            }
+        // Test finish reason conversion
+        let json_data = r#"{"candidates":[{"finishReason":"STOP"}]}"#;
+
+        let result = converter.convert_json(json_data).await;
+        assert!(result.is_some());
+
+        if let Some(Ok(ChatStreamEvent::StreamEnd { response })) = result {
+            assert_eq!(response.finish_reason, Some(FinishReason::Stop));
+        } else {
+            panic!("Expected StreamEnd event");
         }
     }
 }

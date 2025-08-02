@@ -16,6 +16,7 @@ use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 /// # Example
 /// ```rust
 /// use siumai::providers::openai::OpenAiConfig;
+/// use secrecy::SecretString;
 ///
 /// let config = OpenAiConfig {
 ///     api_key: SecretString::from("your-api-key"),

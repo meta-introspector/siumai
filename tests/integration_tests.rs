@@ -297,7 +297,7 @@ mod tests {
 
     #[test]
     fn test_error_classification() {
-        use siumai::error_handling::{ErrorCategory, ErrorClassifier, ErrorContext};
+        use siumai::error::ErrorCategory;
 
         let error = LlmError::ApiError {
             code: 429,
@@ -305,11 +305,14 @@ mod tests {
             details: None,
         };
 
-        let context = ErrorContext::default();
-        let classified = ErrorClassifier::classify(&error, context);
+        // Test the category method that exists on LlmError
+        assert_eq!(error.category(), ErrorCategory::RateLimit);
 
-        assert_eq!(classified.category, ErrorCategory::RateLimit);
-        assert!(!classified.recovery_suggestions.is_empty());
+        // Test retryability
+        assert!(error.is_retryable());
+
+        // Test max retry attempts
+        assert_eq!(error.max_retry_attempts(), 3);
     }
 }
 
