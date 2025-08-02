@@ -6,11 +6,11 @@ This directory contains examples demonstrating how to integrate Model Context Pr
 
 ### HTTP Transport
 - `http_mcp_server.rs` - HTTP MCP server implementation providing simple tools
-- `http_mcp_client.rs` - HTTP MCP client implementation integrated with siumai LLM
+- `http_mcp_client.rs` - HTTP MCP client implementation with **separated streaming and non-streaming examples**
 
 ### Stdio Transport
 - `stdio_mcp_server.rs` - Stdio MCP server for process-based communication
-- `stdio_mcp_client.rs` - Stdio MCP client with child process management
+- `stdio_mcp_client.rs` - Stdio MCP client with **separated streaming and non-streaming examples**
 
 ## Features
 
@@ -19,6 +19,9 @@ This directory contains examples demonstrating how to integrate Model Context Pr
 - **Tool Conversion**: Convert MCP tool format to siumai Tool format
 - **LLM Integration**: Integration with siumai LLM client supporting tool calls
 - **Real-time Communication**: Communication with MCP server via HTTP JSON-RPC
+- **Separated Usage Patterns**: Clear distinction between streaming and non-streaming approaches
+  - **Non-streaming Example**: Traditional request-response pattern using `chat_with_tools()`
+  - **Streaming Example**: Real-time streaming pattern using `chat_stream()` with delta processing
 
 ## Running the Examples
 
@@ -98,6 +101,63 @@ npx @modelcontextprotocol/inspector cargo run --example stdio_mcp_server
 2. **HTTP Communication**: Communication via JSON-RPC over HTTP
 3. **Tool Conversion**: Direct conversion from MCP tool format to siumai Tool format
 4. **LLM Integration**: LLM interaction using siumai's ChatCapability trait
+5. **Separated Code Structure**: Clear separation of streaming and non-streaming patterns
+
+### Code Organization
+
+Both HTTP and Stdio MCP client examples are organized with separate methods for different usage patterns:
+
+#### HTTP MCP Client Structure
+
+```rust
+impl HttpMcpLlmDemo {
+    // Main demo orchestrator
+    pub async fn run_demo(&self) -> Result<(), LlmError>
+
+    // Non-streaming approach: chat_with_tools() → tool execution → final response
+    async fn run_non_streaming_example(
+        &self,
+        llm_client: &dyn ChatCapability,
+        tools: &[Tool],
+    ) -> Result<(), LlmError>
+
+    // Streaming approach: chat_stream() → delta processing → tool execution → final response
+    async fn run_streaming_example(
+        &self,
+        llm_client: &dyn ChatCapability,
+        tools: &[Tool],
+    ) -> Result<(), LlmError>
+}
+```
+
+#### Stdio MCP Client Structure
+
+```rust
+impl StdioMcpLlmDemo {
+    // Main demo orchestrator
+    pub async fn run_demo(&mut self) -> Result<(), LlmError>
+
+    // Non-streaming approach: chat_with_tools() → tool execution → final response
+    async fn run_non_streaming_example(
+        &mut self,
+        tools: &[Tool],
+    ) -> Result<(), LlmError>
+
+    // Streaming approach: chat_stream() → delta processing → tool execution → final response
+    async fn run_streaming_example(
+        &mut self,
+        tools: &[Tool],
+    ) -> Result<(), LlmError>
+}
+```
+
+### Benefits of Separation
+
+- **Clear Learning Path**: Developers can understand each pattern independently
+- **Focused Examples**: Each method demonstrates one specific approach without confusion
+- **Easy Comparison**: Side-by-side comparison of streaming vs non-streaming workflows
+- **Maintainable Code**: Easier to modify and extend individual patterns
+- **Better Documentation**: Each method can have focused, pattern-specific documentation
 
 ## Dependencies
 

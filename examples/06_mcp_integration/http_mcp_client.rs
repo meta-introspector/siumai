@@ -18,7 +18,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use siumai::prelude::*;
-use siumai::stream::{ChatStreamEvent, StreamProcessor};
 
 /// JSON-RPC request structure for MCP communication
 #[derive(Debug, Serialize)]
@@ -290,221 +289,15 @@ impl HttpMcpLlmDemo {
 
         // Step 3: Show integration with LLM (if available)
         if let Some(ref llm_client) = self.llm_client {
-            println!("🤖 Step 3: Integrating with real LLM...");
+            println!("🤖 Step 3: LLM Integration Examples...");
 
-            // Create messages for the LLM
-            let user_message =
-                "Please add the numbers 15 and 27, then tell me the current time in UTC.";
-            println!("👤 User: {user_message}");
+            // Run non-streaming example
+            self.run_non_streaming_example(llm_client.as_ref(), &tools)
+                .await?;
 
-            let messages = vec![ChatMessage::user(user_message).build()];
-
-            // Test complete chat_with_tools flow with MCP execution
-            println!("\n📋 Testing chat_with_tools with MCP execution:");
-            match llm_client
-                .chat_with_tools(messages.clone(), Some(tools.clone()))
-                .await
-            {
-                Ok(response) => {
-                    if let Some(tool_calls) = response.get_tool_calls() {
-                        println!("🔧 LLM requested {} tool calls:", tool_calls.len());
-
-                        // Execute each tool call via MCP
-                        let mut tool_results = Vec::new();
-                        for tool_call in tool_calls {
-                            if let Some(function) = &tool_call.function {
-                                println!(
-                                    "   📞 Calling: {} with args: {}",
-                                    function.name, function.arguments
-                                );
-
-                                // Execute the tool via MCP
-                                match self.mcp_client.call_tool(tool_call).await {
-                                    Ok(result) => {
-                                        println!("   ✅ Result: {result}");
-                                        tool_results.push((tool_call.clone(), result));
-                                    }
-                                    Err(e) => {
-                                        println!("   ❌ Error: {e}");
-                                        tool_results
-                                            .push((tool_call.clone(), format!("Error: {e}")));
-                                    }
-                                }
-                            }
-                        }
-
-                        // Create follow-up messages with tool results
-                        let mut follow_up_messages = messages.clone();
-
-                        // Add assistant message with tool calls
-                        let tool_calls = response.get_tool_calls().unwrap_or(&vec![]).clone();
-                        follow_up_messages.push(
-                            ChatMessage::assistant("")
-                                .with_tool_calls(tool_calls)
-                                .build(),
-                        );
-
-                        // Add tool result messages
-                        for (tool_call, result) in tool_results {
-                            follow_up_messages
-                                .push(ChatMessage::tool(&result, &tool_call.id).build());
-                        }
-
-                        // Get final response from LLM
-                        println!("\n🤖 Getting final response from LLM...");
-                        match llm_client.chat(follow_up_messages).await {
-                            Ok(final_response) => {
-                                if let MessageContent::Text(content) = &final_response.content {
-                                    println!("🎯 Final LLM response: {content}");
-                                }
-                            }
-                            Err(e) => {
-                                println!("⚠️ Error getting final response: {e}");
-                            }
-                        }
-                    } else {
-                        println!("📝 LLM response (no tool calls): {:?}", response.content);
-                    }
-                }
-                Err(e) => {
-                    println!("⚠️ Error with chat_with_tools: {e}");
-                }
-            }
-
-            // Test streaming version with complete MCP execution
-            println!("\n🌊 Testing chat_stream with MCP execution:");
-            match llm_client
-                .chat_stream(messages.clone(), Some(tools.clone()))
-                .await
-            {
-                Ok(mut stream) => {
-                    use futures::StreamExt;
-
-                    let mut processor = StreamProcessor::new();
-                    let mut content_buffer = String::new();
-
-                    while let Some(event) = stream.next().await {
-                        match event {
-                            Ok(ChatStreamEvent::ToolCallDelta {
-                                id,
-                                function_name,
-                                arguments_delta,
-                                index,
-                            }) => {
-                                println!(
-                                    "🔧 Tool call delta - ID: {id}, Name: {function_name:?}, Args: {arguments_delta:?}, Index: {index:?}"
-                                );
-                                processor.process_event(ChatStreamEvent::ToolCallDelta {
-                                    id,
-                                    function_name,
-                                    arguments_delta,
-                                    index,
-                                });
-                            }
-                            Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
-                                print!("{delta}");
-                                content_buffer.push_str(&delta);
-                                processor.process_event(ChatStreamEvent::ContentDelta {
-                                    delta,
-                                    index: None,
-                                });
-                            }
-                            Ok(ChatStreamEvent::StreamEnd { .. }) => {
-                                println!("\n🏁 Stream ended");
-                                let final_response = processor.build_final_response();
-
-                                // Execute tool calls if any
-                                if let Some(tool_calls) = final_response.get_tool_calls() {
-                                    println!(
-                                        "📋 Executing {} tool calls from stream:",
-                                        tool_calls.len()
-                                    );
-
-                                    let mut stream_tool_results = Vec::new();
-                                    for tool_call in tool_calls {
-                                        if let Some(function) = &tool_call.function {
-                                            println!(
-                                                "   📞 Executing: {} with args: {}",
-                                                function.name, function.arguments
-                                            );
-
-                                            // Execute the tool via MCP
-                                            match self.mcp_client.call_tool(tool_call).await {
-                                                Ok(result) => {
-                                                    println!("   ✅ Result: {result}");
-                                                    stream_tool_results
-                                                        .push((tool_call.clone(), result));
-                                                }
-                                                Err(e) => {
-                                                    println!("   ❌ Error: {e}");
-                                                    stream_tool_results.push((
-                                                        tool_call.clone(),
-                                                        format!("Error: {e}"),
-                                                    ));
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Create follow-up messages with tool results for streaming
-                                    let mut stream_follow_up_messages = messages.clone();
-
-                                    // Add assistant message with tool calls
-                                    let stream_tool_calls =
-                                        final_response.get_tool_calls().unwrap_or(&vec![]).clone();
-                                    stream_follow_up_messages.push(
-                                        ChatMessage::assistant("")
-                                            .with_tool_calls(stream_tool_calls)
-                                            .build(),
-                                    );
-
-                                    // Add tool result messages
-                                    for (tool_call, result) in stream_tool_results {
-                                        stream_follow_up_messages.push(
-                                            ChatMessage::tool(&result, &tool_call.id).build(),
-                                        );
-                                    }
-
-                                    // Get final response from LLM for streaming
-                                    println!("\n🤖 Getting final response from LLM (streaming)...");
-                                    match llm_client.chat(stream_follow_up_messages).await {
-                                        Ok(final_response) => {
-                                            if let MessageContent::Text(content) =
-                                                &final_response.content
-                                            {
-                                                println!(
-                                                    "🎯 Final LLM response (streaming): {content}"
-                                                );
-                                            }
-                                        }
-                                        Err(e) => {
-                                            println!(
-                                                "⚠️ Error getting final response (streaming): {e}"
-                                            );
-                                        }
-                                    }
-                                } else {
-                                    println!("📝 No tool calls in streaming response");
-                                    if !content_buffer.is_empty() {
-                                        println!("💬 Direct response: {content_buffer}");
-                                    }
-                                }
-                                break;
-                            }
-                            Ok(other) => {
-                                println!("📡 Other event: {other:?}");
-                            }
-                            Err(e) => {
-                                println!("❌ Stream error: {e}");
-                                break;
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("⚠️ Error with chat_stream: {e}");
-                }
-            }
+            // Run streaming example
+            self.run_streaming_example(llm_client.as_ref(), &tools)
+                .await?;
         } else {
             println!(
                 "💡 Step 3: No LLM client available (set OPENAI_API_KEY for full integration)"
@@ -537,6 +330,251 @@ impl HttpMcpLlmDemo {
         println!("   5. Streaming: LLM Stream → Tool Calls → MCP Execution → Final LLM Response");
         println!("   6. Complete integration of siumai streaming with MCP tool execution");
 
+        Ok(())
+    }
+
+    /// Demonstrate non-streaming LLM integration with MCP tools
+    async fn run_non_streaming_example(
+        &self,
+        llm_client: &dyn ChatCapability,
+        tools: &[Tool],
+    ) -> Result<(), LlmError> {
+        println!("📋 Non-Streaming LLM + MCP Integration");
+        println!("=====================================");
+
+        // Create messages for the LLM
+        let user_message =
+            "Please add the numbers 15 and 27, then tell me the current time in UTC.";
+        println!("👤 User: {user_message}");
+
+        let messages = vec![ChatMessage::user(user_message).build()];
+
+        // Test complete chat_with_tools flow with MCP execution
+        println!("\n🔧 Testing chat_with_tools with MCP execution:");
+        match llm_client
+            .chat_with_tools(messages.clone(), Some(tools.to_vec()))
+            .await
+        {
+            Ok(response) => {
+                if let Some(tool_calls) = response.get_tool_calls() {
+                    println!("📞 LLM requested {} tool calls:", tool_calls.len());
+
+                    // Execute each tool call via MCP
+                    let mut tool_results = Vec::new();
+                    for tool_call in tool_calls {
+                        if let Some(function) = &tool_call.function {
+                            println!(
+                                "   🔧 Calling: {} with args: {}",
+                                function.name, function.arguments
+                            );
+
+                            // Execute the tool via MCP
+                            match self.mcp_client.call_tool(tool_call).await {
+                                Ok(result) => {
+                                    println!("   ✅ Result: {result}");
+                                    tool_results.push((tool_call.clone(), result));
+                                }
+                                Err(e) => {
+                                    println!("   ❌ Error: {e}");
+                                    tool_results.push((tool_call.clone(), format!("Error: {e}")));
+                                }
+                            }
+                        }
+                    }
+
+                    // Create follow-up messages with tool results
+                    let mut follow_up_messages = messages.clone();
+
+                    // Add assistant message with tool calls
+                    let tool_calls = response.get_tool_calls().unwrap_or(&vec![]).clone();
+                    follow_up_messages.push(
+                        ChatMessage::assistant("")
+                            .with_tool_calls(tool_calls)
+                            .build(),
+                    );
+
+                    // Add tool result messages
+                    for (tool_call, result) in tool_results {
+                        follow_up_messages.push(ChatMessage::tool(&result, &tool_call.id).build());
+                    }
+
+                    // Get final response from LLM
+                    println!("\n🤖 Getting final response from LLM...");
+                    match llm_client.chat(follow_up_messages).await {
+                        Ok(final_response) => {
+                            if let MessageContent::Text(content) = &final_response.content {
+                                println!("🎯 Final LLM response: {content}");
+                            }
+                        }
+                        Err(e) => {
+                            println!("⚠️ Error getting final response: {e}");
+                        }
+                    }
+                } else {
+                    println!("📝 LLM response (no tool calls): {:?}", response.content);
+                }
+            }
+            Err(e) => {
+                println!("⚠️ Error with chat_with_tools: {e}");
+            }
+        }
+
+        println!("✅ Non-streaming example completed!\n");
+        Ok(())
+    }
+
+    /// Demonstrate streaming LLM integration with MCP tools
+    async fn run_streaming_example(
+        &self,
+        llm_client: &dyn ChatCapability,
+        tools: &[Tool],
+    ) -> Result<(), LlmError> {
+        use futures::StreamExt;
+        use siumai::stream::{ChatStreamEvent, StreamProcessor};
+
+        println!("🌊 Streaming LLM + MCP Integration");
+        println!("==================================");
+
+        // Create messages for the LLM
+        let user_message =
+            "Please add the numbers 15 and 27, then tell me the current time in UTC.";
+        println!("👤 User: {user_message}");
+
+        let messages = vec![ChatMessage::user(user_message).build()];
+
+        // Test streaming version with complete MCP execution
+        println!("\n🌊 Testing chat_stream with MCP execution:");
+        match llm_client
+            .chat_stream(messages.clone(), Some(tools.to_vec()))
+            .await
+        {
+            Ok(mut stream) => {
+                let mut processor = StreamProcessor::new();
+                let mut content_buffer = String::new();
+
+                while let Some(event) = stream.next().await {
+                    match event {
+                        Ok(ChatStreamEvent::ToolCallDelta {
+                            id,
+                            function_name,
+                            arguments_delta,
+                            index,
+                        }) => {
+                            println!(
+                                "🔧 Tool call delta - ID: {id}, Name: {function_name:?}, Args: {arguments_delta:?}, Index: {index:?}"
+                            );
+                            processor.process_event(ChatStreamEvent::ToolCallDelta {
+                                id,
+                                function_name,
+                                arguments_delta,
+                                index,
+                            });
+                        }
+                        Ok(ChatStreamEvent::ContentDelta { delta, .. }) => {
+                            print!("{delta}");
+                            content_buffer.push_str(&delta);
+                            processor.process_event(ChatStreamEvent::ContentDelta {
+                                delta,
+                                index: None,
+                            });
+                        }
+                        Ok(ChatStreamEvent::StreamEnd { .. }) => {
+                            println!("\n🏁 Stream ended");
+                            let final_response = processor.build_final_response();
+
+                            // Execute tool calls if any
+                            if let Some(tool_calls) = final_response.get_tool_calls() {
+                                println!(
+                                    "📋 Executing {} tool calls from stream:",
+                                    tool_calls.len()
+                                );
+
+                                let mut stream_tool_results = Vec::new();
+                                for tool_call in tool_calls {
+                                    if let Some(function) = &tool_call.function {
+                                        println!(
+                                            "   📞 Executing: {} with args: {}",
+                                            function.name, function.arguments
+                                        );
+
+                                        // Execute the tool via MCP
+                                        match self.mcp_client.call_tool(tool_call).await {
+                                            Ok(result) => {
+                                                println!("   ✅ Result: {result}");
+                                                stream_tool_results
+                                                    .push((tool_call.clone(), result));
+                                            }
+                                            Err(e) => {
+                                                println!("   ❌ Error: {e}");
+                                                stream_tool_results.push((
+                                                    tool_call.clone(),
+                                                    format!("Error: {e}"),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Create follow-up messages with tool results for streaming
+                                let mut stream_follow_up_messages = messages.clone();
+
+                                // Add assistant message with tool calls
+                                let stream_tool_calls =
+                                    final_response.get_tool_calls().unwrap_or(&vec![]).clone();
+                                stream_follow_up_messages.push(
+                                    ChatMessage::assistant("")
+                                        .with_tool_calls(stream_tool_calls)
+                                        .build(),
+                                );
+
+                                // Add tool result messages
+                                for (tool_call, result) in stream_tool_results {
+                                    stream_follow_up_messages
+                                        .push(ChatMessage::tool(&result, &tool_call.id).build());
+                                }
+
+                                // Get final response from LLM for streaming
+                                println!("\n🤖 Getting final response from LLM (streaming)...");
+                                match llm_client.chat(stream_follow_up_messages).await {
+                                    Ok(final_response) => {
+                                        if let MessageContent::Text(content) =
+                                            &final_response.content
+                                        {
+                                            println!(
+                                                "🎯 Final LLM response (streaming): {content}"
+                                            );
+                                        }
+                                    }
+                                    Err(e) => {
+                                        println!(
+                                            "⚠️ Error getting final response (streaming): {e}"
+                                        );
+                                    }
+                                }
+                            } else {
+                                println!("📝 No tool calls in streaming response");
+                                if !content_buffer.is_empty() {
+                                    println!("💬 Direct response: {content_buffer}");
+                                }
+                            }
+                            break;
+                        }
+                        Ok(other) => {
+                            println!("📡 Other event: {other:?}");
+                        }
+                        Err(e) => {
+                            println!("❌ Stream error: {e}");
+                            break;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                println!("⚠️ Error with chat_stream: {e}");
+            }
+        }
+
+        println!("✅ Streaming example completed!\n");
         Ok(())
     }
 }
