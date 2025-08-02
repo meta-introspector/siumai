@@ -5,6 +5,7 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::time::Instant;
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::error::LlmError;
 use crate::params::{OpenAiParameterMapper, OpenAiParams, ParameterMapper};
@@ -99,7 +100,7 @@ use super::utils::*;
 
 /// `OpenAI` Chat Capability Implementation
 pub struct OpenAiChatCapability {
-    pub api_key: String,
+    pub api_key: SecretString,
     pub base_url: String,
     pub http_client: reqwest::Client,
     pub organization: Option<String>,
@@ -110,8 +111,8 @@ pub struct OpenAiChatCapability {
 
 impl OpenAiChatCapability {
     /// Create a new `OpenAI` chat capability instance
-    pub const fn new(
-        api_key: String,
+    pub fn new(
+        api_key: SecretString,
         base_url: String,
         http_client: reqwest::Client,
         organization: Option<String>,
@@ -293,7 +294,7 @@ impl ChatCapability for OpenAiChatCapability {
         };
 
         let headers = build_headers(
-            &self.api_key,
+            self.api_key.expose_secret(),
             self.organization.as_deref(),
             self.project.as_deref(),
             &self.http_config.headers,
@@ -409,7 +410,7 @@ impl OpenAiChatCapability {
         info!("Starting OpenAI chat request");
 
         let headers = build_headers(
-            &self.api_key,
+            self.api_key.expose_secret(),
             self.organization.as_deref(),
             self.project.as_deref(),
             &self.http_config.headers,

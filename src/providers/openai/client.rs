@@ -108,7 +108,7 @@ impl OpenAiClient {
         project: Option<String>,
     ) -> Self {
         let config = super::OpenAiConfig {
-            api_key,
+            api_key: secrecy::SecretString::from(api_key),
             base_url,
             organization,
             project,

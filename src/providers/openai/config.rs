@@ -3,6 +3,7 @@
 //! This module provides configuration structures for the `OpenAI` provider.
 
 use std::collections::HashMap;
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::params::OpenAiParams;
 use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
@@ -17,7 +18,7 @@ use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 /// use siumai::providers::openai::OpenAiConfig;
 ///
 /// let config = OpenAiConfig {
-///     api_key: "your-api-key".to_string(),
+///     api_key: SecretString::from("your-api-key"),
 ///     base_url: "https://api.openai.com/v1".to_string(),
 ///     organization: Some("org-123".to_string()),
 ///     project: None,
@@ -32,8 +33,8 @@ use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
 /// ```
 #[derive(Debug, Clone)]
 pub struct OpenAiConfig {
-    /// `OpenAI` API key
-    pub api_key: String,
+    /// `OpenAI` API key (securely stored)
+    pub api_key: SecretString,
 
     /// Base URL for the `OpenAI` API
     pub base_url: String,
@@ -76,7 +77,7 @@ impl OpenAiConfig {
     /// A new configuration with default settings
     pub fn new<S: Into<String>>(api_key: S) -> Self {
         Self {
-            api_key: api_key.into(),
+            api_key: SecretString::from(api_key.into()),
             base_url: "https://api.openai.com/v1".to_string(),
             organization: None,
             project: None,
@@ -191,7 +192,7 @@ impl OpenAiConfig {
     /// # Returns
     /// The authorization header value for API requests
     pub fn auth_header(&self) -> String {
-        format!("Bearer {}", self.api_key)
+        format!("Bearer {}", self.api_key.expose_secret())
     }
 
     /// Get the organization header if set.
@@ -241,7 +242,7 @@ impl OpenAiConfig {
     /// # Returns
     /// Result indicating whether the configuration is valid
     pub fn validate(&self) -> Result<(), String> {
-        if self.api_key.is_empty() {
+        if self.api_key.expose_secret().is_empty() {
             return Err("API key cannot be empty".to_string());
         }
 
@@ -286,7 +287,7 @@ impl OpenAiConfig {
 impl Default for OpenAiConfig {
     fn default() -> Self {
         Self {
-            api_key: String::new(),
+            api_key: SecretString::from(String::new()),
             base_url: "https://api.openai.com/v1".to_string(),
             organization: None,
             project: None,
@@ -308,7 +309,7 @@ mod tests {
     #[test]
     fn test_config_creation() {
         let config = OpenAiConfig::new("test-key");
-        assert_eq!(config.api_key, "test-key");
+        assert_eq!(config.api_key.expose_secret(), "test-key");
         assert_eq!(config.base_url, "https://api.openai.com/v1");
     }
 
@@ -317,7 +318,7 @@ mod tests {
         let mut config = OpenAiConfig::new("test-key");
         assert!(config.validate().is_ok());
 
-        config.api_key = String::new();
+        config.api_key = SecretString::from(String::new());
         assert!(config.validate().is_err());
     }
 

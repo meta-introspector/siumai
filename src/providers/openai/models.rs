@@ -7,6 +7,7 @@
 
 use async_trait::async_trait;
 use reqwest::header::HeaderMap;
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::error::LlmError;
 use crate::traits::ModelListingCapability;
@@ -17,8 +18,8 @@ use super::utils::build_headers;
 
 /// `OpenAI` Models API client
 pub struct OpenAiModels {
-    /// API key for authentication
-    pub api_key: String,
+    /// API key for authentication (securely stored)
+    pub api_key: SecretString,
     /// Base URL for `OpenAI` API
     pub base_url: String,
     /// HTTP client
@@ -33,8 +34,8 @@ pub struct OpenAiModels {
 
 impl OpenAiModels {
     /// Create a new `OpenAI` models client
-    pub const fn new(
-        api_key: String,
+    pub fn new(
+        api_key: SecretString,
         base_url: String,
         http_client: reqwest::Client,
         organization: Option<String>,
@@ -54,7 +55,7 @@ impl OpenAiModels {
     /// Build headers for API requests
     fn build_request_headers(&self) -> Result<HeaderMap, LlmError> {
         build_headers(
-            &self.api_key,
+            self.api_key.expose_secret(),
             self.organization.as_deref(),
             self.project.as_deref(),
             &self.http_config.headers,

@@ -60,6 +60,12 @@ rand = "0.8"
 urlencoding = "2.1"
 regex = "1.11.1"
 
+# Security
+secrecy = { version = "0.10", features = ["serde"] }
+
+# Retry mechanism
+backoff = { version = "0.4", features = ["tokio"] }
+
 [features]
 default = []
 validation = []

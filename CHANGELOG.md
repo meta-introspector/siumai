@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.7.0] (Not Released)
+## [0.8.0] (Not Released) - 2025-08-02
+
+### Breaking Changes
+
+- **Security and Reliability Improvements** - Introduced `secrecy` crate for secure API key handling, `backoff` crate for professional retry mechanisms.
+
+## [0.7.0] - 2025-08-02
 
 ### Fixed
 

@@ -15,6 +15,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use secrecy::ExposeSecret;
 
 use crate::error::LlmError;
 use crate::stream::ChatStream;
@@ -137,7 +138,7 @@ impl OpenAiResponses {
         let response = self
             .http_client
             .post(self.responses_endpoint())
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .header("Content-Type", "application/json")
             .json(&request_body)
             .send()
@@ -166,7 +167,7 @@ impl OpenAiResponses {
         let response = self
             .http_client
             .get(self.response_endpoint(response_id))
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .send()
             .await
             .map_err(|e| LlmError::HttpError(e.to_string()))?;
@@ -193,7 +194,7 @@ impl OpenAiResponses {
         let response = self
             .http_client
             .post(self.response_cancel_endpoint(response_id))
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .header("Content-Type", "application/json")
             .send()
             .await
@@ -254,7 +255,7 @@ impl OpenAiResponses {
         let response = self
             .http_client
             .get(&url)
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .send()
             .await
             .map_err(|e| LlmError::HttpError(e.to_string()))?;
@@ -630,7 +631,7 @@ impl ChatCapability for OpenAiResponses {
         let response = self
             .http_client
             .post(self.responses_endpoint())
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .header("Content-Type", "application/json")
             .json(&request_body)
             .send()
@@ -673,7 +674,7 @@ impl ChatCapability for OpenAiResponses {
         let response = self
             .http_client
             .post(self.responses_endpoint())
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .header("Content-Type", "application/json")
             .header("Accept", "text/event-stream")
             .json(&request_body)
@@ -951,7 +952,7 @@ impl ResponsesApiCapability for OpenAiResponses {
         let response = self
             .http_client
             .post(self.responses_endpoint())
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .header("Content-Type", "application/json")
             .json(&request_body)
             .send()
@@ -993,7 +994,7 @@ impl OpenAiResponses {
         let response = self
             .http_client
             .get(self.response_endpoint(response_id))
-            .header("Authorization", format!("Bearer {}", self.config.api_key))
+            .header("Authorization", format!("Bearer {}", self.config.api_key.expose_secret()))
             .send()
             .await
             .map_err(|e| LlmError::HttpError(e.to_string()))?;

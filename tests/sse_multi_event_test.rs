@@ -10,7 +10,7 @@ use siumai::stream::ChatStreamEvent;
 
 fn create_test_config() -> OpenAiConfig {
     OpenAiConfig {
-        api_key: "test-key".to_string(),
+        api_key: secrecy::SecretString::from("test-key"),
         base_url: "https://api.openai.com/v1".to_string(),
         ..Default::default()
     }

@@ -404,7 +404,7 @@ impl OpenAiBuilder {
 
         // Create OpenAI configuration
         let config = OpenAiConfig {
-            api_key,
+            api_key: secrecy::SecretString::from(api_key),
             base_url,
             organization: self.organization,
             project: self.project,
