@@ -3,9 +3,9 @@
 //! Implements the `ChatCapability` trait for `OpenAI`.
 
 use async_trait::async_trait;
+use secrecy::{ExposeSecret, SecretString};
 use std::collections::HashMap;
 use std::time::Instant;
-use secrecy::{ExposeSecret, SecretString};
 
 use crate::error::LlmError;
 use crate::params::{OpenAiParameterMapper, OpenAiParams, ParameterMapper};

@@ -56,14 +56,15 @@ impl BackoffRetryExecutor {
                     if Self::is_retryable(&error) {
                         Err(backoff::Error::Transient {
                             err: error,
-                            retry_after: None
+                            retry_after: None,
                         })
                     } else {
                         Err(backoff::Error::Permanent(error))
                     }
                 }
             }
-        }).await
+        })
+        .await
     }
 
     /// Check if an error is retryable
@@ -161,8 +162,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     #[tokio::test]
     async fn test_retry_success_on_second_attempt() {
@@ -171,14 +172,16 @@ mod tests {
 
         let executor = BackoffRetryExecutor::new();
 
-        let result: Result<String, LlmError> = executor.execute(|| async {
-            let count = counter_clone.fetch_add(1, Ordering::SeqCst);
-            if count == 0 {
-                Err(LlmError::RateLimitError("Rate limited".to_string()))
-            } else {
-                Ok("Success".to_string())
-            }
-        }).await;
+        let result: Result<String, LlmError> = executor
+            .execute(|| async {
+                let count = counter_clone.fetch_add(1, Ordering::SeqCst);
+                if count == 0 {
+                    Err(LlmError::RateLimitError("Rate limited".to_string()))
+                } else {
+                    Ok("Success".to_string())
+                }
+            })
+            .await;
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Success");
@@ -192,10 +195,12 @@ mod tests {
 
         let executor = BackoffRetryExecutor::new();
 
-        let result: Result<String, LlmError> = executor.execute(|| async {
-            counter_clone.fetch_add(1, Ordering::SeqCst);
-            Err(LlmError::InvalidInput("Bad input".to_string()))
-        }).await;
+        let result: Result<String, LlmError> = executor
+            .execute(|| async {
+                counter_clone.fetch_add(1, Ordering::SeqCst);
+                Err(LlmError::InvalidInput("Bad input".to_string()))
+            })
+            .await;
 
         assert!(result.is_err());
         assert_eq!(counter.load(Ordering::SeqCst), 1); // No retry for permanent error
@@ -206,9 +211,9 @@ mod tests {
         let executor = BackoffRetryExecutor::for_provider(&ProviderType::OpenAi);
 
         // Just test that it creates without panicking
-        let result: Result<String, LlmError> = executor.execute(|| async {
-            Ok("Success".to_string())
-        }).await;
+        let result: Result<String, LlmError> = executor
+            .execute(|| async { Ok("Success".to_string()) })
+            .await;
 
         assert!(result.is_ok());
     }

@@ -2,8 +2,8 @@
 //!
 //! This module provides configuration structures for the `OpenAI` provider.
 
-use std::collections::HashMap;
 use secrecy::{ExposeSecret, SecretString};
+use std::collections::HashMap;
 
 use crate::params::OpenAiParams;
 use crate::types::{CommonParams, HttpConfig, WebSearchConfig};
