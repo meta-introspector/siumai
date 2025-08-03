@@ -69,7 +69,7 @@ impl OpenAiModels {
 
     /// Get a specific model endpoint URL
     fn model_endpoint(&self, model_id: &str) -> String {
-        crate::utils::url::join_url(&self.base_url, &format!("models/{}", model_id))
+        crate::utils::url::join_url(&self.base_url, &format!("models/{model_id}"))
     }
 
     /// Convert `OpenAI` model response to `ModelInfo`

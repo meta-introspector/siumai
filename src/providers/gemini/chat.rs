@@ -317,7 +317,7 @@ impl GeminiChatCapability {
 
         let url = crate::utils::url::join_url(
             &self.config.base_url,
-            &format!("models/{}:generateContent", self.config.model)
+            &format!("models/{}:generateContent", self.config.model),
         );
 
         tracer.trace_request_start("POST", &url);
@@ -397,7 +397,7 @@ impl ChatCapability for GeminiChatCapability {
 
         let url = crate::utils::url::join_url(
             &self.config.base_url,
-            &format!("models/{}:streamGenerateContent", self.config.model)
+            &format!("models/{}:streamGenerateContent", self.config.model),
         );
 
         // Use the dedicated streaming capability

@@ -388,9 +388,11 @@ impl HttpMcpLlmDemo {
                     // Add assistant message with tool calls
                     let tool_calls = response.get_tool_calls().unwrap_or(&vec![]).clone();
                     follow_up_messages.push(
-                        ChatMessage::assistant("I'll help you with those calculations and get the current time.")
-                            .with_tool_calls(tool_calls)
-                            .build(),
+                        ChatMessage::assistant(
+                            "I'll help you with those calculations and get the current time.",
+                        )
+                        .with_tool_calls(tool_calls)
+                        .build(),
                     );
 
                     // Add tool result messages

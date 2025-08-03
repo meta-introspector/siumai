@@ -21,9 +21,6 @@ type SseEventFuture<'a> =
 type JsonEventFuture<'a> =
     Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + 'a>>;
 
-
-
-
 /// Trait for converting provider-specific SSE events to ChatStreamEvent
 pub trait SseEventConverter: Send + Sync {
     /// Convert an SSE event to a ChatStreamEvent
@@ -45,8 +42,6 @@ pub trait JsonEventConverter: Send + Sync {
 pub struct StreamProcessor;
 
 impl StreamProcessor {
-
-
     /// Create a chat stream for JSON-based streaming (like Gemini)
     ///
     /// Some providers use JSON streaming instead of SSE. This method handles
@@ -144,7 +139,9 @@ impl StreamProcessor {
                     }
                 }
                 Err(err) => {
-                    events.push(Err(LlmError::StreamError(format!("EventSource error: {err}"))));
+                    events.push(Err(LlmError::StreamError(format!(
+                        "EventSource error: {err}"
+                    ))));
                     break; // Stop on error
                 }
             }

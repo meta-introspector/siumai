@@ -11,10 +11,7 @@ pub struct ApiErrorHandler;
 
 impl ApiErrorHandler {
     /// Handle a failed HTTP response and convert it to an appropriate LlmError
-    pub async fn handle_response_error(
-        response: Response,
-        provider_name: &str,
-    ) -> LlmError {
+    pub async fn handle_response_error(response: Response, provider_name: &str) -> LlmError {
         let status_code = response.status().as_u16();
         let error_text = response
             .text()
@@ -27,12 +24,18 @@ impl ApiErrorHandler {
         // Map common HTTP status codes to appropriate error types
         match status_code {
             400 => LlmError::InvalidInput(format!("{provider_name} API error: {error_text}")),
-            401 => LlmError::AuthenticationError(format!("Authentication failed for {provider_name}: {error_text}")),
-            403 => LlmError::AuthenticationError(format!("Access forbidden for {provider_name}: {error_text}")),
+            401 => LlmError::AuthenticationError(format!(
+                "Authentication failed for {provider_name}: {error_text}"
+            )),
+            403 => LlmError::AuthenticationError(format!(
+                "Access forbidden for {provider_name}: {error_text}"
+            )),
             404 => LlmError::NotFound(format!("{provider_name} resource not found: {error_text}")),
             413 => LlmError::InvalidInput("Request payload too large".to_string()),
             415 => LlmError::InvalidInput("Unsupported media type".to_string()),
-            429 => LlmError::RateLimitError(format!("Rate limit exceeded for {provider_name}: {error_text}")),
+            429 => LlmError::RateLimitError(format!(
+                "Rate limit exceeded for {provider_name}: {error_text}"
+            )),
             500..=599 => LlmError::ApiError {
                 code: status_code,
                 message: format!("{provider_name} server error: {error_text}"),
@@ -65,9 +68,15 @@ impl ApiErrorHandler {
 
                 match status_code {
                     400 => LlmError::InvalidInput(format!("OpenAI API error: {error_text}")),
-                    401 => LlmError::AuthenticationError(format!("Authentication failed for OpenAI: {error_text}")),
-                    403 => LlmError::AuthenticationError(format!("Access forbidden for OpenAI: {error_text}")),
-                    429 => LlmError::RateLimitError(format!("Rate limit exceeded for OpenAI: {error_text}")),
+                    401 => LlmError::AuthenticationError(format!(
+                        "Authentication failed for OpenAI: {error_text}"
+                    )),
+                    403 => LlmError::AuthenticationError(format!(
+                        "Access forbidden for OpenAI: {error_text}"
+                    )),
+                    429 => LlmError::RateLimitError(format!(
+                        "Rate limit exceeded for OpenAI: {error_text}"
+                    )),
                     500..=599 => LlmError::ApiError {
                         code: status_code,
                         message: format!("OpenAI server error: {error_text}"),
@@ -130,7 +139,9 @@ impl ApiErrorHandler {
     ) -> LlmError {
         match error_type {
             "authentication_error" => LlmError::AuthenticationError(error_message.to_string()),
-            "permission_error" => LlmError::AuthenticationError(format!("Permission denied: {error_message}")),
+            "permission_error" => {
+                LlmError::AuthenticationError(format!("Permission denied: {error_message}"))
+            }
             "not_found_error" => LlmError::NotFound(error_message.to_string()),
             "rate_limit_error" => LlmError::RateLimitError(error_message.to_string()),
             "api_error" => LlmError::ApiError {

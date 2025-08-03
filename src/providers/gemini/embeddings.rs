@@ -199,7 +199,7 @@ impl GeminiEmbeddings {
 
         let url = crate::utils::url::join_url(
             &self.config.base_url,
-            &format!("models/{}:embedContent", model)
+            &format!("models/{model}:embedContent"),
         );
 
         let response = self
@@ -242,7 +242,7 @@ impl GeminiEmbeddings {
 
         let url = crate::utils::url::join_url(
             &self.config.base_url,
-            &format!("models/{}:batchEmbedContents", model)
+            &format!("models/{model}:batchEmbedContents"),
         );
 
         let response = self

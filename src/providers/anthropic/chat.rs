@@ -256,10 +256,8 @@ impl ChatCapability for AnthropicChatCapability {
 
         // Use the new streaming infrastructure
         let anthropic_params = crate::params::AnthropicParams::default();
-        let streaming = super::streaming::AnthropicStreaming::new(
-            anthropic_params,
-            self.http_client.clone(),
-        );
+        let streaming =
+            super::streaming::AnthropicStreaming::new(anthropic_params, self.http_client.clone());
         streaming.create_chat_stream(request).await
     }
 }
@@ -377,5 +375,3 @@ impl AnthropicChatCapability {
         }
     }
 }
-
-

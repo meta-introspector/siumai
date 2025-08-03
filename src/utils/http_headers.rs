@@ -3,7 +3,9 @@
 //! Common utilities for building HTTP headers across all providers.
 
 use crate::error::LlmError;
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
+use reqwest::header::{
+    AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT,
+};
 use std::collections::HashMap;
 
 /// HTTP header builder for API requests
@@ -24,16 +26,18 @@ impl HttpHeaderBuilder {
         let auth_value = format!("Bearer {token}");
         self.headers.insert(
             AUTHORIZATION,
-            HeaderValue::from_str(&auth_value)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key format: {e}")))?,
+            HeaderValue::from_str(&auth_value).map_err(|e| {
+                LlmError::ConfigurationError(format!("Invalid API key format: {e}"))
+            })?,
         );
         Ok(self)
     }
 
     /// Add custom authorization header (e.g., x-api-key for Anthropic)
     pub fn with_custom_auth(mut self, header_name: &str, value: &str) -> Result<Self, LlmError> {
-        let header_name = HeaderName::from_bytes(header_name.as_bytes())
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid header name '{header_name}': {e}")))?;
+        let header_name = HeaderName::from_bytes(header_name.as_bytes()).map_err(|e| {
+            LlmError::ConfigurationError(format!("Invalid header name '{header_name}': {e}"))
+        })?;
         self.headers.insert(
             header_name,
             HeaderValue::from_str(value)
@@ -44,7 +48,8 @@ impl HttpHeaderBuilder {
 
     /// Add JSON content type
     pub fn with_json_content_type(mut self) -> Self {
-        self.headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        self.headers
+            .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         self
     }
 
@@ -60,25 +65,32 @@ impl HttpHeaderBuilder {
 
     /// Add a custom header
     pub fn with_header(mut self, name: &str, value: &str) -> Result<Self, LlmError> {
-        let header_name = HeaderName::from_bytes(name.as_bytes())
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid header name '{name}': {e}")))?;
+        let header_name = HeaderName::from_bytes(name.as_bytes()).map_err(|e| {
+            LlmError::ConfigurationError(format!("Invalid header name '{name}': {e}"))
+        })?;
         self.headers.insert(
             header_name,
-            HeaderValue::from_str(value)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}")))?,
+            HeaderValue::from_str(value).map_err(|e| {
+                LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
+            })?,
         );
         Ok(self)
     }
 
     /// Add multiple custom headers from a HashMap
-    pub fn with_custom_headers(mut self, custom_headers: &HashMap<String, String>) -> Result<Self, LlmError> {
+    pub fn with_custom_headers(
+        mut self,
+        custom_headers: &HashMap<String, String>,
+    ) -> Result<Self, LlmError> {
         for (key, value) in custom_headers {
-            let header_name = HeaderName::from_bytes(key.as_bytes())
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid header name '{key}': {e}")))?;
+            let header_name = HeaderName::from_bytes(key.as_bytes()).map_err(|e| {
+                LlmError::ConfigurationError(format!("Invalid header name '{key}': {e}"))
+            })?;
             self.headers.insert(
                 header_name,
-                HeaderValue::from_str(value)
-                    .map_err(|e| LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}")))?,
+                HeaderValue::from_str(value).map_err(|e| {
+                    LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
+                })?,
             );
         }
         Ok(self)
@@ -224,7 +236,9 @@ mod tests {
     #[test]
     fn test_openai_headers() {
         let custom_headers = HashMap::new();
-        let headers = ProviderHeaders::openai("test-key", Some("org"), Some("proj"), &custom_headers).unwrap();
+        let headers =
+            ProviderHeaders::openai("test-key", Some("org"), Some("proj"), &custom_headers)
+                .unwrap();
 
         assert_eq!(headers.get(AUTHORIZATION).unwrap(), "Bearer test-key");
         assert_eq!(headers.get("OpenAI-Organization").unwrap(), "org");
