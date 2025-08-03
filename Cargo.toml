@@ -69,7 +69,6 @@ backoff = { version = "0.4", features = ["tokio"] }
 
 [features]
 default = []
-validation = []
 
 [dev-dependencies]
 tokio-test = "0.4"
