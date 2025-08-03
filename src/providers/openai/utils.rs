@@ -5,8 +5,9 @@
 use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
+use crate::utils::http_headers::ProviderHeaders;
 use regex::Regex;
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::header::HeaderMap;
 
 /// Build HTTP headers for `OpenAI` API requests
 pub fn build_headers(
@@ -15,51 +16,7 @@ pub fn build_headers(
     project: Option<&str>,
     custom_headers: &std::collections::HashMap<String, String>,
 ) -> Result<HeaderMap, LlmError> {
-    let mut headers = HeaderMap::new();
-
-    // Set the authorization header
-    let auth_value = format!("Bearer {api_key}");
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&auth_value)
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key: {e}")))?,
-    );
-
-    // Set the content type
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    // Set the organization header (if it exists)
-    if let Some(org) = organization {
-        headers.insert(
-            "OpenAI-Organization",
-            HeaderValue::from_str(org)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid organization: {e}")))?,
-        );
-    }
-
-    // Set the project header (if it exists)
-    if let Some(project) = project {
-        headers.insert(
-            "OpenAI-Project",
-            HeaderValue::from_str(project)
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid project: {e}")))?,
-        );
-    }
-
-    // Add custom headers
-    for (key, value) in custom_headers {
-        let header_name: reqwest::header::HeaderName = key.parse().map_err(|e| {
-            LlmError::ConfigurationError(format!("Invalid header key '{key}': {e}"))
-        })?;
-        headers.insert(
-            header_name,
-            HeaderValue::from_str(value).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
-            })?,
-        );
-    }
-
-    Ok(headers)
+    ProviderHeaders::openai(api_key, organization, project, custom_headers)
 }
 
 /// Convert message content to `OpenAI` format

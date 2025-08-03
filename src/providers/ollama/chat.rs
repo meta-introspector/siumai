@@ -211,7 +211,7 @@ impl OllamaChatCapability {
 
         let headers = build_headers(&self.http_config.headers)?;
         let body = self.build_chat_request_body(&request)?;
-        let url = format!("{}/api/chat", self.base_url);
+        let url = crate::utils::url::join_url(&self.base_url, "api/chat");
 
         tracer.trace_request_start("POST", &url);
 

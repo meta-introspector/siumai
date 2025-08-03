@@ -159,7 +159,7 @@ impl OllamaEmbeddings {
         request: OllamaEmbedRequest,
     ) -> Result<OllamaEmbedResponse, LlmError> {
         let headers = build_headers(&self.http_config.headers)?;
-        let url = format!("{}/api/embed", self.base_url);
+        let url = crate::utils::url::join_url(&self.base_url, "api/embed");
 
         let response = self
             .http_client

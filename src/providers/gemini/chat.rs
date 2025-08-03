@@ -315,9 +315,9 @@ impl GeminiChatCapability {
         // Create tracer with model information
         let tracer = ProviderTracer::new("gemini").with_model(&self.config.model);
 
-        let url = format!(
-            "{}/models/{}:generateContent",
-            self.config.base_url, self.config.model
+        let url = crate::utils::url::join_url(
+            &self.config.base_url,
+            &format!("models/{}:generateContent", self.config.model)
         );
 
         tracer.trace_request_start("POST", &url);
@@ -395,9 +395,9 @@ impl ChatCapability for GeminiChatCapability {
     ) -> Result<ChatStream, LlmError> {
         let request = self.build_request_body(&messages, tools.as_deref())?;
 
-        let url = format!(
-            "{}/models/{}:streamGenerateContent",
-            self.config.base_url, self.config.model
+        let url = crate::utils::url::join_url(
+            &self.config.base_url,
+            &format!("models/{}:streamGenerateContent", self.config.model)
         );
 
         // Use the dedicated streaming capability

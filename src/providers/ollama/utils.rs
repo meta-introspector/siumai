@@ -5,34 +5,13 @@
 use super::types::*;
 use crate::error::LlmError;
 use crate::types::{ChatMessage, Tool, ToolCall};
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
+use crate::utils::http_headers::ProviderHeaders;
+use reqwest::header::HeaderMap;
 use std::collections::HashMap;
 
 /// Build HTTP headers for Ollama requests
 pub fn build_headers(additional_headers: &HashMap<String, String>) -> Result<HeaderMap, LlmError> {
-    let mut headers = HeaderMap::new();
-
-    // Set content type
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    // Set user agent
-    headers.insert(
-        USER_AGENT,
-        HeaderValue::from_str(&format!("siumai/{}", env!("CARGO_PKG_VERSION")))
-            .map_err(|e| LlmError::HttpError(format!("Invalid user agent: {e}")))?,
-    );
-
-    // Add additional headers
-    for (key, value) in additional_headers {
-        let header_name: reqwest::header::HeaderName = key
-            .parse()
-            .map_err(|e| LlmError::HttpError(format!("Invalid header name '{key}': {e}")))?;
-        let header_value = HeaderValue::from_str(value)
-            .map_err(|e| LlmError::HttpError(format!("Invalid header value for '{key}': {e}")))?;
-        headers.insert(header_name, header_value);
-    }
-
-    Ok(headers)
+    ProviderHeaders::ollama(additional_headers)
 }
 
 /// Convert common `ChatMessage` to Ollama format
@@ -328,6 +307,7 @@ pub fn calculate_tokens_per_second(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use reqwest::header::{CONTENT_TYPE, USER_AGENT};
 
     #[test]
     fn test_build_headers() {

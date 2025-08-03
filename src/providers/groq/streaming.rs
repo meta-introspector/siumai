@@ -2,19 +2,138 @@
 //!
 //! This module provides Groq-specific streaming functionality for chat completions.
 
-use futures::{Stream, StreamExt};
-use std::sync::{Arc, Mutex as StdMutex};
-use tokio::sync::Mutex;
-
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, Usage};
-use crate::types::{ChatResponse, FinishReason, MessageContent, ResponseMetadata};
-use crate::utils::Utf8StreamDecoder;
+use crate::types::{ChatResponse, FinishReason, MessageContent};
+use crate::utils::streaming::{SseEventConverter, StreamProcessor};
+use eventsource_stream::Event;
+use std::future::Future;
+use std::pin::Pin;
 
 use super::config::GroqConfig;
 use super::types::*;
 use super::utils::*;
+
+/// Groq event converter for SSE events
+#[derive(Clone)]
+pub struct GroqEventConverter {
+    #[allow(dead_code)] // May be used for future configuration
+    config: GroqConfig,
+}
+
+impl GroqEventConverter {
+    /// Create a new Groq event converter
+    pub fn new(config: GroqConfig) -> Self {
+        Self { config }
+    }
+
+    /// Convert Groq stream response to ChatStreamEvent
+    fn convert_groq_response(&self, response: GroqChatStreamChunk) -> ChatStreamEvent {
+        // Handle usage information (final chunk)
+        if let Some(usage) = response.usage {
+            return ChatStreamEvent::UsageUpdate {
+                usage: Usage {
+                    prompt_tokens: usage.prompt_tokens.unwrap_or(0),
+                    completion_tokens: usage.completion_tokens.unwrap_or(0),
+                    total_tokens: usage.total_tokens.unwrap_or(0),
+                    reasoning_tokens: None, // Groq doesn't provide reasoning tokens
+                    cached_tokens: None,
+                },
+            };
+        }
+
+        // Process choices
+        for choice in response.choices {
+            let delta = choice.delta;
+
+            // Handle finish reason (stream end)
+            if let Some(finish_reason) = choice.finish_reason {
+                let finish_reason_enum = match finish_reason.as_str() {
+                    "stop" => FinishReason::Stop,
+                    "length" => FinishReason::Length,
+                    "tool_calls" => FinishReason::ToolCalls,
+                    "content_filter" => FinishReason::ContentFilter,
+                    _ => FinishReason::Stop,
+                };
+
+                return ChatStreamEvent::StreamEnd {
+                    response: ChatResponse {
+                        id: Some(response.id),
+                        content: MessageContent::Text(String::new()),
+                        model: Some(response.model),
+                        usage: None,
+                        finish_reason: Some(finish_reason_enum),
+                        tool_calls: None,
+                        thinking: None,
+                        metadata: std::collections::HashMap::new(),
+                    },
+                };
+            }
+
+            // Handle content delta
+            if let Some(content) = delta.content {
+                return ChatStreamEvent::ContentDelta {
+                    delta: content,
+                    index: Some(choice.index as usize),
+                };
+            }
+
+            // Handle tool calls
+            if let Some(tool_calls) = delta.tool_calls {
+                for tool_call in tool_calls {
+                    if let Some(function) = tool_call.function {
+                        if let Some(arguments) = function.arguments {
+                            return ChatStreamEvent::ToolCallDelta {
+                                index: tool_call.index.map(|i| i as usize),
+                                id: tool_call.id.unwrap_or_default(),
+                                function_name: function.name,
+                                arguments_delta: Some(arguments),
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // Default: empty content delta
+        ChatStreamEvent::ContentDelta {
+            delta: String::new(),
+            index: None,
+        }
+    }
+}
+
+impl SseEventConverter for GroqEventConverter {
+    fn convert_event(
+        &self,
+        event: Event,
+    ) -> Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + '_>>
+    {
+        Box::pin(async move {
+            match serde_json::from_str::<GroqChatStreamChunk>(&event.data) {
+                Ok(groq_response) => Some(Ok(self.convert_groq_response(groq_response))),
+                Err(e) => Some(Err(LlmError::ParseError(format!(
+                    "Failed to parse Groq event: {e}"
+                )))),
+            }
+        })
+    }
+
+    fn handle_stream_end(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
+        let response = ChatResponse {
+            id: None,
+            model: None,
+            content: MessageContent::Text("".to_string()),
+            usage: None,
+            finish_reason: Some(FinishReason::Stop),
+            tool_calls: None,
+            thinking: None,
+            metadata: std::collections::HashMap::new(),
+        };
+        Some(Ok(ChatStreamEvent::StreamEnd { response }))
+    }
+}
 
 /// `Groq` streaming client
 #[derive(Clone)]
@@ -23,10 +142,6 @@ pub struct GroqStreaming {
     config: GroqConfig,
     /// HTTP client
     http_client: reqwest::Client,
-    /// SSE line buffer for handling incomplete lines
-    sse_buffer: Arc<Mutex<String>>,
-    /// Event queue for handling multiple events from a single chunk
-    event_queue: Arc<Mutex<Vec<Result<ChatStreamEvent, LlmError>>>>,
 }
 
 impl GroqStreaming {
@@ -35,8 +150,6 @@ impl GroqStreaming {
         Self {
             config,
             http_client,
-            sse_buffer: Arc::new(Mutex::new(String::new())),
-            event_queue: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -91,315 +204,14 @@ impl GroqStreaming {
         // Create headers
         let headers = build_headers(&self.config.api_key, &self.config.http_config.headers)?;
 
-        // Make the request
-        let response = self
+        // Create the stream using reqwest_eventsource for enhanced reliability
+        let request_builder = self
             .http_client
             .post(&url)
             .headers(headers)
-            .json(&request_body)
-            .send()
-            .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
+            .json(&request_body);
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            let error_message = extract_error_message(&error_text);
-            return Err(LlmError::ApiError {
-                code: status.as_u16(),
-                message: format!("Groq API error {status}: {error_message}"),
-                details: serde_json::from_str(&error_text).ok(),
-            });
-        }
-
-        // Create the stream
-        let stream = self.clone().create_event_stream(response).await?;
-        Ok(Box::pin(stream))
-    }
-
-    /// Create an event stream from the HTTP response
-    async fn create_event_stream(
-        self,
-        response: reqwest::Response,
-    ) -> Result<impl Stream<Item = Result<ChatStreamEvent, LlmError>>, LlmError> {
-        let stream = response
-            .bytes_stream()
-            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
-
-        // Create a UTF-8 decoder for this stream
-        let decoder = Arc::new(StdMutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-        let streaming_for_flush = self.clone();
-
-        // Create a stream that handles UTF-8 decoding
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let streaming = self.clone();
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
-
-                        if !decoded_chunk.is_empty() {
-                            streaming.parse_sse_chunk_buffered(&decoded_chunk).await
-                        } else {
-                            None
-                        }
-                    }
-                    Err(e) => Some(Err(e)),
-                }
-            }
-        });
-
-        // Add a final flush operation
-        let flush_stream = futures::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                streaming_for_flush
-                    .parse_sse_chunk_buffered(&remaining)
-                    .await
-            } else {
-                // Also flush any remaining SSE buffer content
-                streaming_for_flush.flush_sse_buffer().await
-            }
-        })
-        .filter_map(|result| async move { result });
-
-        Ok(decoded_stream.chain(flush_stream))
-    }
-
-    /// Parse a Server-Sent Events chunk with buffering for incomplete lines
-    async fn parse_sse_chunk_buffered(
-        &self,
-        chunk: &str,
-    ) -> Option<Result<ChatStreamEvent, LlmError>> {
-        // Add chunk to buffer
-        {
-            let mut buffer = self.sse_buffer.lock().await;
-            buffer.push_str(chunk);
-        }
-
-        // Process complete lines from buffer
-        self.process_buffered_lines().await
-    }
-
-    /// Process complete lines from the SSE buffer
-    async fn process_buffered_lines(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        // First, check if we have queued events
-        {
-            let mut queue = self.event_queue.lock().await;
-            if !queue.is_empty() {
-                return queue.remove(0).into();
-            }
-        }
-
-        {
-            let mut buffer = self.sse_buffer.lock().await;
-
-            // Find the last complete line (ending with \n)
-            if let Some(last_newline_pos) = buffer.rfind('\n') {
-                // Extract complete lines
-                let complete_lines = buffer[..=last_newline_pos].to_string();
-                // Keep incomplete line in buffer
-                let remaining = buffer[last_newline_pos + 1..].to_string();
-                *buffer = remaining;
-
-                // Release the lock before processing
-                drop(buffer);
-
-                // Process all events from the complete lines
-                let events = self.parse_sse_chunk_all_events(&complete_lines);
-
-                if !events.is_empty() {
-                    let mut events_iter = events.into_iter();
-                    let first_event = events_iter.next();
-
-                    // Queue remaining events
-                    let remaining_events: Vec<_> = events_iter.collect();
-                    if !remaining_events.is_empty() {
-                        let mut queue = self.event_queue.lock().await;
-                        queue.extend(remaining_events);
-                    }
-
-                    return first_event;
-                }
-            }
-        }
-
-        // No complete lines yet
-        None
-    }
-
-    /// Flush any remaining content in the SSE buffer
-    async fn flush_sse_buffer(&self) -> Option<Result<ChatStreamEvent, LlmError>> {
-        let remaining = {
-            let mut buffer = self.sse_buffer.lock().await;
-            let content = buffer.clone();
-            buffer.clear();
-            content
-        };
-
-        if !remaining.is_empty() {
-            // Try to parse remaining content as if it were complete
-            let events = self.parse_sse_chunk_all_events(&remaining);
-
-            if !events.is_empty() {
-                let mut events_iter = events.into_iter();
-                let first_event = events_iter.next();
-
-                // Queue remaining events
-                let remaining_events: Vec<_> = events_iter.collect();
-                if !remaining_events.is_empty() {
-                    let mut queue = self.event_queue.lock().await;
-                    queue.extend(remaining_events);
-                }
-
-                return first_event;
-            }
-        }
-
-        None
-    }
-
-    /// Parse a Server-Sent Events chunk and return all events found
-    fn parse_sse_chunk_all_events(&self, chunk: &str) -> Vec<Result<ChatStreamEvent, LlmError>> {
-        let mut events = Vec::new();
-
-        for line in chunk.lines() {
-            let line = line.trim();
-
-            // Skip empty lines and comments
-            if line.is_empty() || line.starts_with(':') {
-                continue;
-            }
-
-            // Parse data lines
-            if let Some(data) = line.strip_prefix("data: ") {
-                // Check for stream end
-                if data == "[DONE]" {
-                    // Add a stream end event
-                    events.push(Ok(ChatStreamEvent::StreamEnd {
-                        response: ChatResponse {
-                            id: None,
-                            content: MessageContent::Text(String::new()),
-                            model: None,
-                            usage: None,
-                            finish_reason: Some(FinishReason::Stop),
-                            tool_calls: None,
-                            thinking: None,
-                            metadata: std::collections::HashMap::new(),
-                        },
-                    }));
-                    break;
-                }
-
-                // Parse JSON data
-                match serde_json::from_str::<GroqChatStreamChunk>(data) {
-                    Ok(response) => {
-                        events.push(Ok(self.convert_groq_response(response)));
-                    }
-                    Err(e) => {
-                        events.push(Err(LlmError::ParseError(format!(
-                            "Failed to parse SSE data: {e}"
-                        ))));
-                    }
-                }
-            }
-        }
-
-        events
-    }
-
-    /// Convert `Groq` stream response to our `ChatStreamEvent`
-    fn convert_groq_response(&self, response: GroqChatStreamChunk) -> ChatStreamEvent {
-        // Handle usage information (final chunk)
-        if let Some(usage) = response.usage {
-            return ChatStreamEvent::UsageUpdate {
-                usage: Usage {
-                    prompt_tokens: usage.prompt_tokens.unwrap_or(0),
-                    completion_tokens: usage.completion_tokens.unwrap_or(0),
-                    total_tokens: usage.total_tokens.unwrap_or(0),
-                    reasoning_tokens: None, // Groq doesn't provide reasoning tokens
-                    cached_tokens: None,
-                },
-            };
-        }
-
-        // Process choices
-        for choice in response.choices {
-            let delta = choice.delta;
-
-            // Handle finish reason (stream end)
-            if let Some(finish_reason) = choice.finish_reason {
-                let finish_reason_enum = match finish_reason.as_str() {
-                    "stop" => FinishReason::Stop,
-                    "length" => FinishReason::Length,
-                    "tool_calls" => FinishReason::ToolCalls,
-                    "content_filter" => FinishReason::ContentFilter,
-                    _ => FinishReason::Stop,
-                };
-
-                return ChatStreamEvent::StreamEnd {
-                    response: ChatResponse {
-                        id: Some(response.id),
-                        content: MessageContent::Text(String::new()),
-                        model: Some(response.model),
-                        usage: None, // Usage comes in a separate event
-                        finish_reason: Some(finish_reason_enum),
-                        tool_calls: None, // Tool calls are accumulated by StreamProcessor
-                        thinking: None,
-                        metadata: std::collections::HashMap::new(),
-                    },
-                };
-            }
-
-            // Handle content delta
-            if let Some(content) = delta.content {
-                return ChatStreamEvent::ContentDelta {
-                    delta: content,
-                    index: Some(choice.index as usize),
-                };
-            }
-
-            // Handle tool call deltas
-            if let Some(tool_calls) = delta.tool_calls {
-                if let Some(tool_call) = tool_calls.into_iter().next() {
-                    return ChatStreamEvent::ToolCallDelta {
-                        id: tool_call.id.unwrap_or_default(),
-                        function_name: tool_call.function.as_ref().and_then(|f| f.name.clone()),
-                        arguments_delta: tool_call
-                            .function
-                            .as_ref()
-                            .and_then(|f| f.arguments.clone()),
-                        index: Some(choice.index as usize),
-                    };
-                }
-            }
-        }
-
-        // Default: stream start event
-        ChatStreamEvent::StreamStart {
-            metadata: ResponseMetadata {
-                id: Some(response.id),
-                model: Some(response.model),
-                created: Some(
-                    chrono::DateTime::from_timestamp(response.created as i64, 0)
-                        .unwrap_or_else(chrono::Utc::now),
-                ),
-                provider: "groq".to_string(),
-                request_id: None,
-            },
-        }
+        let converter = GroqEventConverter::new(self.config.clone());
+        StreamProcessor::create_eventsource_stream(request_builder, converter).await
     }
 }

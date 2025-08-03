@@ -2,48 +2,19 @@
 //!
 //! Utility functions for the Groq provider.
 
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue, USER_AGENT};
+use reqwest::header::HeaderMap;
 use std::collections::HashMap;
 
 use crate::error::LlmError;
 use crate::types::{ChatMessage, FinishReason, MessageContent, MessageRole};
+use crate::utils::http_headers::ProviderHeaders;
 
 /// Build HTTP headers for Groq API requests
 pub fn build_headers(
     api_key: &str,
     custom_headers: &HashMap<String, String>,
 ) -> Result<HeaderMap, LlmError> {
-    let mut headers = HeaderMap::new();
-
-    // Authorization header
-    let auth_value = format!("Bearer {api_key}");
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&auth_value)
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key format: {e}")))?,
-    );
-
-    // Content-Type header
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    // User-Agent header
-    headers.insert(
-        USER_AGENT,
-        HeaderValue::from_static("siumai/0.1.0 (groq-provider)"),
-    );
-
-    // Add custom headers
-    for (key, value) in custom_headers {
-        let header_name: reqwest::header::HeaderName = key.parse().map_err(|e| {
-            LlmError::ConfigurationError(format!("Invalid header name '{key}': {e}"))
-        })?;
-        let header_value = HeaderValue::from_str(value).map_err(|e| {
-            LlmError::ConfigurationError(format!("Invalid header value for '{key}': {e}"))
-        })?;
-        headers.insert(header_name, header_value);
-    }
-
-    Ok(headers)
+    ProviderHeaders::groq(api_key, custom_headers)
 }
 
 /// Convert internal messages to Groq API format
@@ -239,6 +210,7 @@ pub fn validate_groq_params(params: &serde_json::Value) -> Result<(), LlmError> 
 mod tests {
     use super::*;
     use crate::types::ChatMessage;
+    use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
 
     #[test]
     fn test_build_headers() {

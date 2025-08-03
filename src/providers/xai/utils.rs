@@ -2,44 +2,19 @@
 //!
 //! This module contains utility functions for the `xAI` provider.
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use reqwest::header::HeaderMap;
 use std::collections::HashMap;
 
 use crate::error::LlmError;
 use crate::types::{ChatMessage, ContentPart, FinishReason, MessageContent};
+use crate::utils::http_headers::ProviderHeaders;
 
 /// Build HTTP headers for `xAI` API requests
 pub fn build_headers(
     api_key: &str,
     additional_headers: &HashMap<String, String>,
 ) -> Result<HeaderMap, LlmError> {
-    let mut headers = HeaderMap::new();
-
-    // Authorization header
-    let auth_value = format!("Bearer {api_key}");
-    headers.insert(
-        reqwest::header::AUTHORIZATION,
-        HeaderValue::from_str(&auth_value)
-            .map_err(|e| LlmError::InvalidInput(format!("Invalid authorization header: {e}")))?,
-    );
-
-    // Content-Type header
-    headers.insert(
-        reqwest::header::CONTENT_TYPE,
-        HeaderValue::from_static("application/json"),
-    );
-
-    // Add additional headers
-    for (key, value) in additional_headers {
-        let header_name = HeaderName::from_bytes(key.as_bytes())
-            .map_err(|e| LlmError::InvalidInput(format!("Invalid header name '{key}': {e}")))?;
-        let header_value = HeaderValue::from_str(value).map_err(|e| {
-            LlmError::InvalidInput(format!("Invalid header value for '{key}': {e}"))
-        })?;
-        headers.insert(header_name, header_value);
-    }
-
-    Ok(headers)
+    ProviderHeaders::xai(api_key, additional_headers)
 }
 
 /// Convert internal message format to `xAI` format

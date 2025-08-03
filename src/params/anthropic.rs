@@ -18,6 +18,11 @@ impl ParameterMapper for AnthropicParameterMapper {
     fn map_common_params(&self, params: &CommonParams) -> serde_json::Value {
         let mut json = CommonMapper::map_common_to_json(params);
 
+        // Anthropic API requires max_tokens parameter - set default if not provided
+        if json.get("max_tokens").is_none() {
+            json["max_tokens"] = 4096.into();
+        }
+
         // Handle Anthropic-specific stop sequences format
         if let Some(stop) = &params.stop_sequences {
             json["stop_sequences"] = stop.clone().into();
@@ -77,10 +82,15 @@ impl ParameterMapper for AnthropicParameterMapper {
             }
         }
 
+        // Anthropic API requires max_tokens parameter
         if let Some(max_tokens) = params.get("max_tokens") {
             if let Some(max_tokens_val) = max_tokens.as_u64() {
                 ParameterValidator::validate_max_tokens(max_tokens_val, 1, 200_000, "Anthropic")?;
             }
+        } else {
+            return Err(LlmError::InvalidParameter(
+                "max_tokens is required for Anthropic API".to_string(),
+            ));
         }
 
         // Validate Anthropic-specific parameters
@@ -275,6 +285,29 @@ mod tests {
         assert_eq!(mapped_params["model"], "claude-3-5-sonnet-20241022");
         assert_eq!(mapped_params["max_tokens"], 1000);
         assert_eq!(mapped_params["stop_sequences"], serde_json::json!(["STOP"]));
+        // Seed should not be present for Anthropic
+        assert!(mapped_params.get("seed").is_none());
+    }
+
+    #[test]
+    fn test_anthropic_parameter_mapping_with_default_max_tokens() {
+        let mapper = AnthropicParameterMapper;
+        let params = CommonParams {
+            model: "claude-3-5-sonnet-20241022".to_string(),
+            temperature: Some(0.7),
+            max_tokens: None, // No max_tokens provided
+            top_p: Some(0.9),
+            stop_sequences: None,
+            seed: None,
+        };
+
+        let mapped_params = mapper.map_common_params(&params);
+        assert_eq!(mapped_params["model"], "claude-3-5-sonnet-20241022");
+        // Should have default max_tokens
+        assert_eq!(mapped_params["max_tokens"], 4096);
+        // Use approximate comparison for floating point values
+        assert!((mapped_params["temperature"].as_f64().unwrap() - 0.7).abs() < 0.001);
+        assert!((mapped_params["top_p"].as_f64().unwrap() - 0.9).abs() < 0.001);
         // Seed should not be present for Anthropic
         assert!(mapped_params.get("seed").is_none());
     }

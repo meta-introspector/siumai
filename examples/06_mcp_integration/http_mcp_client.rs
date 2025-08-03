@@ -388,7 +388,7 @@ impl HttpMcpLlmDemo {
                     // Add assistant message with tool calls
                     let tool_calls = response.get_tool_calls().unwrap_or(&vec![]).clone();
                     follow_up_messages.push(
-                        ChatMessage::assistant("")
+                        ChatMessage::assistant("I'll help you with those calculations and get the current time.")
                             .with_tool_calls(tool_calls)
                             .build(),
                     );
@@ -522,7 +522,7 @@ impl HttpMcpLlmDemo {
                                 let stream_tool_calls =
                                     final_response.get_tool_calls().unwrap_or(&vec![]).clone();
                                 stream_follow_up_messages.push(
-                                    ChatMessage::assistant("")
+                                    ChatMessage::assistant("I'll help you with those calculations and get the current time.")
                                         .with_tool_calls(stream_tool_calls)
                                         .build(),
                                 );

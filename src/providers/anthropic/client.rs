@@ -202,15 +202,6 @@ impl ChatCapability for AnthropicClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // Create a new chat capability with current configuration for streaming
-        let chat_capability = super::chat::AnthropicChatCapability::new(
-            self.chat_capability.api_key.clone(),
-            self.chat_capability.base_url.clone(),
-            self.chat_capability.http_client.clone(),
-            self.chat_capability.http_config.clone(),
-            self.specific_params.clone(),
-        );
-
         // Create a ChatRequest with client's configuration for streaming
         let request = ChatRequest {
             messages,
@@ -222,85 +213,12 @@ impl ChatCapability for AnthropicClient {
             stream: true,
         };
 
-        let headers = super::utils::build_headers(
-            &chat_capability.api_key,
-            &chat_capability.http_config.headers,
-        )?;
-        let request_body =
-            chat_capability.build_chat_request_body(&request, Some(&self.specific_params))?;
-
-        let response = chat_capability
-            .http_client
-            .post(format!("{}/v1/messages", chat_capability.base_url))
-            .headers(headers)
-            .json(&request_body)
-            .send()
-            .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            return Err(LlmError::ApiError {
-                code: status.as_u16(),
-                message: format!("Anthropic API error {status}: {error_text}"),
-                details: None,
-            });
-        }
-
-        // Create stream from response with UTF-8 decoder
-        use crate::utils::Utf8StreamDecoder;
-        use futures_util::StreamExt;
-        use std::sync::{Arc, Mutex};
-
-        let decoder = Arc::new(Mutex::new(Utf8StreamDecoder::new()));
-        let decoder_for_flush = decoder.clone();
-
-        let stream = response.bytes_stream();
-        let decoded_stream = stream.filter_map(move |chunk_result| {
-            let decoder = decoder.clone();
-            async move {
-                match chunk_result {
-                    Ok(chunk) => {
-                        // Use UTF-8 decoder to handle incomplete sequences
-                        let decoded_chunk = {
-                            let mut decoder = decoder.lock().unwrap();
-                            decoder.decode(&chunk)
-                        };
-
-                        if !decoded_chunk.is_empty() {
-                            if let Some(event) =
-                                super::chat::AnthropicChatCapability::parse_sse_event(
-                                    &decoded_chunk,
-                                )
-                            {
-                                return Some(event);
-                            }
-                        }
-                        None
-                    }
-                    Err(e) => Some(Err(LlmError::StreamError(format!("Stream error: {e}")))),
-                }
-            }
-        });
-
-        // Add flush operation
-        let flush_stream = futures_util::stream::once(async move {
-            let remaining = {
-                let mut decoder = decoder_for_flush.lock().unwrap();
-                decoder.flush()
-            };
-
-            if !remaining.is_empty() {
-                super::chat::AnthropicChatCapability::parse_sse_event(&remaining)
-            } else {
-                None
-            }
-        })
-        .filter_map(|result| async move { result });
-
-        let final_stream = decoded_stream.chain(flush_stream);
-        Ok(Box::pin(final_stream))
+        // Create streaming client with proper configuration
+        let streaming = super::streaming::AnthropicStreaming::new(
+            self.anthropic_params.clone(),
+            self.chat_capability.http_client.clone(),
+        );
+        streaming.create_chat_stream(request).await
     }
 }
 

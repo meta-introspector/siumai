@@ -206,32 +206,15 @@ impl AnthropicStreaming {
         headers.insert("anthropic-version", "2023-06-01".parse().unwrap());
         // Note: API key should be provided via config
 
-        // Make the request
-        let response = self
+        // Create the stream using reqwest_eventsource for enhanced reliability
+        let request_builder = self
             .http_client
             .post("https://api.anthropic.com/v1/messages")
             .headers(headers)
-            .json(&request_body)
-            .send()
-            .await
-            .map_err(|e| LlmError::HttpError(format!("Request failed: {e}")))?;
+            .json(&request_body);
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(LlmError::ApiError {
-                code: status.as_u16(),
-                message: format!("Anthropic API error {status}: {error_text}"),
-                details: None,
-            });
-        }
-
-        // Create the stream using our new infrastructure
         let converter = AnthropicEventConverter::new(self.config);
-        StreamProcessor::create_sse_stream(response, converter).await
+        StreamProcessor::create_eventsource_stream(request_builder, converter).await
     }
 
     /// Convert messages to Anthropic format

@@ -142,7 +142,7 @@ impl GeminiFiles {
         method: reqwest::Method,
         endpoint: &str,
     ) -> Result<reqwest::RequestBuilder, LlmError> {
-        let url = format!("{}/{}", self.config.base_url, endpoint);
+        let url = crate::utils::url::join_url(&self.config.base_url, endpoint);
 
         let request_builder = self
             .http_client

@@ -217,7 +217,7 @@ impl ModelListingCapability for GeminiModels {
             format!("models/{model_id}")
         };
 
-        let url = format!("{}/{}", self.config.base_url, full_model_name);
+        let url = crate::utils::url::join_url(&self.config.base_url, &full_model_name);
 
         let response = self
             .http_client

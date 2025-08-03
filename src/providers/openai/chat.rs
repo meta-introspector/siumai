@@ -301,7 +301,7 @@ impl ChatCapability for OpenAiChatCapability {
         )?;
 
         let body = self.build_chat_request_body(&request)?;
-        let url = format!("{}/chat/completions", self.base_url);
+        let url = crate::utils::url::join_url(&self.base_url, "chat/completions");
 
         debug!(
             url = %url,
@@ -417,7 +417,7 @@ impl OpenAiChatCapability {
         )?;
 
         let body = self.build_chat_request_body(&request)?;
-        let url = format!("{}/chat/completions", self.base_url);
+        let url = crate::utils::url::join_url(&self.base_url, "chat/completions");
 
         debug!(
             url = %url,

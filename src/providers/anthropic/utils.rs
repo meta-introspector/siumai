@@ -5,7 +5,8 @@
 use super::types::*;
 use crate::error::LlmError;
 use crate::types::*;
-use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
+use crate::utils::http_headers::ProviderHeaders;
+use reqwest::header::HeaderMap;
 
 /// Build HTTP headers for Anthropic API requests according to official documentation
 /// <https://docs.anthropic.com/en/api/messages>
@@ -13,56 +14,7 @@ pub fn build_headers(
     api_key: &str,
     custom_headers: &std::collections::HashMap<String, String>,
 ) -> Result<HeaderMap, LlmError> {
-    let mut headers = HeaderMap::new();
-
-    // Set the authentication header
-    headers.insert(
-        "x-api-key",
-        HeaderValue::from_str(api_key)
-            .map_err(|e| LlmError::ConfigurationError(format!("Invalid API key: {e}")))?,
-    );
-
-    // Set the content type
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    // Set the Anthropic version (required)
-    headers.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
-
-    // Add beta features if needed (for thinking and other experimental features)
-    let mut beta_features = Vec::new();
-
-    // Check if thinking is being used (look for thinking-related headers)
-    if custom_headers.contains_key("anthropic-beta") {
-        if let Some(beta_value) = custom_headers.get("anthropic-beta") {
-            beta_features.push(beta_value.clone());
-        }
-    }
-
-    if !beta_features.is_empty() {
-        headers.insert(
-            "anthropic-beta",
-            HeaderValue::from_str(&beta_features.join(","))
-                .map_err(|e| LlmError::ConfigurationError(format!("Invalid beta header: {e}")))?,
-        );
-    }
-
-    // Add custom headers (excluding anthropic-beta which we handle above)
-    for (key, value) in custom_headers {
-        if key == "anthropic-beta" {
-            continue; // Already handled above
-        }
-        let header_name: reqwest::header::HeaderName = key.parse().map_err(|e| {
-            LlmError::ConfigurationError(format!("Invalid header key '{key}': {e}"))
-        })?;
-        headers.insert(
-            header_name,
-            HeaderValue::from_str(value).map_err(|e| {
-                LlmError::ConfigurationError(format!("Invalid header value '{value}': {e}"))
-            })?,
-        );
-    }
-
-    Ok(headers)
+    ProviderHeaders::anthropic(api_key, custom_headers)
 }
 
 /// Convert message content to Anthropic format

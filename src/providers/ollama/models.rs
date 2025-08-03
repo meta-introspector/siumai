@@ -290,7 +290,7 @@ impl OllamaModelsCapability {
 impl ModelListingCapability for OllamaModelsCapability {
     async fn list_models(&self) -> Result<Vec<ModelInfo>, LlmError> {
         let headers = build_headers(&self.http_config.headers)?;
-        let url = format!("{}/api/tags", self.base_url);
+        let url = crate::utils::url::join_url(&self.base_url, "api/tags");
 
         let response = self.http_client.get(&url).headers(headers).send().await?;
 

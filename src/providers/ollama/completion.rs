@@ -153,7 +153,7 @@ impl OllamaCompletionCapability {
     ) -> Result<String, LlmError> {
         let headers = build_headers(&self.http_config.headers)?;
         let body = self.build_generate_request_body(&prompt, Some(&model), false)?;
-        let url = format!("{}/api/generate", self.base_url);
+        let url = crate::utils::url::join_url(&self.base_url, "api/generate");
 
         let response = self
             .http_client
