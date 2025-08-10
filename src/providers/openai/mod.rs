@@ -86,3 +86,6 @@ pub use moderation::OpenAiModeration;
 pub use responses::{
     ListResponsesQuery, OpenAiResponses, ResponseMetadata, ResponseStatus, ResponsesApiCapability,
 };
+
+// Re-export parameter enums for convenience
+pub use crate::params::openai::{IncludableItem, SortOrder, TruncationStrategy};

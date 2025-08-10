@@ -37,6 +37,10 @@ pub enum ResponseStatus {
     Failed,
     /// Response was cancelled
     Cancelled,
+    /// Response is queued for processing
+    Queued,
+    /// Response is incomplete
+    Incomplete,
 }
 
 /// Response metadata for Responses API
@@ -70,7 +74,7 @@ pub struct ListResponsesQuery {
     /// Filter by status
     pub status: Option<ResponseStatus>,
     /// Sort order (asc/desc)
-    pub order: Option<String>,
+    pub order: Option<crate::params::openai::SortOrder>,
 }
 
 /// `OpenAI` Responses API client
@@ -332,11 +336,17 @@ impl OpenAiResponses {
                     ResponseStatus::Completed => "completed",
                     ResponseStatus::Failed => "failed",
                     ResponseStatus::Cancelled => "cancelled",
+                    ResponseStatus::Queued => "queued",
+                    ResponseStatus::Incomplete => "incomplete",
                 };
                 params.push(format!("status={status_str}"));
             }
             if let Some(order) = q.order {
-                params.push(format!("order={order}"));
+                let order_str = match order {
+                    crate::params::openai::SortOrder::Asc => "asc",
+                    crate::params::openai::SortOrder::Desc => "desc",
+                };
+                params.push(format!("order={order_str}"));
             }
 
             if !params.is_empty() {
@@ -423,7 +433,7 @@ impl OpenAiResponses {
         let mut body = serde_json::json!({
             "model": self.config.common_params.model,
             "stream": stream,
-            "background": background,
+            "background": self.config.openai_params.background.unwrap_or(background),
         });
 
         // Add previous response ID for chaining
@@ -465,6 +475,44 @@ impl OpenAiResponses {
         // Responses API expects `input` to be an array of input items
         body["input"] = serde_json::Value::Array(input_items);
 
+        // Add instructions if provided
+        if let Some(ref instructions) = self.config.openai_params.instructions {
+            body["instructions"] = serde_json::Value::String(instructions.clone());
+        }
+
+        // Add include array if provided
+        if let Some(ref include) = self.config.openai_params.include {
+            body["include"] = serde_json::to_value(include)
+                .map_err(|e| LlmError::ParseError(format!("Failed to serialize include: {}", e)))?;
+        }
+
+        // Add truncation strategy if provided
+        if let Some(ref truncation) = self.config.openai_params.truncation {
+            body["truncation"] = serde_json::to_value(truncation).map_err(|e| {
+                LlmError::ParseError(format!("Failed to serialize truncation: {}", e))
+            })?;
+        }
+
+        // Add reasoning configuration if provided
+        if let Some(ref reasoning) = self.config.openai_params.reasoning {
+            body["reasoning"] = reasoning.clone();
+        }
+
+        // Add text configuration if provided
+        if let Some(ref text) = self.config.openai_params.text {
+            body["text"] = text.clone();
+        }
+
+        // Add prompt configuration if provided
+        if let Some(ref prompt) = self.config.openai_params.prompt {
+            body["prompt"] = prompt.clone();
+        }
+
+        // Add stream options if provided
+        if let Some(ref stream_options) = self.config.openai_params.stream_options {
+            body["stream_options"] = stream_options.clone();
+        }
+
         // Add optional parameters
         if let Some(temp) = self.config.common_params.temperature
             && let Some(num) = serde_json::Number::from_f64(temp as f64)
@@ -472,11 +520,18 @@ impl OpenAiResponses {
             body["temperature"] = serde_json::Value::Number(num);
         }
 
-        // Prefer OpenAI-specific max_completion_tokens mapped to Responses' max_output_tokens; fallback to common max_tokens
-        if let Some(max_comp) = self.config.openai_params.max_completion_tokens {
+        // Prefer Responses API specific max_output_tokens, then max_completion_tokens, then fallback to common max_tokens
+        if let Some(max_output) = self.config.openai_params.max_output_tokens {
+            body["max_output_tokens"] = serde_json::Value::Number(max_output.into());
+        } else if let Some(max_comp) = self.config.openai_params.max_completion_tokens {
             body["max_output_tokens"] = serde_json::Value::Number(max_comp.into());
         } else if let Some(max_tokens) = self.config.common_params.max_tokens {
             body["max_output_tokens"] = serde_json::Value::Number(max_tokens.into());
+        }
+
+        // Add max_tool_calls if provided
+        if let Some(max_tool_calls) = self.config.openai_params.max_tool_calls {
+            body["max_tool_calls"] = serde_json::Value::Number(max_tool_calls.into());
         }
 
         // Seed for reproducibility (if supported by model)
@@ -529,6 +584,12 @@ impl OpenAiResponses {
         }
         if let Some(ref user) = self.config.openai_params.user {
             body["user"] = serde_json::Value::String(user.clone());
+        }
+        if let Some(ref safety_id) = self.config.openai_params.safety_identifier {
+            body["safety_identifier"] = serde_json::Value::String(safety_id.clone());
+        }
+        if let Some(ref cache_key) = self.config.openai_params.prompt_cache_key {
+            body["prompt_cache_key"] = serde_json::Value::String(cache_key.clone());
         }
 
         // Build tools array
@@ -602,6 +663,8 @@ impl OpenAiResponses {
             "completed" => ResponseStatus::Completed,
             "failed" => ResponseStatus::Failed,
             "cancelled" => ResponseStatus::Cancelled,
+            "queued" => ResponseStatus::Queued,
+            "incomplete" => ResponseStatus::Incomplete,
             _ => ResponseStatus::InProgress,
         };
 
@@ -1861,7 +1924,10 @@ impl ResponsesApiCapability for OpenAiResponses {
         let metadata = self.get_response_metadata(response_id).await?;
         Ok(matches!(
             metadata.status,
-            ResponseStatus::Completed | ResponseStatus::Failed | ResponseStatus::Cancelled
+            ResponseStatus::Completed
+                | ResponseStatus::Failed
+                | ResponseStatus::Cancelled
+                | ResponseStatus::Incomplete
         ))
     }
 }
@@ -2109,6 +2175,83 @@ mod tests {
         {
             assert_eq!(first_content["type"], "input_text");
         }
+    }
+
+    #[test]
+    fn test_responses_api_specific_parameters() {
+        use crate::params::OpenAiParams;
+
+        let mut config = create_test_config();
+
+        // Set Responses API specific parameters
+        config.openai_params = OpenAiParams {
+            instructions: Some("You are a helpful assistant.".to_string()),
+            include: Some(vec![
+                crate::params::openai::IncludableItem::MessageOutputTextLogprobs,
+            ]),
+            truncation: Some(crate::params::openai::TruncationStrategy::Auto),
+            reasoning: Some(serde_json::json!({"effort": "high"})),
+            max_output_tokens: Some(1000),
+            max_tool_calls: Some(5),
+            text: Some(serde_json::json!({"format": {"type": "text"}})),
+            background: Some(true),
+            ..Default::default()
+        };
+
+        let client = super::OpenAiResponses::new(reqwest::Client::new(), config);
+        let message = create_test_message();
+
+        let body = client
+            .build_request_body(&[message], None, None, false, false)
+            .unwrap();
+
+        // Check that Responses API specific parameters are included
+        assert_eq!(body["instructions"], "You are a helpful assistant.");
+        assert_eq!(
+            body["include"],
+            serde_json::json!(["message.output_text.logprobs"])
+        );
+        assert_eq!(body["truncation"], "auto");
+        assert_eq!(body["reasoning"], serde_json::json!({"effort": "high"}));
+        assert_eq!(body["max_output_tokens"], 1000);
+        assert_eq!(body["max_tool_calls"], 5);
+        assert_eq!(
+            body["text"],
+            serde_json::json!({"format": {"type": "text"}})
+        );
+        assert_eq!(body["background"], true); // Should override the method parameter
+    }
+
+    #[test]
+    fn test_enum_serialization() {
+        use crate::params::OpenAiParams;
+        use crate::params::openai::{IncludableItem, TruncationStrategy};
+
+        let mut config = create_test_config();
+
+        // Test enum serialization
+        config.openai_params = OpenAiParams {
+            include: Some(vec![
+                IncludableItem::MessageOutputTextLogprobs,
+                IncludableItem::FileSearchCallResults,
+            ]),
+            truncation: Some(TruncationStrategy::Auto),
+            ..Default::default()
+        };
+
+        let client = super::OpenAiResponses::new(reqwest::Client::new(), config);
+        let message = create_test_message();
+
+        let body = client
+            .build_request_body(&[message], None, None, false, false)
+            .unwrap();
+
+        // Check that enums are serialized correctly
+        assert_eq!(
+            body["include"],
+            serde_json::json!(["message.output_text.logprobs", "file_search_call.results"])
+        );
+        assert_eq!(body["truncation"], "auto");
     }
 
     #[test]
