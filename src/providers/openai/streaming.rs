@@ -271,6 +271,19 @@ impl OpenAiStreaming {
             request_body["tools"] = self.convert_tools(tools)?;
         }
 
+        // Merge provider-specific params (from OpenAiParams via ProviderParams)
+        if let Some(provider) = &request.provider_params {
+            if let serde_json::Value::Object(ref mut body_obj) = request_body {
+                for (k, v) in &provider.params {
+                    // Avoid overriding mandatory streaming flags
+                    if k == "stream" || k == "stream_options" || k == "messages" || k == "model" {
+                        continue;
+                    }
+                    body_obj.insert(k.clone(), v.clone());
+                }
+            }
+        }
+
         // Create headers
         let mut headers = reqwest::header::HeaderMap::new();
         for (key, value) in self.config.get_headers() {

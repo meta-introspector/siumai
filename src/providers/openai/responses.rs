@@ -637,8 +637,13 @@ impl ChatCapability for OpenAiResponses {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        let request_body =
-            self.build_request_body(&messages, tools.as_deref(), None, false, false)?;
+        let request_body = self.build_request_body(
+            &messages,
+            tools.as_deref(),
+            Some(&self.config.built_in_tools),
+            false,
+            false,
+        )?;
 
         let response = self
             .http_client

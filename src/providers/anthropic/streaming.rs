@@ -171,6 +171,23 @@ impl AnthropicStreaming {
         }
     }
 
+    /// Merge provider-specific params into the request body, preserving core fields
+    fn merge_provider_params_into_body(
+        body: &mut serde_json::Value,
+        request: &crate::types::ChatRequest,
+    ) {
+        if let Some(provider) = &request.provider_params {
+            if let serde_json::Value::Object(obj) = body {
+                for (k, v) in &provider.params {
+                    if k == "stream" || k == "messages" || k == "model" {
+                        continue;
+                    }
+                    obj.insert(k.clone(), v.clone());
+                }
+            }
+        }
+    }
+
     /// Create a chat stream from ChatRequest
     pub async fn create_chat_stream(
         self,
@@ -199,6 +216,21 @@ impl AnthropicStreaming {
         if let Some(tools) = &request.tools {
             request_body["tools"] = self.convert_tools(tools)?;
         }
+
+        // Merge provider-specific params if present (preserve core fields)
+        if let Some(provider) = &request.provider_params {
+            if let serde_json::Value::Object(obj) = &mut request_body {
+                for (k, v) in &provider.params {
+                    if k == "stream" || k == "messages" || k == "model" {
+                        continue;
+                    }
+                    obj.insert(k.clone(), v.clone());
+                }
+            }
+        }
+
+        // Merge provider-specific params before sending
+        Self::merge_provider_params_into_body(&mut request_body, &request);
 
         // Create headers
         let mut headers = reqwest::header::HeaderMap::new();
@@ -284,6 +316,42 @@ mod tests {
         } else {
             panic!("Expected ContentDelta event");
         }
+    }
+
+    #[test]
+    fn test_merge_provider_params_into_body_preserves_core_fields_anthropic() {
+        let request = crate::types::ChatRequest {
+            messages: vec![],
+            tools: None,
+            common_params: crate::types::CommonParams {
+                model: "claude-3-5-sonnet".to_string(),
+                ..Default::default()
+            },
+            provider_params: Some(crate::types::ProviderParams {
+                params: {
+                    let mut m = std::collections::HashMap::new();
+                    m.insert("tool_choice".to_string(), serde_json::json!("auto"));
+                    m.insert("model".to_string(), serde_json::json!("override"));
+                    m
+                },
+            }),
+            http_config: None,
+            web_search: None,
+            stream: true,
+        };
+
+        let mut body = serde_json::json!({
+            "model": request.common_params.model,
+            "messages": [],
+            "stream": true
+        });
+
+        super::AnthropicStreaming::merge_provider_params_into_body(&mut body, &request);
+
+        assert_eq!(body["model"], serde_json::json!("claude-3-5-sonnet"));
+        assert_eq!(body["messages"], serde_json::json!([]));
+        assert_eq!(body["stream"], serde_json::json!(true));
+        assert_eq!(body["tool_choice"], serde_json::json!("auto"));
     }
 
     #[tokio::test]

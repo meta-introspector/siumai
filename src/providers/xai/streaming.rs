@@ -23,6 +23,19 @@ impl XaiStreaming {
             http_client,
         }
     }
+    /// Merge provider-specific params into the request body, preserving critical streaming fields
+    fn merge_provider_params_into_body(body: &mut serde_json::Value, request: &ChatRequest) {
+        if let Some(provider) = &request.provider_params {
+            if let serde_json::Value::Object(obj) = body {
+                for (k, v) in &provider.params {
+                    if k == "stream" || k == "stream_options" || k == "messages" || k == "model" {
+                        continue;
+                    }
+                    obj.insert(k.clone(), v.clone());
+                }
+            }
+        }
+    }
 
     /// Create a chat stream
     pub async fn create_chat_stream(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
@@ -54,6 +67,9 @@ impl XaiStreaming {
                 body["tools"] = serde_json::to_value(tools)?;
             }
         }
+
+        // Merge provider-specific params
+        Self::merge_provider_params_into_body(&mut body, &request);
 
         let url = format!("{}/chat/completions", self.config.base_url);
 

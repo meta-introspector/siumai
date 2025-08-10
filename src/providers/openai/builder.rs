@@ -55,6 +55,14 @@ pub struct OpenAiBuilder {
     http_config: HttpConfig,
     /// Tracing configuration
     tracing_config: Option<crate::tracing::TracingConfig>,
+    /// Responses API toggle
+    use_responses_api: bool,
+    /// Previous response id for chaining
+    previous_response_id: Option<String>,
+    /// Built-in tools for Responses API
+    built_in_tools: Vec<OpenAiBuiltInTool>,
+    /// Web search config
+    web_search_config: WebSearchConfig,
 }
 
 impl OpenAiBuilder {
@@ -74,6 +82,10 @@ impl OpenAiBuilder {
             openai_params: OpenAiParams::default(),
             http_config: HttpConfig::default(),
             tracing_config: None,
+            use_responses_api: false,
+            previous_response_id: None,
+            built_in_tools: Vec::new(),
+            web_search_config: WebSearchConfig::default(),
         }
     }
 
@@ -231,6 +243,45 @@ impl OpenAiBuilder {
     /// * `enabled` - Whether to enable parallel tool calls
     pub const fn parallel_tool_calls(mut self, enabled: bool) -> Self {
         self.openai_params.parallel_tool_calls = Some(enabled);
+        self
+    }
+
+    // === Responses API Configuration ===
+
+    /// Use OpenAI Responses API instead of Chat Completions
+    pub fn responses_api(mut self, enabled: bool) -> Self {
+        self.use_responses_api = enabled;
+        self
+    }
+
+    /// Set previous response id for chaining (Responses API)
+    pub fn previous_response_id<S: Into<String>>(mut self, id: S) -> Self {
+        self.previous_response_id = Some(id.into());
+        self
+    }
+
+    /// Add a built-in tool for Responses API
+    pub fn built_in_tool(mut self, tool: OpenAiBuiltInTool) -> Self {
+        self.built_in_tools.push(tool);
+        self
+    }
+
+    /// Add multiple built-in tools for Responses API
+    pub fn built_in_tools(mut self, tools: Vec<OpenAiBuiltInTool>) -> Self {
+        self.built_in_tools.extend(tools);
+        self
+    }
+
+    /// Enable web search (Responses API built-in tool)
+    pub fn enable_web_search(mut self) -> Self {
+        self.web_search_config.enabled = true;
+        if !self
+            .built_in_tools
+            .iter()
+            .any(|t| matches!(t, OpenAiBuiltInTool::WebSearch))
+        {
+            self.built_in_tools.push(OpenAiBuiltInTool::WebSearch);
+        }
         self
     }
 
@@ -411,10 +462,10 @@ impl OpenAiBuilder {
             common_params: self.common_params,
             openai_params: self.openai_params,
             http_config: self.http_config,
-            web_search_config: crate::types::WebSearchConfig::default(),
-            use_responses_api: false,
-            previous_response_id: None,
-            built_in_tools: Vec::new(),
+            web_search_config: self.web_search_config,
+            use_responses_api: self.use_responses_api,
+            previous_response_id: self.previous_response_id,
+            built_in_tools: self.built_in_tools,
         };
 
         // Create client and store tracing guard to keep tracing active

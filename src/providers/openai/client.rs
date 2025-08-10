@@ -13,6 +13,7 @@ use crate::types::*;
 
 use super::chat::OpenAiChatCapability;
 use super::models::OpenAiModels;
+use super::responses::OpenAiResponses;
 use super::types::OpenAiSpecificParams;
 use super::utils::get_default_models;
 
@@ -35,6 +36,14 @@ pub struct OpenAiClient {
     tracing_config: Option<crate::tracing::TracingConfig>,
     /// Tracing guard to keep tracing system active
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
+    /// Responses API toggle
+    use_responses_api: bool,
+    /// Previous response id for chaining
+    previous_response_id: Option<String>,
+    /// Built-in tools for Responses API
+    built_in_tools: Vec<crate::types::OpenAiBuiltInTool>,
+    /// Web search config
+    web_search_config: crate::types::WebSearchConfig,
 }
 
 impl OpenAiClient {
@@ -73,6 +82,10 @@ impl OpenAiClient {
             http_client,
             tracing_config: None,
             _tracing_guard: None,
+            use_responses_api: config.use_responses_api,
+            previous_response_id: config.previous_response_id,
+            built_in_tools: config.built_in_tools,
+            web_search_config: config.web_search_config,
         }
     }
 
@@ -208,7 +221,7 @@ impl ChatCapability for OpenAiClient {
             messages,
             tools,
             common_params: self.common_params.clone(),
-            provider_params: None,
+            provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
             http_config: None,
             web_search: None,
             stream: false,
@@ -227,7 +240,7 @@ impl ChatCapability for OpenAiClient {
             messages,
             tools,
             common_params: self.common_params.clone(),
-            provider_params: None,
+            provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
             http_config: None,
             web_search: None,
             stream: true,
