@@ -107,6 +107,23 @@ impl OpenAiClient {
         let http_client = reqwest::Client::new();
         Self::new(config, http_client)
     }
+    /// Decide whether to use Responses API for current client config (auto routes gpt-5*)
+    pub(crate) fn should_use_responses(&self) -> bool {
+        let cfg = super::config::OpenAiConfig {
+            api_key: self.chat_capability.api_key.clone(),
+            base_url: self.chat_capability.base_url.clone(),
+            organization: self.chat_capability.organization.clone(),
+            project: self.chat_capability.project.clone(),
+            common_params: self.common_params.clone(),
+            openai_params: self.openai_params.clone(),
+            http_config: self.chat_capability.http_config.clone(),
+            web_search_config: self.web_search_config.clone(),
+            use_responses_api: self.use_responses_api,
+            previous_response_id: self.previous_response_id.clone(),
+            built_in_tools: self.built_in_tools.clone(),
+        };
+        super::utils::should_route_responses(&cfg)
+    }
 
     /// Creates a new `OpenAI` client (legacy constructor for backward compatibility)
     #[allow(clippy::too_many_arguments)]
@@ -216,17 +233,35 @@ impl ChatCapability for OpenAiClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        // Create a ChatRequest from messages and tools, using client's configuration
-        let request = ChatRequest {
-            messages,
-            tools,
-            common_params: self.common_params.clone(),
-            provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
-            http_config: None,
-            web_search: None,
-            stream: false,
-        };
-        self.chat_capability.chat(request).await
+        if self.should_use_responses() {
+            let config = super::config::OpenAiConfig {
+                api_key: self.chat_capability.api_key.clone(),
+                base_url: self.chat_capability.base_url.clone(),
+                organization: self.chat_capability.organization.clone(),
+                project: self.chat_capability.project.clone(),
+                common_params: self.common_params.clone(),
+                openai_params: self.openai_params.clone(),
+                http_config: self.chat_capability.http_config.clone(),
+                web_search_config: self.web_search_config.clone(),
+                use_responses_api: true,
+                previous_response_id: self.previous_response_id.clone(),
+                built_in_tools: self.built_in_tools.clone(),
+            };
+            let responses = OpenAiResponses::new(self.http_client.clone(), config);
+            responses.chat_with_tools(messages, tools).await
+        } else {
+            // Create a ChatRequest from messages and tools, using client's configuration
+            let request = ChatRequest {
+                messages,
+                tools,
+                common_params: self.common_params.clone(),
+                provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
+                http_config: None,
+                web_search: None,
+                stream: false,
+            };
+            self.chat_capability.chat(request).await
+        }
     }
 
     /// Streaming chat with tools
@@ -235,34 +270,53 @@ impl ChatCapability for OpenAiClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // Create a ChatRequest with client's configuration for streaming
-        let request = ChatRequest {
-            messages,
-            tools,
-            common_params: self.common_params.clone(),
-            provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
-            http_config: None,
-            web_search: None,
-            stream: true,
-        };
+        if self.should_use_responses() {
+            let config = super::config::OpenAiConfig {
+                api_key: self.chat_capability.api_key.clone(),
+                base_url: self.chat_capability.base_url.clone(),
+                organization: self.chat_capability.organization.clone(),
+                project: self.chat_capability.project.clone(),
+                common_params: self.common_params.clone(),
+                openai_params: self.openai_params.clone(),
+                http_config: self.chat_capability.http_config.clone(),
+                web_search_config: self.web_search_config.clone(),
+                use_responses_api: true,
+                previous_response_id: self.previous_response_id.clone(),
+                built_in_tools: self.built_in_tools.clone(),
+            };
+            let responses = OpenAiResponses::new(self.http_client.clone(), config);
+            responses.chat_stream(messages, tools).await
+        } else {
+            // Create a ChatRequest with client's configuration for streaming
+            let request = ChatRequest {
+                messages,
+                tools,
+                common_params: self.common_params.clone(),
+                provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
+                http_config: None,
+                web_search: None,
+                stream: true,
+            };
 
-        // Create streaming client with proper configuration
-        let config = super::config::OpenAiConfig {
-            api_key: self.chat_capability.api_key.clone(),
-            base_url: self.chat_capability.base_url.clone(),
-            organization: self.chat_capability.organization.clone(),
-            project: self.chat_capability.project.clone(),
-            common_params: self.common_params.clone(),
-            openai_params: self.openai_params.clone(),
-            http_config: self.chat_capability.http_config.clone(),
-            web_search_config: crate::types::WebSearchConfig::default(),
-            use_responses_api: false,
-            previous_response_id: None,
-            built_in_tools: Vec::new(),
-        };
+            // Create streaming client with proper configuration
+            let config = super::config::OpenAiConfig {
+                api_key: self.chat_capability.api_key.clone(),
+                base_url: self.chat_capability.base_url.clone(),
+                organization: self.chat_capability.organization.clone(),
+                project: self.chat_capability.project.clone(),
+                common_params: self.common_params.clone(),
+                openai_params: self.openai_params.clone(),
+                http_config: self.chat_capability.http_config.clone(),
+                web_search_config: crate::types::WebSearchConfig::default(),
+                use_responses_api: false,
+                previous_response_id: None,
+                built_in_tools: Vec::new(),
+            };
 
-        let streaming = super::streaming::OpenAiStreaming::new(config, self.http_client.clone());
-        streaming.create_chat_stream(request).await
+            let streaming =
+                super::streaming::OpenAiStreaming::new(config, self.http_client.clone());
+            streaming.create_chat_stream(request).await
+        }
     }
 }
 

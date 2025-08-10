@@ -235,6 +235,14 @@ impl OpenAiConfig {
             headers.insert("OpenAI-Project".to_string(), project.clone());
         }
 
+        // Beta header required for Responses API
+        if self.use_responses_api {
+            headers.insert(
+                "OpenAI-Beta".to_string(),
+                "responses-2024-12-17".to_string(),
+            );
+        }
+
         headers
     }
 

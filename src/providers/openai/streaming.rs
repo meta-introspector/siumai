@@ -239,50 +239,23 @@ impl OpenAiStreaming {
     ) -> Result<ChatStream, LlmError> {
         let url = format!("{}/chat/completions", self.config.base_url);
 
-        // Build request body
-        let mut request_body = serde_json::json!({
-            "model": request.common_params.model,
-            "messages": self.convert_messages(&request.messages)?,
-            "stream": true,
-            "stream_options": {
-                "include_usage": true
-            }
+        // Use the same request building logic as non-streaming
+        let chat_capability = super::chat::OpenAiChatCapability::new(
+            self.config.api_key.clone(),
+            self.config.base_url.clone(),
+            self.http_client.clone(),
+            self.config.organization.clone(),
+            self.config.project.clone(),
+            self.config.http_config.clone(),
+        );
+
+        let mut request_body = chat_capability.build_chat_request_body(&request)?;
+
+        // Override with streaming-specific settings
+        request_body["stream"] = serde_json::Value::Bool(true);
+        request_body["stream_options"] = serde_json::json!({
+            "include_usage": true
         });
-
-        // Add common parameters
-        if let Some(temp) = request.common_params.temperature {
-            request_body["temperature"] = temp.into();
-        }
-        if let Some(max_tokens) = request.common_params.max_tokens {
-            request_body["max_tokens"] = max_tokens.into();
-        }
-        if let Some(top_p) = request.common_params.top_p {
-            request_body["top_p"] = top_p.into();
-        }
-        if let Some(stop) = &request.common_params.stop_sequences {
-            request_body["stop"] = stop.clone().into();
-        }
-        if let Some(seed) = request.common_params.seed {
-            request_body["seed"] = seed.into();
-        }
-
-        // Add tools if provided
-        if let Some(tools) = &request.tools {
-            request_body["tools"] = self.convert_tools(tools)?;
-        }
-
-        // Merge provider-specific params (from OpenAiParams via ProviderParams)
-        if let Some(provider) = &request.provider_params {
-            if let serde_json::Value::Object(ref mut body_obj) = request_body {
-                for (k, v) in &provider.params {
-                    // Avoid overriding mandatory streaming flags
-                    if k == "stream" || k == "stream_options" || k == "messages" || k == "model" {
-                        continue;
-                    }
-                    body_obj.insert(k.clone(), v.clone());
-                }
-            }
-        }
 
         // Create headers
         let mut headers = reqwest::header::HeaderMap::new();
@@ -303,42 +276,5 @@ impl OpenAiStreaming {
 
         let converter = OpenAiEventConverter::new(self.config);
         StreamProcessor::create_eventsource_stream(request_builder, converter).await
-    }
-
-    /// Convert messages to OpenAI format
-    fn convert_messages(
-        &self,
-        messages: &[crate::types::ChatMessage],
-    ) -> Result<serde_json::Value, LlmError> {
-        let openai_messages: Vec<serde_json::Value> = messages
-            .iter()
-            .map(|msg| {
-                serde_json::json!({
-                    "role": format!("{:?}", msg.role).to_lowercase(),
-                    "content": msg.content_text().unwrap_or("")
-                })
-            })
-            .collect();
-
-        Ok(serde_json::Value::Array(openai_messages))
-    }
-
-    /// Convert tools to OpenAI format
-    fn convert_tools(&self, tools: &[crate::types::Tool]) -> Result<serde_json::Value, LlmError> {
-        let openai_tools: Vec<serde_json::Value> = tools
-            .iter()
-            .map(|tool| {
-                serde_json::json!({
-                    "type": tool.r#type,
-                    "function": {
-                        "name": tool.function.name,
-                        "description": tool.function.description,
-                        "parameters": tool.function.parameters
-                    }
-                })
-            })
-            .collect();
-
-        Ok(serde_json::Value::Array(openai_tools))
     }
 }

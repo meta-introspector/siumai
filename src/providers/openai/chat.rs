@@ -161,7 +161,31 @@ impl OpenAiChatCapability {
             }
         }
 
+        // Clean up null values that might cause API errors
+        self.clean_null_values(&mut body);
+
         Ok(body)
+    }
+
+    /// Clean null values from request body to prevent API errors
+    fn clean_null_values(&self, body: &mut serde_json::Value) {
+        if let serde_json::Value::Object(obj) = body {
+            // Remove null values that can cause OpenAI API errors
+            let keys_to_remove: Vec<String> = obj
+                .iter()
+                .filter_map(|(key, value)| {
+                    if value.is_null() {
+                        Some(key.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            for key in keys_to_remove {
+                obj.remove(&key);
+            }
+        }
     }
 
     /// Parse the `OpenAI` response

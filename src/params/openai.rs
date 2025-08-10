@@ -170,6 +170,8 @@ impl ParameterMapper for OpenAiParameterMapper {
             "service_tier",
             "logprobs",
             "top_logprobs",
+            "store",
+            "metadata",
         ]
     }
 
@@ -196,6 +198,12 @@ pub struct OpenAiParams {
 
     /// Parallel tool calls
     pub parallel_tool_calls: Option<bool>,
+
+    /// Persist response in server-side store (Responses API)
+    pub store: Option<bool>,
+
+    /// Custom metadata for Responses API
+    pub metadata: Option<HashMap<String, String>>,
 
     /// User ID
     pub user: Option<String>,
@@ -263,6 +271,9 @@ pub struct OpenAiParamsBuilder {
     response_format: Option<ResponseFormat>,
     tool_choice: Option<ToolChoice>,
     parallel_tool_calls: Option<bool>,
+    store: Option<bool>,
+    metadata: Option<HashMap<String, String>>,
+
     user: Option<String>,
     frequency_penalty: Option<f32>,
     presence_penalty: Option<f32>,
@@ -296,6 +307,18 @@ impl OpenAiParamsBuilder {
     }
 
     /// Set parallel tool calls
+    /// Set store flag
+    pub fn store(mut self, store: bool) -> Self {
+        self.store = Some(store);
+        self
+    }
+
+    /// Set metadata
+    pub fn metadata(mut self, metadata: HashMap<String, String>) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+
     pub fn parallel_tool_calls(mut self, parallel: bool) -> Self {
         self.parallel_tool_calls = Some(parallel);
         self
@@ -389,6 +412,8 @@ impl OpenAiParamsBuilder {
             response_format: self.response_format,
             tool_choice: self.tool_choice,
             parallel_tool_calls: self.parallel_tool_calls,
+            store: self.store,
+            metadata: self.metadata,
             user: self.user,
             frequency_penalty: self.frequency_penalty,
             presence_penalty: self.presence_penalty,

@@ -23,53 +23,23 @@ impl XaiStreaming {
             http_client,
         }
     }
-    /// Merge provider-specific params into the request body, preserving critical streaming fields
-    fn merge_provider_params_into_body(body: &mut serde_json::Value, request: &ChatRequest) {
-        if let Some(provider) = &request.provider_params {
-            if let serde_json::Value::Object(obj) = body {
-                for (k, v) in &provider.params {
-                    if k == "stream" || k == "stream_options" || k == "messages" || k == "model" {
-                        continue;
-                    }
-                    obj.insert(k.clone(), v.clone());
-                }
-            }
-        }
-    }
 
     /// Create a chat stream
     pub async fn create_chat_stream(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
         let headers = build_headers(&self.config.api_key, &self.config.http_config.headers)?;
 
-        // Build request body with streaming enabled
-        let mut body = serde_json::json!({
-            "model": request.common_params.model,
-            "messages": convert_messages(&request.messages)?,
-            "stream": true
-        });
+        // Use the same request building logic as non-streaming
+        let chat_capability = super::chat::XaiChatCapability::new(
+            self.config.api_key.clone(),
+            self.config.base_url.clone(),
+            self.http_client.clone(),
+            self.config.http_config.clone(),
+        );
 
-        // Add common parameters
-        if let Some(temp) = request.common_params.temperature {
-            body["temperature"] =
-                serde_json::Value::Number(serde_json::Number::from_f64(temp as f64).unwrap());
-        }
-        if let Some(max_tokens) = request.common_params.max_tokens {
-            body["max_tokens"] = serde_json::Value::Number(serde_json::Number::from(max_tokens));
-        }
-        if let Some(top_p) = request.common_params.top_p {
-            body["top_p"] =
-                serde_json::Value::Number(serde_json::Number::from_f64(top_p as f64).unwrap());
-        }
+        let mut body = chat_capability.build_chat_request_body(&request)?;
 
-        // Add tools if provided
-        if let Some(ref tools) = request.tools {
-            if !tools.is_empty() {
-                body["tools"] = serde_json::to_value(tools)?;
-            }
-        }
-
-        // Merge provider-specific params
-        Self::merge_provider_params_into_body(&mut body, &request);
+        // Override with streaming-specific settings
+        body["stream"] = serde_json::Value::Bool(true);
 
         let url = format!("{}/chat/completions", self.config.base_url);
 

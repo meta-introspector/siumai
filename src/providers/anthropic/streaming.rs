@@ -224,7 +224,10 @@ impl AnthropicStreaming {
                     if k == "stream" || k == "messages" || k == "model" {
                         continue;
                     }
-                    obj.insert(k.clone(), v.clone());
+                    // Skip null values to prevent API errors
+                    if !v.is_null() {
+                        obj.insert(k.clone(), v.clone());
+                    }
                 }
             }
         }

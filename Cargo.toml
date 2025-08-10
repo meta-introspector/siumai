@@ -78,7 +78,7 @@ mockito = "1.0"
 tracing-test = "0.2"
 tempfile = "3.0"
 futures-util = "0.3"
-rmcp = { version = "0.3.2", features = ["transport-io", "transport-child-process", "macros", "server", "client"] }
+rmcp = { version = "0.5", features = ["transport-io", "transport-child-process", "macros", "server", "client"] }
 serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 axum = "0.8.4"
@@ -135,6 +135,10 @@ path = "examples/03_advanced_features/custom_provider.rs"
 [[example]]
 name = "tracing_monitoring"
 path = "examples/03_advanced_features/tracing_monitoring.rs"
+
+[[example]]
+name = "openai_response_api_http_mcp_client"
+path = "examples/04_providers/openai/openai_response_api_http_mcp_client.rs"
 
 [[example]]
 name = "openai_basic_chat"

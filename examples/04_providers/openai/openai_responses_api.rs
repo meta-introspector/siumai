@@ -168,29 +168,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!();
 
-    // Example 4: List responses
-    println!("4️⃣ List Recent Responses");
-    println!("------------------------");
+    // Example 4: List responses (commented out by default)
+    // println!("4️⃣ List Recent Responses");
+    // println!("------------------------");
+    //
+    // let query = ListResponsesQuery {
+    //     limit: Some(5),
+    //     status: Some(ResponseStatus::Completed),
+    //     ..Default::default()
+    // };
+    //
+    // // Note: Listing responses requires a browser session key (session-based auth).
+    // // Using a standard server-side API key will likely return 401 missing_scope.
+    // // Uncomment this block only if you have a valid session key configured.
+    // let responses_list = responses_client.list_responses(Some(query)).await?;
+    //
+    // println!("Recent completed responses:");
+    // for (i, response_meta) in responses_list.iter().enumerate() {
+    //     println!(
+    //         "  {}. ID: {} | Model: {} | Created: {}",
+    //         i + 1,
+    //         response_meta.id,
+    //         response_meta.model,
+    //         response_meta.created_at
+    //     );
+    // }
+    // println!();
 
-    let query = ListResponsesQuery {
-        limit: Some(5),
-        status: Some(ResponseStatus::Completed),
-        ..Default::default()
-    };
+    println!("(ℹ️ Skipping 'List Recent Responses' — requires session key; see README)");
+    // Optional: If you have a browser session key, you can list recent responses
+    if let Ok(session_key) = std::env::var("OPENAI_SESSION_KEY") {
+        println!("4️⃣ List Recent Responses (using session key)");
+        println!("--------------------------------------------");
 
-    let responses_list = responses_client.list_responses(Some(query)).await?;
-
-    println!("Recent completed responses:");
-    for (i, response_meta) in responses_list.iter().enumerate() {
-        println!(
-            "  {}. ID: {} | Model: {} | Created: {}",
-            i + 1,
-            response_meta.id,
-            response_meta.model,
-            response_meta.created_at
+        let responses_client_session = siumai::providers::openai::responses::OpenAiResponses::new(
+            reqwest::Client::new(),
+            siumai::providers::openai::config::OpenAiConfig::new(&session_key)
+                .with_model("gpt-4o")
+                .with_responses_api(true),
         );
+
+        let query = ListResponsesQuery {
+            limit: Some(5),
+            status: Some(ResponseStatus::Completed),
+            ..Default::default()
+        };
+
+        match responses_client_session.list_responses(Some(query)).await {
+            Ok(responses_list) => {
+                println!("Recent completed responses:");
+                for (i, response_meta) in responses_list.iter().enumerate() {
+                    println!(
+                        "  {}. ID: {} | Model: {} | Created: {}",
+                        i + 1,
+                        response_meta.id,
+                        response_meta.model,
+                        response_meta.created_at
+                    );
+                }
+                println!();
+            }
+            Err(e) => {
+                eprintln!("Failed to list responses with session key: {e:?}");
+            }
+        }
     }
-    println!();
 
     // Example 5: Built-in tools
     println!("5️⃣ Built-in Tools (Web Search)");

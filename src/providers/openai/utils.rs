@@ -186,3 +186,51 @@ pub fn extract_content_without_thinking(content: &str) -> String {
         content.to_string()
     }
 }
+
+/// Determine if a model should default to Responses API (auto mode)
+/// Currently only gpt-5 family triggers auto routing
+pub fn is_responses_model(model: &str) -> bool {
+    let m = model.trim().to_ascii_lowercase();
+    m.starts_with("gpt-5")
+}
+
+/// Decide whether to route to Responses API given OpenAI config
+/// Rules:
+/// - Explicit flag use_responses_api takes precedence
+/// - Auto: models matching is_responses_model (currently only gpt-5*)
+pub fn should_route_responses(cfg: &super::config::OpenAiConfig) -> bool {
+    if cfg.use_responses_api {
+        return true;
+    }
+    is_responses_model(&cfg.common_params.model)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::providers::openai::config::OpenAiConfig;
+
+    #[test]
+    fn test_is_responses_model_only_gpt5() {
+        assert!(is_responses_model("gpt-5"));
+        assert!(is_responses_model("gpt-5-mini"));
+        assert!(is_responses_model("GPT-5-VISION"));
+        assert!(!is_responses_model("gpt-4o"));
+        assert!(!is_responses_model("o1"));
+        assert!(!is_responses_model(""));
+    }
+
+    #[test]
+    fn test_should_route_responses_explicit_or_gpt5() {
+        let cfg = OpenAiConfig::new("test").with_model("gpt-4o");
+        assert!(!should_route_responses(&cfg));
+
+        let cfg = OpenAiConfig::new("test").with_model("gpt-5-mini");
+        assert!(should_route_responses(&cfg));
+
+        let cfg = OpenAiConfig::new("test")
+            .with_model("gpt-4")
+            .with_responses_api(true);
+        assert!(should_route_responses(&cfg));
+    }
+}

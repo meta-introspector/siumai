@@ -157,46 +157,21 @@ impl GroqStreaming {
     pub async fn create_chat_stream(&self, request: ChatRequest) -> Result<ChatStream, LlmError> {
         let url = format!("{}/chat/completions", self.config.base_url);
 
-        // Build request body
-        let mut request_body = serde_json::json!({
-            "model": request.common_params.model,
-            "messages": convert_messages(&request.messages)?,
-            "stream": true,
-            "stream_options": {
-                "include_usage": true
-            }
+        // Use the same request building logic as non-streaming
+        let chat_capability = super::chat::GroqChatCapability::new(
+            self.config.api_key.clone(),
+            self.config.base_url.clone(),
+            self.http_client.clone(),
+            self.config.http_config.clone(),
+        );
+
+        let mut request_body = chat_capability.build_chat_request_body(&request)?;
+
+        // Override with streaming-specific settings
+        request_body["stream"] = serde_json::Value::Bool(true);
+        request_body["stream_options"] = serde_json::json!({
+            "include_usage": true
         });
-
-        // Add common parameters
-        if let Some(temp) = request.common_params.temperature {
-            request_body["temperature"] = temp.into();
-        }
-        if let Some(max_tokens) = request.common_params.max_tokens {
-            request_body["max_tokens"] = max_tokens.into();
-        }
-        if let Some(top_p) = request.common_params.top_p {
-            request_body["top_p"] = top_p.into();
-        }
-        if let Some(stop) = &request.common_params.stop_sequences {
-            request_body["stop"] = stop.clone().into();
-        }
-        if let Some(seed) = request.common_params.seed {
-            request_body["seed"] = seed.into();
-        }
-
-        // Add tools if provided
-        if let Some(tools) = &request.tools {
-            if !tools.is_empty() {
-                request_body["tools"] = serde_json::to_value(tools)?;
-            }
-        }
-
-        // Add provider-specific parameters if provided
-        if let Some(provider_params) = &request.provider_params {
-            for (key, value) in &provider_params.params {
-                request_body[key] = value.clone();
-            }
-        }
 
         // Validate parameters
         validate_groq_params(&request_body)?;

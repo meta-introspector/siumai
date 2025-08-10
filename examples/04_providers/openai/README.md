@@ -19,6 +19,21 @@ cargo run --example openai_basic_chat
 - Token usage optimization
 - Response format options
 
+### [openai_responses_api.rs](openai_responses_api.rs)
+**🧩 Responses API (stateful conversations, background jobs, built-in tools)**
+
+Demonstrates OpenAI Responses API usage including background processing and conversation chaining.
+
+```bash
+cargo run --example openai_responses_api
+```
+
+Notes:
+- Requires OPENAI_API_KEY
+- The “List Responses” section is commented out by default because OpenAI requires a browser session key (session-based auth) for GET /v1/responses.
+- If you have a valid session key flow, set OPENAI_SESSION_KEY and the example will attempt to list responses using it; otherwise it prints a message and continues.
+
+
 ### [enhanced_features.rs](enhanced_features.rs)
 **🚀 Advanced OpenAI capabilities**
 
