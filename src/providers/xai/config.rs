@@ -155,16 +155,16 @@ impl XaiConfig {
         }
 
         // Validate common parameters
-        if let Some(temp) = self.common_params.temperature {
-            if !(0.0..=2.0).contains(&temp) {
-                return Err("Temperature must be between 0.0 and 2.0".to_string());
-            }
+        if let Some(temp) = self.common_params.temperature
+            && !(0.0..=2.0).contains(&temp)
+        {
+            return Err("Temperature must be between 0.0 and 2.0".to_string());
         }
 
-        if let Some(top_p) = self.common_params.top_p {
-            if !(0.0..=1.0).contains(&top_p) {
-                return Err("Top-p must be between 0.0 and 1.0".to_string());
-            }
+        if let Some(top_p) = self.common_params.top_p
+            && !(0.0..=1.0).contains(&top_p)
+        {
+            return Err("Top-p must be between 0.0 and 1.0".to_string());
         }
 
         Ok(())

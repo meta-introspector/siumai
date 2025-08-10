@@ -127,30 +127,30 @@ impl GroqConfig {
         }
 
         // Validate temperature range
-        if let Some(temp) = self.common_params.temperature {
-            if !(0.0..=2.0).contains(&temp) {
-                return Err(LlmError::ConfigurationError(
-                    "Temperature must be between 0.0 and 2.0".to_string(),
-                ));
-            }
+        if let Some(temp) = self.common_params.temperature
+            && !(0.0..=2.0).contains(&temp)
+        {
+            return Err(LlmError::ConfigurationError(
+                "Temperature must be between 0.0 and 2.0".to_string(),
+            ));
         }
 
         // Validate top_p range
-        if let Some(top_p) = self.common_params.top_p {
-            if !(0.0..=1.0).contains(&top_p) {
-                return Err(LlmError::ConfigurationError(
-                    "top_p must be between 0.0 and 1.0".to_string(),
-                ));
-            }
+        if let Some(top_p) = self.common_params.top_p
+            && !(0.0..=1.0).contains(&top_p)
+        {
+            return Err(LlmError::ConfigurationError(
+                "top_p must be between 0.0 and 1.0".to_string(),
+            ));
         }
 
         // Validate max_tokens
-        if let Some(max_tokens) = self.common_params.max_tokens {
-            if max_tokens == 0 {
-                return Err(LlmError::ConfigurationError(
-                    "max_tokens must be greater than 0".to_string(),
-                ));
-            }
+        if let Some(max_tokens) = self.common_params.max_tokens
+            && max_tokens == 0
+        {
+            return Err(LlmError::ConfigurationError(
+                "max_tokens must be greater than 0".to_string(),
+            ));
         }
 
         Ok(())

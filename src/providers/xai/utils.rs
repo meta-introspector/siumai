@@ -112,13 +112,12 @@ pub fn contains_thinking_tags(text: &str) -> bool {
 
 /// Extract thinking content from text
 pub fn extract_thinking_content(text: &str) -> Option<String> {
-    if let Some(start) = text.find("<think>") {
-        if let Some(end) = text.find("</think>") {
-            if start < end {
-                let thinking_start = start + "<think>".len();
-                return Some(text[thinking_start..end].trim().to_string());
-            }
-        }
+    if let Some(start) = text.find("<think>")
+        && let Some(end) = text.find("</think>")
+        && start < end
+    {
+        let thinking_start = start + "<think>".len();
+        return Some(text[thinking_start..end].trim().to_string());
     }
     None
 }

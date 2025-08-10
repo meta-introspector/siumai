@@ -81,13 +81,13 @@ impl OllamaEventConverter {
         }
 
         // Handle content delta
-        if let Some(message) = response.message {
-            if let Some(content) = message.content {
-                return Some(ChatStreamEvent::ContentDelta {
-                    delta: content,
-                    index: None,
-                });
-            }
+        if let Some(message) = response.message
+            && let Some(content) = message.content
+        {
+            return Some(ChatStreamEvent::ContentDelta {
+                delta: content,
+                index: None,
+            });
         }
 
         None

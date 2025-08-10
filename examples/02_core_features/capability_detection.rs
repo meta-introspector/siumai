@@ -191,35 +191,33 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
     let mut providers = Vec::new();
 
     // Try OpenAI
-    if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
-        if let Ok(client) = LlmBuilder::new()
+    if let Ok(api_key) = std::env::var("OPENAI_API_KEY")
+        && let Ok(client) = LlmBuilder::new()
             .openai()
             .api_key(&api_key)
             .model("gpt-4o-mini")
             .build()
             .await
-        {
-            providers.push((
-                "OpenAI".to_string(),
-                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
-            ));
-        }
+    {
+        providers.push((
+            "OpenAI".to_string(),
+            Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+        ));
     }
 
     // Try Anthropic
-    if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
-        if let Ok(client) = LlmBuilder::new()
+    if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY")
+        && let Ok(client) = LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
             .model("claude-3-5-haiku-20241022")
             .build()
             .await
-        {
-            providers.push((
-                "Anthropic".to_string(),
-                Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
-            ));
-        }
+    {
+        providers.push((
+            "Anthropic".to_string(),
+            Box::new(client) as Box<dyn ChatCapability + Send + Sync>,
+        ));
     }
 
     // Try Ollama

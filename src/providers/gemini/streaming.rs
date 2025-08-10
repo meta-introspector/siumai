@@ -107,15 +107,15 @@ impl GeminiEventConverter {
                 }
 
                 // Handle content
-                if let Some(content) = candidate.content {
-                    if let Some(parts) = content.parts {
-                        for part in parts {
-                            if let Some(text) = part.text {
-                                return Some(ChatStreamEvent::ContentDelta {
-                                    delta: text,
-                                    index: None,
-                                });
-                            }
+                if let Some(content) = candidate.content
+                    && let Some(parts) = content.parts
+                {
+                    for part in parts {
+                        if let Some(text) = part.text {
+                            return Some(ChatStreamEvent::ContentDelta {
+                                delta: text,
+                                index: None,
+                            });
                         }
                     }
                 }

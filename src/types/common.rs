@@ -238,12 +238,11 @@ impl ProviderParams {
         let mut params = HashMap::new();
 
         // Serialize the OpenAI params to a JSON value and then convert to HashMap
-        if let Ok(json_value) = serde_json::to_value(&openai_params) {
-            if let Ok(map) =
+        if let Ok(json_value) = serde_json::to_value(&openai_params)
+            && let Ok(map) =
                 serde_json::from_value::<HashMap<String, serde_json::Value>>(json_value)
-            {
-                params = map;
-            }
+        {
+            params = map;
         }
 
         Self { params }

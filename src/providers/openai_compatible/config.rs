@@ -88,10 +88,10 @@ impl OpenAiCompatibleConfig {
                 if reasoning.as_bool() == Some(true) {
                     model = "deepseek-reasoner".to_string();
                 }
-            } else if let Some(coding) = self.provider_params.get("coding") {
-                if coding.as_bool() == Some(true) {
-                    model = "deepseek-coder".to_string();
-                }
+            } else if let Some(coding) = self.provider_params.get("coding")
+                && coding.as_bool() == Some(true)
+            {
+                model = "deepseek-coder".to_string();
             }
         }
 

@@ -544,10 +544,10 @@ pub mod optimization {
         /// Store response in cache
         pub fn put(&mut self, key: String, response: crate::types::ChatResponse) {
             // Remove oldest entry if at capacity
-            if self.cache.len() >= self.max_size {
-                if let Some(oldest_key) = self.access_order.pop_back() {
-                    self.cache.remove(&oldest_key);
-                }
+            if self.cache.len() >= self.max_size
+                && let Some(oldest_key) = self.access_order.pop_back()
+            {
+                self.cache.remove(&oldest_key);
             }
 
             let cached = CachedResponse {

@@ -113,69 +113,67 @@ impl ParameterMapper for OllamaParameterMapper {
         if let Some(temp) = params
             .get("temperature")
             .and_then(serde_json::Value::as_f64)
+            && !(0.0..=2.0).contains(&temp)
         {
-            if !(0.0..=2.0).contains(&temp) {
-                return Err(LlmError::InvalidParameter(
-                    "Temperature must be between 0.0 and 2.0".to_string(),
-                ));
-            }
+            return Err(LlmError::InvalidParameter(
+                "Temperature must be between 0.0 and 2.0".to_string(),
+            ));
         }
 
         // Validate top_p
-        if let Some(top_p) = params.get("top_p").and_then(serde_json::Value::as_f64) {
-            if !(0.0..=1.0).contains(&top_p) {
-                return Err(LlmError::InvalidParameter(
-                    "top_p must be between 0.0 and 1.0".to_string(),
-                ));
-            }
+        if let Some(top_p) = params.get("top_p").and_then(serde_json::Value::as_f64)
+            && !(0.0..=1.0).contains(&top_p)
+        {
+            return Err(LlmError::InvalidParameter(
+                "top_p must be between 0.0 and 1.0".to_string(),
+            ));
         }
 
         // Validate num_predict (max_tokens)
         if let Some(num_predict) = params
             .get("num_predict")
             .and_then(serde_json::Value::as_u64)
+            && num_predict == 0
         {
-            if num_predict == 0 {
-                return Err(LlmError::InvalidParameter(
-                    "num_predict must be greater than 0".to_string(),
-                ));
-            }
+            return Err(LlmError::InvalidParameter(
+                "num_predict must be greater than 0".to_string(),
+            ));
         }
 
         // Validate num_ctx
-        if let Some(num_ctx) = params.get("num_ctx").and_then(serde_json::Value::as_u64) {
-            if num_ctx == 0 {
-                return Err(LlmError::InvalidParameter(
-                    "num_ctx must be greater than 0".to_string(),
-                ));
-            }
+        if let Some(num_ctx) = params.get("num_ctx").and_then(serde_json::Value::as_u64)
+            && num_ctx == 0
+        {
+            return Err(LlmError::InvalidParameter(
+                "num_ctx must be greater than 0".to_string(),
+            ));
         }
 
         // Validate num_batch
-        if let Some(num_batch) = params.get("num_batch").and_then(serde_json::Value::as_u64) {
-            if num_batch == 0 {
-                return Err(LlmError::InvalidParameter(
-                    "num_batch must be greater than 0".to_string(),
-                ));
-            }
+        if let Some(num_batch) = params.get("num_batch").and_then(serde_json::Value::as_u64)
+            && num_batch == 0
+        {
+            return Err(LlmError::InvalidParameter(
+                "num_batch must be greater than 0".to_string(),
+            ));
         }
 
         // Validate num_gpu
-        if let Some(num_gpu) = params.get("num_gpu").and_then(serde_json::Value::as_u64) {
-            if num_gpu > 64 {
-                return Err(LlmError::InvalidParameter(
-                    "num_gpu should not exceed 64".to_string(),
-                ));
-            }
+        if let Some(num_gpu) = params.get("num_gpu").and_then(serde_json::Value::as_u64)
+            && num_gpu > 64
+        {
+            return Err(LlmError::InvalidParameter(
+                "num_gpu should not exceed 64".to_string(),
+            ));
         }
 
         // Validate num_thread
-        if let Some(num_thread) = params.get("num_thread").and_then(serde_json::Value::as_u64) {
-            if num_thread == 0 || num_thread > 256 {
-                return Err(LlmError::InvalidParameter(
-                    "num_thread must be between 1 and 256".to_string(),
-                ));
-            }
+        if let Some(num_thread) = params.get("num_thread").and_then(serde_json::Value::as_u64)
+            && (num_thread == 0 || num_thread > 256)
+        {
+            return Err(LlmError::InvalidParameter(
+                "num_thread must be between 1 and 256".to_string(),
+            ));
         }
 
         Ok(())

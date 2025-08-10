@@ -101,24 +101,24 @@ impl ApiErrorHandler {
             .unwrap_or_else(|_| "Unknown error".to_string());
 
         // Try to parse Anthropic's structured error format
-        if let Ok(error_json) = serde_json::from_str::<Value>(&error_text) {
-            if let Some(error_obj) = error_json.get("error") {
-                let error_type = error_obj
-                    .get("type")
-                    .and_then(|t| t.as_str())
-                    .unwrap_or("unknown");
-                let error_message = error_obj
-                    .get("message")
-                    .and_then(|m| m.as_str())
-                    .unwrap_or("Unknown error");
+        if let Ok(error_json) = serde_json::from_str::<Value>(&error_text)
+            && let Some(error_obj) = error_json.get("error")
+        {
+            let error_type = error_obj
+                .get("type")
+                .and_then(|t| t.as_str())
+                .unwrap_or("unknown");
+            let error_message = error_obj
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown error");
 
-                return Self::map_anthropic_error_type(
-                    status_code,
-                    error_type,
-                    error_message,
-                    error_json.clone(),
-                );
-            }
+            return Self::map_anthropic_error_type(
+                status_code,
+                error_type,
+                error_message,
+                error_json.clone(),
+            );
         }
 
         // Fallback to generic error handling

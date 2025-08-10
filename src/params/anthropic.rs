@@ -70,16 +70,16 @@ impl ParameterMapper for AnthropicParameterMapper {
 
     fn validate_params(&self, params: &serde_json::Value) -> Result<(), LlmError> {
         // Validate Anthropic-specific parameter constraints
-        if let Some(temp) = params.get("temperature") {
-            if let Some(temp_val) = temp.as_f64() {
-                ParameterValidator::validate_temperature(temp_val, 0.0, 1.0, "Anthropic")?;
-            }
+        if let Some(temp) = params.get("temperature")
+            && let Some(temp_val) = temp.as_f64()
+        {
+            ParameterValidator::validate_temperature(temp_val, 0.0, 1.0, "Anthropic")?;
         }
 
-        if let Some(top_p) = params.get("top_p") {
-            if let Some(top_p_val) = top_p.as_f64() {
-                ParameterValidator::validate_top_p(top_p_val)?;
-            }
+        if let Some(top_p) = params.get("top_p")
+            && let Some(top_p_val) = top_p.as_f64()
+        {
+            ParameterValidator::validate_top_p(top_p_val)?;
         }
 
         // Anthropic API requires max_tokens parameter
@@ -94,14 +94,13 @@ impl ParameterMapper for AnthropicParameterMapper {
         }
 
         // Validate Anthropic-specific parameters
-        if let Some(thinking_budget) = params.get("thinking_budget") {
-            if let Some(budget_val) = thinking_budget.as_u64() {
-                if budget_val > 60_000 {
-                    return Err(LlmError::InvalidParameter(
-                        "thinking_budget must not exceed 60_000 for Anthropic".to_string(),
-                    ));
-                }
-            }
+        if let Some(thinking_budget) = params.get("thinking_budget")
+            && let Some(budget_val) = thinking_budget.as_u64()
+            && budget_val > 60_000
+        {
+            return Err(LlmError::InvalidParameter(
+                "thinking_budget must not exceed 60_000 for Anthropic".to_string(),
+            ));
         }
 
         Ok(())

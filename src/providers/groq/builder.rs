@@ -167,10 +167,10 @@ impl GroqBuilder {
     /// Build the `Groq` client
     pub async fn build(mut self) -> Result<GroqClient, LlmError> {
         // Try to get API key from environment if not set
-        if self.config.api_key.is_empty() {
-            if let Ok(api_key) = std::env::var("GROQ_API_KEY") {
-                self.config.api_key = api_key;
-            }
+        if self.config.api_key.is_empty()
+            && let Ok(api_key) = std::env::var("GROQ_API_KEY")
+        {
+            self.config.api_key = api_key;
         }
 
         // Validate configuration

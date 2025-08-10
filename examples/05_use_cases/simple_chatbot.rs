@@ -84,38 +84,38 @@ impl Chatbot {
     async fn create_best_client()
     -> Result<(Box<dyn ChatCapability + Send + Sync>, String), LlmError> {
         // Try OpenAI first
-        if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
-            if !api_key.is_empty() {
-                match LlmBuilder::new()
-                    .openai()
-                    .api_key(&api_key)
-                    .model("gpt-4o-mini")
-                    .temperature(0.7)
-                    .max_tokens(1000)
-                    .build()
-                    .await
-                {
-                    Ok(client) => return Ok((Box::new(client), "OpenAI".to_string())),
-                    Err(_) => {} // Try next provider
-                }
+        if let Ok(api_key) = std::env::var("OPENAI_API_KEY")
+            && !api_key.is_empty()
+        {
+            match LlmBuilder::new()
+                .openai()
+                .api_key(&api_key)
+                .model("gpt-4o-mini")
+                .temperature(0.7)
+                .max_tokens(1000)
+                .build()
+                .await
+            {
+                Ok(client) => return Ok((Box::new(client), "OpenAI".to_string())),
+                Err(_) => {} // Try next provider
             }
         }
 
         // Try Anthropic
-        if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
-            if !api_key.is_empty() {
-                match LlmBuilder::new()
-                    .anthropic()
-                    .api_key(&api_key)
-                    .model("claude-3-5-haiku-20241022")
-                    .temperature(0.7)
-                    .max_tokens(1000)
-                    .build()
-                    .await
-                {
-                    Ok(client) => return Ok((Box::new(client), "Anthropic".to_string())),
-                    Err(_) => {} // Try next provider
-                }
+        if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY")
+            && !api_key.is_empty()
+        {
+            match LlmBuilder::new()
+                .anthropic()
+                .api_key(&api_key)
+                .model("claude-3-5-haiku-20241022")
+                .temperature(0.7)
+                .max_tokens(1000)
+                .build()
+                .await
+            {
+                Ok(client) => return Ok((Box::new(client), "Anthropic".to_string())),
+                Err(_) => {} // Try next provider
             }
         }
 

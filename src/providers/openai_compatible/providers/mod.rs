@@ -57,20 +57,20 @@ impl OpenAiCompatibleProvider for DeepSeekProvider {
         }
 
         // Validate reasoning and coding parameters
-        if let Some(reasoning) = config.provider_params.get("reasoning") {
-            if !reasoning.is_boolean() {
-                return Err(LlmError::ConfigurationError(
-                    "reasoning parameter must be boolean".to_string(),
-                ));
-            }
+        if let Some(reasoning) = config.provider_params.get("reasoning")
+            && !reasoning.is_boolean()
+        {
+            return Err(LlmError::ConfigurationError(
+                "reasoning parameter must be boolean".to_string(),
+            ));
         }
 
-        if let Some(coding) = config.provider_params.get("coding") {
-            if !coding.is_boolean() {
-                return Err(LlmError::ConfigurationError(
-                    "coding parameter must be boolean".to_string(),
-                ));
-            }
+        if let Some(coding) = config.provider_params.get("coding")
+            && !coding.is_boolean()
+        {
+            return Err(LlmError::ConfigurationError(
+                "coding parameter must be boolean".to_string(),
+            ));
         }
 
         Ok(())
@@ -80,30 +80,30 @@ impl OpenAiCompatibleProvider for DeepSeekProvider {
         // DeepSeek-specific parameter transformations
 
         // Handle reasoning mode - switch to reasoner model if enabled
-        if let Some(reasoning) = params.get("reasoning") {
-            if reasoning.as_bool() == Some(true) {
-                // This would be handled in the config transformation
-                // The model switch happens in the config conversion
-            }
+        if let Some(reasoning) = params.get("reasoning")
+            && reasoning.as_bool() == Some(true)
+        {
+            // This would be handled in the config transformation
+            // The model switch happens in the config conversion
         }
 
         // Handle coding mode - switch to coder model if enabled
-        if let Some(coding) = params.get("coding") {
-            if coding.as_bool() == Some(true) {
-                // This would be handled in the config transformation
-                // The model switch happens in the config conversion
-            }
+        if let Some(coding) = params.get("coding")
+            && coding.as_bool() == Some(true)
+        {
+            // This would be handled in the config transformation
+            // The model switch happens in the config conversion
         }
 
         // Handle thinking budget for reasoning models
-        if let Some(budget) = params.get("thinking_budget") {
-            if let Some(budget_val) = budget.as_u64() {
-                // Add to request parameters (this would be used in request building)
-                params.insert(
-                    "max_reasoning_tokens".to_string(),
-                    serde_json::Value::Number(budget_val.into()),
-                );
-            }
+        if let Some(budget) = params.get("thinking_budget")
+            && let Some(budget_val) = budget.as_u64()
+        {
+            // Add to request parameters (this would be used in request building)
+            params.insert(
+                "max_reasoning_tokens".to_string(),
+                serde_json::Value::Number(budget_val.into()),
+            );
         }
 
         Ok(())
@@ -138,14 +138,14 @@ impl OpenAiCompatibleProvider for OpenRouterProvider {
         }
 
         // Validate site_url if provided
-        if let Some(site_url) = config.provider_params.get("site_url") {
-            if let Some(url_str) = site_url.as_str() {
-                if !url_str.starts_with("http://") && !url_str.starts_with("https://") {
-                    return Err(LlmError::ConfigurationError(
-                        "site_url must be a valid HTTP/HTTPS URL".to_string(),
-                    ));
-                }
-            }
+        if let Some(site_url) = config.provider_params.get("site_url")
+            && let Some(url_str) = site_url.as_str()
+            && !url_str.starts_with("http://")
+            && !url_str.starts_with("https://")
+        {
+            return Err(LlmError::ConfigurationError(
+                "site_url must be a valid HTTP/HTTPS URL".to_string(),
+            ));
         }
 
         Ok(())
@@ -155,39 +155,39 @@ impl OpenAiCompatibleProvider for OpenRouterProvider {
         // OpenRouter-specific parameter transformations
 
         // Transform site_url to HTTP-Referer header
-        if let Some(site_url) = params.remove("site_url") {
-            if let Some(url_str) = site_url.as_str() {
-                params.insert(
-                    "http_referer".to_string(),
-                    serde_json::Value::String(url_str.to_string()),
-                );
-            }
+        if let Some(site_url) = params.remove("site_url")
+            && let Some(url_str) = site_url.as_str()
+        {
+            params.insert(
+                "http_referer".to_string(),
+                serde_json::Value::String(url_str.to_string()),
+            );
         }
 
         // Transform app_name to X-Title header
-        if let Some(app_name) = params.remove("app_name") {
-            if let Some(name_str) = app_name.as_str() {
-                params.insert(
-                    "x_title".to_string(),
-                    serde_json::Value::String(name_str.to_string()),
-                );
-            }
+        if let Some(app_name) = params.remove("app_name")
+            && let Some(name_str) = app_name.as_str()
+        {
+            params.insert(
+                "x_title".to_string(),
+                serde_json::Value::String(name_str.to_string()),
+            );
         }
 
         // Handle fallback models
-        if let Some(fallback_models) = params.get("fallback_models") {
-            if let Some(models_array) = fallback_models.as_array() {
-                let models: Vec<String> = models_array
-                    .iter()
-                    .filter_map(|v| v.as_str().map(std::string::ToString::to_string))
-                    .collect();
-                params.insert(
-                    "fallback_models".to_string(),
-                    serde_json::Value::Array(
-                        models.into_iter().map(serde_json::Value::String).collect(),
-                    ),
-                );
-            }
+        if let Some(fallback_models) = params.get("fallback_models")
+            && let Some(models_array) = fallback_models.as_array()
+        {
+            let models: Vec<String> = models_array
+                .iter()
+                .filter_map(|v| v.as_str().map(std::string::ToString::to_string))
+                .collect();
+            params.insert(
+                "fallback_models".to_string(),
+                serde_json::Value::Array(
+                    models.into_iter().map(serde_json::Value::String).collect(),
+                ),
+            );
         }
 
         Ok(())

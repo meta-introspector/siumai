@@ -432,11 +432,9 @@ impl OpenAiResponses {
         }
 
         // Build Responses API input items from messages
-        // - Initial user text can be a plain string
         // - Tool result messages become function_call_output items
         // - Other messages become role-based message objects
         let mut input_items: Vec<serde_json::Value> = Vec::new();
-        let mut has_tool_outputs = false;
         for msg in messages.iter() {
             match msg.role {
                 crate::types::MessageRole::Tool => {
@@ -456,7 +454,6 @@ impl OpenAiResponses {
                         "call_id": call_id,
                         "output": output_text,
                     }));
-                    has_tool_outputs = true;
                 }
                 _ => {
                     // Convert non-tool messages
@@ -465,23 +462,14 @@ impl OpenAiResponses {
             }
         }
 
-        // Responses API expects `input` to be a string or an array of input items.
-        // Use plain string optimization only when one user text and no tool outputs.
-        if !has_tool_outputs && messages.len() == 1 {
-            if let crate::types::MessageContent::Text(text) = &messages[0].content {
-                body["input"] = serde_json::Value::String(text.clone());
-            } else {
-                body["input"] = serde_json::Value::Array(input_items);
-            }
-        } else {
-            body["input"] = serde_json::Value::Array(input_items);
-        }
+        // Responses API expects `input` to be an array of input items
+        body["input"] = serde_json::Value::Array(input_items);
 
         // Add optional parameters
-        if let Some(temp) = self.config.common_params.temperature {
-            if let Some(num) = serde_json::Number::from_f64(temp as f64) {
-                body["temperature"] = serde_json::Value::Number(num);
-            }
+        if let Some(temp) = self.config.common_params.temperature
+            && let Some(num) = serde_json::Number::from_f64(temp as f64)
+        {
+            body["temperature"] = serde_json::Value::Number(num);
         }
 
         // Prefer OpenAI-specific max_completion_tokens mapped to Responses' max_output_tokens; fallback to common max_tokens
@@ -496,10 +484,10 @@ impl OpenAiResponses {
             body["seed"] = serde_json::Value::Number(seed.into());
         }
 
-        if let Some(top_p) = self.config.common_params.top_p {
-            if let Some(num) = serde_json::Number::from_f64(top_p as f64) {
-                body["top_p"] = serde_json::Value::Number(num);
-            }
+        if let Some(top_p) = self.config.common_params.top_p
+            && let Some(num) = serde_json::Number::from_f64(top_p as f64)
+        {
+            body["top_p"] = serde_json::Value::Number(num);
         }
 
         // Stop sequences -> OpenAI uses "stop" for arrays
@@ -513,20 +501,17 @@ impl OpenAiResponses {
         }
 
         // OpenAI-specific parameters for Responses API
-        if let Some(ref rf) = self.config.openai_params.response_format {
-            if let Ok(val) = serde_json::to_value(rf) {
-                body["response_format"] = val;
-            }
-        }
-        // Only include tool_choice when function tools are provided and a choice is configured
-        if let (Some(tool_choice), Some(fn_tools)) = (&self.config.openai_params.tool_choice, tools)
+        if let Some(ref rf) = self.config.openai_params.response_format
+            && let Ok(val) = serde_json::to_value(rf)
         {
-            if !fn_tools.is_empty() {
-                if let Ok(val) = serde_json::to_value(tool_choice) {
-                    // Keep string forms as strings ("auto"|"required"|"none"); keep object for specific function
-                    body["tool_choice"] = val;
-                }
-            }
+            body["response_format"] = val;
+        }
+        // Include tool_choice when configured
+        if let Some(tool_choice) = &self.config.openai_params.tool_choice
+            && let Ok(val) = serde_json::to_value(tool_choice)
+        {
+            // Keep string forms as strings ("auto"|"required"|"none"); keep object for specific function
+            body["tool_choice"] = val;
         }
         if let Some(parallel) = self.config.openai_params.parallel_tool_calls {
             body["parallel_tool_calls"] = serde_json::Value::Bool(parallel);
@@ -708,7 +693,7 @@ impl OpenAiResponses {
             if let crate::types::MessageContent::Text(text) = &message.content {
                 if !text.is_empty() {
                     content_parts.push(serde_json::json!({
-                        "type": "text",
+                        "type": "input_text",
                         "text": text
                     }));
                 }
@@ -716,7 +701,8 @@ impl OpenAiResponses {
                 // Preserve multimodal text parts if present
                 for part in parts {
                     if let crate::types::ContentPart::Text { text } = part {
-                        content_parts.push(serde_json::json!({ "type": "text", "text": text }));
+                        content_parts
+                            .push(serde_json::json!({ "type": "input_text", "text": text }));
                     }
                 }
             }
@@ -761,15 +747,21 @@ impl OpenAiResponses {
         // Default content handling (no assistant tool calls)
         match &message.content {
             crate::types::MessageContent::Text(text) => {
-                api_message["content"] = serde_json::Value::String(text.clone());
+                // Responses API expects content as array with proper type
+                // All input messages (including assistant messages from conversation history) use "input_text"
+                api_message["content"] = serde_json::Value::Array(vec![serde_json::json!({
+                    "type": "input_text",
+                    "text": text
+                })]);
             }
             crate::types::MessageContent::MultiModal(parts) => {
                 let mut content_parts = Vec::new();
+                // All input messages use "input_text" for text content
                 for part in parts {
                     match part {
                         crate::types::ContentPart::Text { text } => {
                             content_parts.push(serde_json::json!({
-                                "type": "text",
+                                "type": "input_text",
                                 "text": text
                             }));
                         }
@@ -1188,33 +1180,33 @@ impl OpenAiResponsesEventConverter {
             }
 
             // Handle tool_calls delta
-            if let Some(tool_calls) = delta.get("tool_calls").and_then(|tc| tc.as_array()) {
-                if let Some((index, tool_call)) = tool_calls.iter().enumerate().next() {
-                    let id = tool_call
-                        .get("id")
-                        .and_then(|id| id.as_str())
-                        .unwrap_or("")
-                        .to_string();
+            if let Some(tool_calls) = delta.get("tool_calls").and_then(|tc| tc.as_array())
+                && let Some((index, tool_call)) = tool_calls.iter().enumerate().next()
+            {
+                let id = tool_call
+                    .get("id")
+                    .and_then(|id| id.as_str())
+                    .unwrap_or("")
+                    .to_string();
 
-                    let function_name = tool_call
-                        .get("function")
-                        .and_then(|func| func.get("name"))
-                        .and_then(|n| n.as_str())
-                        .map(std::string::ToString::to_string);
+                let function_name = tool_call
+                    .get("function")
+                    .and_then(|func| func.get("name"))
+                    .and_then(|n| n.as_str())
+                    .map(std::string::ToString::to_string);
 
-                    let arguments_delta = tool_call
-                        .get("function")
-                        .and_then(|func| func.get("arguments"))
-                        .and_then(|a| a.as_str())
-                        .map(std::string::ToString::to_string);
+                let arguments_delta = tool_call
+                    .get("function")
+                    .and_then(|func| func.get("arguments"))
+                    .and_then(|a| a.as_str())
+                    .map(std::string::ToString::to_string);
 
-                    return Some(crate::stream::ChatStreamEvent::ToolCallDelta {
-                        id,
-                        function_name,
-                        arguments_delta,
-                        index: Some(index),
-                    });
-                }
+                return Some(crate::stream::ChatStreamEvent::ToolCallDelta {
+                    id,
+                    function_name,
+                    arguments_delta,
+                    index: Some(index),
+                });
             }
         }
 
@@ -1374,12 +1366,12 @@ impl crate::utils::streaming::SseEventConverter for OpenAiResponsesEventConverte
                                 for part in parts {
                                     if let Some(txt) = part.get("text").and_then(|v| v.as_str()) {
                                         if !text_content.is_empty() {
-                                            text_content.push_str("\n");
+                                            text_content.push('\n');
                                         }
                                         text_content.push_str(txt);
                                     } else if let Some(s) = part.as_str() {
                                         if !text_content.is_empty() {
-                                            text_content.push_str("\n");
+                                            text_content.push('\n');
                                         }
                                         text_content.push_str(s);
                                     }
@@ -1999,6 +1991,7 @@ mod tests {
         ChatMessage, MessageContent, MessageMetadata, MessageRole, OpenAiBuiltInTool,
     };
 
+    #[allow(dead_code)]
     fn create_test_config() -> OpenAiConfig {
         OpenAiConfig::new("test-key")
             .with_model("gpt-4o")
@@ -2006,6 +1999,7 @@ mod tests {
             .with_built_in_tool(OpenAiBuiltInTool::WebSearch)
     }
 
+    #[allow(dead_code)]
     fn create_test_message() -> ChatMessage {
         ChatMessage {
             role: MessageRole::User,
@@ -2054,6 +2048,67 @@ mod tests {
 
         // Check input format: Responses input is always an array of input items
         assert!(body["input"].is_array());
+
+        // Check that user message content uses "input_text" type
+        let input_array = body["input"].as_array().unwrap();
+        assert!(!input_array.is_empty());
+        let first_message = &input_array[0];
+        if let Some(content) = first_message.get("content")
+            && let Some(content_array) = content.as_array()
+            && let Some(first_content) = content_array.first()
+        {
+            assert_eq!(first_content["type"], "input_text");
+        }
+    }
+
+    #[test]
+    fn test_content_types_by_role() {
+        let config = create_test_config();
+        let client = super::OpenAiResponses::new(reqwest::Client::new(), config);
+
+        // Test user message uses input_text
+        let user_message = ChatMessage {
+            role: crate::types::MessageRole::User,
+            content: crate::types::MessageContent::Text("User message".to_string()),
+            metadata: crate::types::MessageMetadata::default(),
+            tool_calls: None,
+            tool_call_id: None,
+        };
+
+        // Test assistant message uses output_text
+        let assistant_message = ChatMessage {
+            role: crate::types::MessageRole::Assistant,
+            content: crate::types::MessageContent::Text("Assistant message".to_string()),
+            metadata: crate::types::MessageMetadata::default(),
+            tool_calls: None,
+            tool_call_id: None,
+        };
+
+        let messages = vec![user_message, assistant_message];
+        let body = client
+            .build_request_body(&messages, None, None, false, false)
+            .unwrap();
+
+        let input_array = body["input"].as_array().unwrap();
+        assert_eq!(input_array.len(), 2);
+
+        // Check user message content type
+        let user_msg = &input_array[0];
+        if let Some(content) = user_msg.get("content")
+            && let Some(content_array) = content.as_array()
+            && let Some(first_content) = content_array.first()
+        {
+            assert_eq!(first_content["type"], "input_text");
+        }
+
+        // Check assistant message content type (also uses input_text in Responses API)
+        let assistant_msg = &input_array[1];
+        if let Some(content) = assistant_msg.get("content")
+            && let Some(content_array) = content.as_array()
+            && let Some(first_content) = content_array.first()
+        {
+            assert_eq!(first_content["type"], "input_text");
+        }
     }
 
     #[test]
@@ -2088,12 +2143,14 @@ mod tests {
 }
 
 // Additional unit tests for parse_response and request body building
+#[cfg(test)]
 fn create_test_config() -> OpenAiConfig {
     OpenAiConfig::new("test-key")
         .with_model("gpt-5-mini")
         .with_responses_api(true)
 }
 
+#[cfg(test)]
 fn create_test_message() -> ChatMessage {
     ChatMessage {
         role: crate::types::MessageRole::User,

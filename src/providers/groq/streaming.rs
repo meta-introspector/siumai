@@ -82,15 +82,15 @@ impl GroqEventConverter {
             // Handle tool calls
             if let Some(tool_calls) = delta.tool_calls {
                 for tool_call in tool_calls {
-                    if let Some(function) = tool_call.function {
-                        if let Some(arguments) = function.arguments {
-                            return ChatStreamEvent::ToolCallDelta {
-                                index: tool_call.index.map(|i| i as usize),
-                                id: tool_call.id.unwrap_or_default(),
-                                function_name: function.name,
-                                arguments_delta: Some(arguments),
-                            };
-                        }
+                    if let Some(function) = tool_call.function
+                        && let Some(arguments) = function.arguments
+                    {
+                        return ChatStreamEvent::ToolCallDelta {
+                            index: tool_call.index.map(|i| i as usize),
+                            id: tool_call.id.unwrap_or_default(),
+                            function_name: function.name,
+                            arguments_delta: Some(arguments),
+                        };
                     }
                 }
             }

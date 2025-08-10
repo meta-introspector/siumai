@@ -290,10 +290,10 @@ pub fn mask_sensitive_value(value: &str) -> String {
     }
 
     // Check if this looks like an API key or token
-    if let Some(token) = value.strip_prefix("Bearer ") {
-        if token.len() > 8 {
-            return format!("Bearer {}...{}", &token[..4], &token[token.len() - 4..]);
-        }
+    if let Some(token) = value.strip_prefix("Bearer ")
+        && token.len() > 8
+    {
+        return format!("Bearer {}...{}", &token[..4], &token[token.len() - 4..]);
     }
 
     // Check for API key patterns

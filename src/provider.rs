@@ -78,7 +78,7 @@ impl Siumai {
     ///
     /// Note: This method provides access regardless of reported capability support.
     /// Actual support depends on the specific model being used.
-    pub fn audio_capability(&self) -> AudioCapabilityProxy {
+    pub fn audio_capability(&self) -> AudioCapabilityProxy<'_> {
         AudioCapabilityProxy::new(self, self.supports("audio"))
     }
 
@@ -86,7 +86,7 @@ impl Siumai {
     ///
     /// Note: This method provides access regardless of reported capability support.
     /// Actual support depends on the specific model being used.
-    pub fn embedding_capability(&self) -> EmbeddingCapabilityProxy {
+    pub fn embedding_capability(&self) -> EmbeddingCapabilityProxy<'_> {
         EmbeddingCapabilityProxy::new(self, self.supports("embedding"))
     }
 
@@ -94,7 +94,7 @@ impl Siumai {
     ///
     /// Note: This method provides access regardless of reported capability support.
     /// Actual support depends on the specific model being used.
-    pub fn vision_capability(&self) -> VisionCapabilityProxy {
+    pub fn vision_capability(&self) -> VisionCapabilityProxy<'_> {
         VisionCapabilityProxy::new(self, self.supports("vision"))
     }
 

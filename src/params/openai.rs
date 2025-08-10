@@ -37,106 +37,103 @@ impl ParameterMapper for OpenAiParameterMapper {
 
     fn validate_params(&self, params: &serde_json::Value) -> Result<(), LlmError> {
         // Validate OpenAI-specific parameter constraints
-        if let Some(temp) = params.get("temperature") {
-            if let Some(temp_val) = temp.as_f64() {
-                ParameterValidator::validate_temperature(temp_val, 0.0, 2.0, "OpenAI")?;
-            }
+        if let Some(temp) = params.get("temperature")
+            && let Some(temp_val) = temp.as_f64()
+        {
+            ParameterValidator::validate_temperature(temp_val, 0.0, 2.0, "OpenAI")?;
         }
 
-        if let Some(top_p) = params.get("top_p") {
-            if let Some(top_p_val) = top_p.as_f64() {
-                ParameterValidator::validate_top_p(top_p_val)?;
-            }
+        if let Some(top_p) = params.get("top_p")
+            && let Some(top_p_val) = top_p.as_f64()
+        {
+            ParameterValidator::validate_top_p(top_p_val)?;
         }
 
-        if let Some(max_tokens) = params.get("max_tokens") {
-            if let Some(max_tokens_val) = max_tokens.as_u64() {
-                ParameterValidator::validate_max_tokens(max_tokens_val, 1, 128_000, "OpenAI")?;
-            }
+        if let Some(max_tokens) = params.get("max_tokens")
+            && let Some(max_tokens_val) = max_tokens.as_u64()
+        {
+            ParameterValidator::validate_max_tokens(max_tokens_val, 1, 128_000, "OpenAI")?;
         }
 
         // Validate OpenAI-specific parameters
-        if let Some(frequency_penalty) = params.get("frequency_penalty") {
-            if let Some(penalty_val) = frequency_penalty.as_f64() {
-                ParameterValidator::validate_numeric_range(
-                    penalty_val,
-                    -2.0,
-                    2.0,
-                    "frequency_penalty",
-                    "OpenAI",
-                )?;
-            }
+        if let Some(frequency_penalty) = params.get("frequency_penalty")
+            && let Some(penalty_val) = frequency_penalty.as_f64()
+        {
+            ParameterValidator::validate_numeric_range(
+                penalty_val,
+                -2.0,
+                2.0,
+                "frequency_penalty",
+                "OpenAI",
+            )?;
         }
 
-        if let Some(presence_penalty) = params.get("presence_penalty") {
-            if let Some(penalty_val) = presence_penalty.as_f64() {
-                ParameterValidator::validate_numeric_range(
-                    penalty_val,
-                    -2.0,
-                    2.0,
-                    "presence_penalty",
-                    "OpenAI",
-                )?;
-            }
+        if let Some(presence_penalty) = params.get("presence_penalty")
+            && let Some(penalty_val) = presence_penalty.as_f64()
+        {
+            ParameterValidator::validate_numeric_range(
+                penalty_val,
+                -2.0,
+                2.0,
+                "presence_penalty",
+                "OpenAI",
+            )?;
         }
 
-        if let Some(n) = params.get("n") {
-            if let Some(n_val) = n.as_u64() {
-                if n_val == 0 || n_val > 128 {
-                    return Err(LlmError::InvalidParameter(
-                        "n must be between 1 and 128 for OpenAI".to_string(),
-                    ));
-                }
-            }
+        if let Some(n) = params.get("n")
+            && let Some(n_val) = n.as_u64()
+            && (n_val == 0 || n_val > 128)
+        {
+            return Err(LlmError::InvalidParameter(
+                "n must be between 1 and 128 for OpenAI".to_string(),
+            ));
         }
 
         // Validate max_completion_tokens
-        if let Some(max_completion_tokens) = params.get("max_completion_tokens") {
-            if let Some(tokens_val) = max_completion_tokens.as_u64() {
-                ParameterValidator::validate_max_tokens(
-                    tokens_val,
-                    1,
-                    128_000,
-                    "OpenAI max_completion_tokens",
-                )?;
-            }
+        if let Some(max_completion_tokens) = params.get("max_completion_tokens")
+            && let Some(tokens_val) = max_completion_tokens.as_u64()
+        {
+            ParameterValidator::validate_max_tokens(
+                tokens_val,
+                1,
+                128_000,
+                "OpenAI max_completion_tokens",
+            )?;
         }
 
         // Validate top_logprobs
-        if let Some(top_logprobs) = params.get("top_logprobs") {
-            if let Some(logprobs_val) = top_logprobs.as_u64() {
-                if logprobs_val > 20 {
-                    return Err(LlmError::InvalidParameter(
-                        "top_logprobs must be between 0 and 20 for OpenAI".to_string(),
-                    ));
-                }
-            }
+        if let Some(top_logprobs) = params.get("top_logprobs")
+            && let Some(logprobs_val) = top_logprobs.as_u64()
+            && logprobs_val > 20
+        {
+            return Err(LlmError::InvalidParameter(
+                "top_logprobs must be between 0 and 20 for OpenAI".to_string(),
+            ));
         }
 
         // Validate modalities
-        if let Some(modalities) = params.get("modalities") {
-            if let Some(modalities_array) = modalities.as_array() {
-                for modality in modalities_array {
-                    if let Some(modality_str) = modality.as_str() {
-                        if !["text", "audio"].contains(&modality_str) {
-                            return Err(LlmError::InvalidParameter(format!(
-                                "Invalid modality '{modality_str}'. Supported modalities: text, audio"
-                            )));
-                        }
-                    }
+        if let Some(modalities) = params.get("modalities")
+            && let Some(modalities_array) = modalities.as_array()
+        {
+            for modality in modalities_array {
+                if let Some(modality_str) = modality.as_str()
+                    && !["text", "audio"].contains(&modality_str)
+                {
+                    return Err(LlmError::InvalidParameter(format!(
+                        "Invalid modality '{modality_str}'. Supported modalities: text, audio"
+                    )));
                 }
             }
         }
 
         // Validate service_tier
-        if let Some(service_tier) = params.get("service_tier") {
-            if let Some(tier_str) = service_tier.as_str() {
-                if !["auto", "default"].contains(&tier_str) {
-                    return Err(LlmError::InvalidParameter(format!(
-                        "Invalid service_tier '{tier_str}'. Supported tiers: auto, default"
-                    )));
-                }
-            }
+        if let Some(service_tier) = params.get("service_tier")
+            && let Some(tier_str) = service_tier.as_str()
+            && !["auto", "default"].contains(&tier_str)
+        {
+            return Err(LlmError::InvalidParameter(format!(
+                "Invalid service_tier '{tier_str}'. Supported tiers: auto, default"
+            )));
         }
 
         Ok(())

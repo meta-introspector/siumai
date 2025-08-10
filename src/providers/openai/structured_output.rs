@@ -222,12 +222,12 @@ impl StructuredOutputValidator {
                     if let Some(required) = schema.get("required").and_then(|r| r.as_array()) {
                         let obj = value.as_object().unwrap();
                         for req_prop in required {
-                            if let Some(prop_name) = req_prop.as_str() {
-                                if !obj.contains_key(prop_name) {
-                                    return Err(LlmError::ParseError(format!(
-                                        "Missing required property: {prop_name}"
-                                    )));
-                                }
+                            if let Some(prop_name) = req_prop.as_str()
+                                && !obj.contains_key(prop_name)
+                            {
+                                return Err(LlmError::ParseError(format!(
+                                    "Missing required property: {prop_name}"
+                                )));
                             }
                         }
                     }

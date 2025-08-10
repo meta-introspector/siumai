@@ -179,14 +179,14 @@ impl OpenAiModeration {
         }
 
         // Validate model if specified
-        if let Some(ref model) = request.model {
-            if !self.get_supported_models().contains(model) {
-                return Err(LlmError::InvalidInput(format!(
-                    "Unsupported moderation model: {}. Supported models: {:?}",
-                    model,
-                    self.get_supported_models()
-                )));
-            }
+        if let Some(ref model) = request.model
+            && !self.get_supported_models().contains(model)
+        {
+            return Err(LlmError::InvalidInput(format!(
+                "Unsupported moderation model: {}. Supported models: {:?}",
+                model,
+                self.get_supported_models()
+            )));
         }
 
         Ok(())

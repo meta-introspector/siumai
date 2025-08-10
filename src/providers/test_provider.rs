@@ -202,28 +202,23 @@ impl TestProvider {
                     return None;
                 }
 
-                if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(data) {
-                    if let Some(choices) = json_value["choices"].as_array() {
-                        if let Some(choice) = choices.first() {
-                            if let Some(delta) = choice["delta"].as_object() {
-                                // Check for reasoning content first
-                                if let Some(reasoning) =
-                                    delta.get("reasoning").and_then(|v| v.as_str())
-                                {
-                                    return Some(ChatStreamEvent::ThinkingDelta {
-                                        delta: reasoning.to_string(),
-                                    });
-                                }
-                                // Then check for regular content
-                                if let Some(content) = delta.get("content").and_then(|v| v.as_str())
-                                {
-                                    return Some(ChatStreamEvent::ContentDelta {
-                                        delta: content.to_string(),
-                                        index: Some(0),
-                                    });
-                                }
-                            }
-                        }
+                if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(data)
+                    && let Some(choices) = json_value["choices"].as_array()
+                    && let Some(choice) = choices.first()
+                    && let Some(delta) = choice["delta"].as_object()
+                {
+                    // Check for reasoning content first
+                    if let Some(reasoning) = delta.get("reasoning").and_then(|v| v.as_str()) {
+                        return Some(ChatStreamEvent::ThinkingDelta {
+                            delta: reasoning.to_string(),
+                        });
+                    }
+                    // Then check for regular content
+                    if let Some(content) = delta.get("content").and_then(|v| v.as_str()) {
+                        return Some(ChatStreamEvent::ContentDelta {
+                            delta: content.to_string(),
+                            index: Some(0),
+                        });
                     }
                 }
             }

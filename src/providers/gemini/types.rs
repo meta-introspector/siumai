@@ -683,10 +683,10 @@ impl ThinkingConfig {
 
     /// Basic validation (only check for obviously invalid values)
     pub fn validate(&self) -> Result<(), String> {
-        if let Some(budget) = self.thinking_budget {
-            if budget < -1 {
-                return Err("Thinking budget cannot be less than -1".to_string());
-            }
+        if let Some(budget) = self.thinking_budget
+            && budget < -1
+        {
+            return Err("Thinking budget cannot be less than -1".to_string());
         }
         Ok(())
     }

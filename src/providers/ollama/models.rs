@@ -118,11 +118,10 @@ impl OllamaModelsCapability {
                 Ok(chunk) => {
                     let chunk_str = String::from_utf8_lossy(&chunk);
                     for line in chunk_str.lines() {
-                        if let Ok(Some(json_value)) = parse_streaming_line(line) {
-                            if let Ok(progress) = serde_json::from_value::<PullProgress>(json_value)
-                            {
-                                return Ok(progress);
-                            }
+                        if let Ok(Some(json_value)) = parse_streaming_line(line)
+                            && let Ok(progress) = serde_json::from_value::<PullProgress>(json_value)
+                        {
+                            return Ok(progress);
                         }
                     }
                     Ok(PullProgress {

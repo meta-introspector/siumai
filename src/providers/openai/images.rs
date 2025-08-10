@@ -366,10 +366,10 @@ impl ImageGenerationCapability for OpenAiImages {
         if let Some(size) = request.size {
             form = form.text("size", size);
         }
-        if let Some(count) = request.count {
-            if count > 0 {
-                form = form.text("n", count.to_string());
-            }
+        if let Some(count) = request.count
+            && count > 0
+        {
+            form = form.text("n", count.to_string());
         }
         if let Some(response_format) = request.response_format {
             form = form.text("response_format", response_format);
@@ -435,10 +435,10 @@ impl ImageGenerationCapability for OpenAiImages {
         if let Some(size) = request.size {
             form = form.text("size", size);
         }
-        if let Some(count) = request.count {
-            if count > 0 {
-                form = form.text("n", count.to_string());
-            }
+        if let Some(count) = request.count
+            && count > 0
+        {
+            form = form.text("n", count.to_string());
         }
         if let Some(response_format) = request.response_format {
             form = form.text("response_format", response_format);

@@ -250,21 +250,19 @@ impl RateLimitHandler {
     /// Extract retry-after duration from error message
     fn extract_retry_after(&self, message: &str) -> Option<Duration> {
         // Try to parse "retry after X seconds" patterns
-        if let Some(seconds_str) = message.split("retry after ").nth(1) {
-            if let Some(seconds_str) = seconds_str.split(' ').next() {
-                if let Ok(seconds) = seconds_str.parse::<u64>() {
-                    return Some(Duration::from_secs(seconds));
-                }
-            }
+        if let Some(seconds_str) = message.split("retry after ").nth(1)
+            && let Some(seconds_str) = seconds_str.split(' ').next()
+            && let Ok(seconds) = seconds_str.parse::<u64>()
+        {
+            return Some(Duration::from_secs(seconds));
         }
 
         // Try to parse "Retry-After: X" patterns
-        if let Some(seconds_str) = message.split("Retry-After: ").nth(1) {
-            if let Some(seconds_str) = seconds_str.split('\n').next() {
-                if let Ok(seconds) = seconds_str.trim().parse::<u64>() {
-                    return Some(Duration::from_secs(seconds));
-                }
-            }
+        if let Some(seconds_str) = message.split("Retry-After: ").nth(1)
+            && let Some(seconds_str) = seconds_str.split('\n').next()
+            && let Ok(seconds) = seconds_str.trim().parse::<u64>()
+        {
+            return Some(Duration::from_secs(seconds));
         }
 
         None

@@ -285,14 +285,12 @@ impl HttpTracer {
     /// Try to format body as pretty JSON if possible
     #[allow(dead_code)]
     fn format_body(&self, body: &str, content_type: Option<&str>) -> String {
-        if let Some(ct) = content_type {
-            if ct.contains("application/json") {
-                if let Ok(json) = serde_json::from_str::<Value>(body) {
-                    if let Ok(pretty) = serde_json::to_string_pretty(&json) {
-                        return self.truncate_body(&pretty);
-                    }
-                }
-            }
+        if let Some(ct) = content_type
+            && ct.contains("application/json")
+            && let Ok(json) = serde_json::from_str::<Value>(body)
+            && let Ok(pretty) = serde_json::to_string_pretty(&json)
+        {
+            return self.truncate_body(&pretty);
         }
         self.truncate_body(body)
     }

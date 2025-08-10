@@ -119,24 +119,21 @@ impl EnhancedParameterValidator {
         let target_constraints = target_mapper.get_param_constraints();
 
         // Check temperature compatibility
-        if let Some(temp) = params.temperature {
-            if temp < target_constraints.temperature_min as f32
-                || temp > target_constraints.temperature_max as f32
-            {
-                report.add_incompatibility(ParameterIncompatibility {
-                    parameter: "temperature".to_string(),
-                    issue: format!(
-                        "Value {} is outside target provider range [{}, {}]",
-                        temp,
-                        target_constraints.temperature_min,
-                        target_constraints.temperature_max
-                    ),
-                    suggestion: Some(format!(
-                        "Clamp to range [{}, {}]",
-                        target_constraints.temperature_min, target_constraints.temperature_max
-                    )),
-                });
-            }
+        if let Some(temp) = params.temperature
+            && (temp < target_constraints.temperature_min as f32
+                || temp > target_constraints.temperature_max as f32)
+        {
+            report.add_incompatibility(ParameterIncompatibility {
+                parameter: "temperature".to_string(),
+                issue: format!(
+                    "Value {} is outside target provider range [{}, {}]",
+                    temp, target_constraints.temperature_min, target_constraints.temperature_max
+                ),
+                suggestion: Some(format!(
+                    "Clamp to range [{}, {}]",
+                    target_constraints.temperature_min, target_constraints.temperature_max
+                )),
+            });
         }
 
         // Check model compatibility

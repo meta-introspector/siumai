@@ -127,27 +127,25 @@ impl CacheAwareMessageBuilder {
         }
 
         // Apply content-level cache controls
-        if !self.content_cache_controls.is_empty() {
-            if let Some(content) = message_json.get_mut("content") {
-                match content {
-                    serde_json::Value::Array(content_array) => {
-                        for (index, cache_control) in self.content_cache_controls {
-                            if let Some(content_item) = content_array.get_mut(index) {
-                                if let Some(content_obj) = content_item.as_object_mut() {
-                                    content_obj.insert(
-                                        "cache_control".to_string(),
-                                        cache_control.to_json(),
-                                    );
-                                }
-                            }
+        if !self.content_cache_controls.is_empty()
+            && let Some(content) = message_json.get_mut("content")
+        {
+            match content {
+                serde_json::Value::Array(content_array) => {
+                    for (index, cache_control) in self.content_cache_controls {
+                        if let Some(content_item) = content_array.get_mut(index)
+                            && let Some(content_obj) = content_item.as_object_mut()
+                        {
+                            content_obj
+                                .insert("cache_control".to_string(), cache_control.to_json());
                         }
                     }
-                    serde_json::Value::String(_) => {
-                        // For simple text content, we can't apply part-level cache control
-                        // This would need to be converted to array format first
-                    }
-                    _ => {}
                 }
+                serde_json::Value::String(_) => {
+                    // For simple text content, we can't apply part-level cache control
+                    // This would need to be converted to array format first
+                }
+                _ => {}
             }
         }
 

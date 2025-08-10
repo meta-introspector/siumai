@@ -80,13 +80,13 @@ impl AnthropicEventConverter {
                 None // We don't emit stream start events for now
             }
             "content_block_delta" => {
-                if let Some(delta) = event.delta {
-                    if let Some(text) = delta.text {
-                        return Some(ChatStreamEvent::ContentDelta {
-                            delta: text,
-                            index: None,
-                        });
-                    }
+                if let Some(delta) = event.delta
+                    && let Some(text) = delta.text
+                {
+                    return Some(ChatStreamEvent::ContentDelta {
+                        delta: text,
+                        index: None,
+                    });
                 }
                 None
             }
@@ -176,14 +176,14 @@ impl AnthropicStreaming {
         body: &mut serde_json::Value,
         request: &crate::types::ChatRequest,
     ) {
-        if let Some(provider) = &request.provider_params {
-            if let serde_json::Value::Object(obj) = body {
-                for (k, v) in &provider.params {
-                    if k == "stream" || k == "messages" || k == "model" {
-                        continue;
-                    }
-                    obj.insert(k.clone(), v.clone());
+        if let Some(provider) = &request.provider_params
+            && let serde_json::Value::Object(obj) = body
+        {
+            for (k, v) in &provider.params {
+                if k == "stream" || k == "messages" || k == "model" {
+                    continue;
                 }
+                obj.insert(k.clone(), v.clone());
             }
         }
     }
@@ -218,16 +218,16 @@ impl AnthropicStreaming {
         }
 
         // Merge provider-specific params if present (preserve core fields)
-        if let Some(provider) = &request.provider_params {
-            if let serde_json::Value::Object(obj) = &mut request_body {
-                for (k, v) in &provider.params {
-                    if k == "stream" || k == "messages" || k == "model" {
-                        continue;
-                    }
-                    // Skip null values to prevent API errors
-                    if !v.is_null() {
-                        obj.insert(k.clone(), v.clone());
-                    }
+        if let Some(provider) = &request.provider_params
+            && let serde_json::Value::Object(obj) = &mut request_body
+        {
+            for (k, v) in &provider.params {
+                if k == "stream" || k == "messages" || k == "model" {
+                    continue;
+                }
+                // Skip null values to prevent API errors
+                if !v.is_null() {
+                    obj.insert(k.clone(), v.clone());
                 }
             }
         }

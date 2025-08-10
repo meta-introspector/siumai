@@ -60,43 +60,41 @@ impl ParameterMapper for GeminiParameterMapper {
 
     fn validate_params(&self, params: &serde_json::Value) -> Result<(), LlmError> {
         // Validate Gemini-specific parameter constraints
-        if let Some(temp) = params.get("temperature") {
-            if let Some(temp_val) = temp.as_f64() {
-                ParameterValidator::validate_temperature(temp_val, 0.0, 2.0, "Gemini")?;
-            }
+        if let Some(temp) = params.get("temperature")
+            && let Some(temp_val) = temp.as_f64()
+        {
+            ParameterValidator::validate_temperature(temp_val, 0.0, 2.0, "Gemini")?;
         }
 
-        if let Some(top_p) = params.get("topP") {
-            if let Some(top_p_val) = top_p.as_f64() {
-                ParameterValidator::validate_top_p(top_p_val)?;
-            }
+        if let Some(top_p) = params.get("topP")
+            && let Some(top_p_val) = top_p.as_f64()
+        {
+            ParameterValidator::validate_top_p(top_p_val)?;
         }
 
-        if let Some(max_tokens) = params.get("maxOutputTokens") {
-            if let Some(max_tokens_val) = max_tokens.as_u64() {
-                ParameterValidator::validate_max_tokens(max_tokens_val, 1, 8192, "Gemini")?;
-            }
+        if let Some(max_tokens) = params.get("maxOutputTokens")
+            && let Some(max_tokens_val) = max_tokens.as_u64()
+        {
+            ParameterValidator::validate_max_tokens(max_tokens_val, 1, 8192, "Gemini")?;
         }
 
         // Validate Gemini-specific parameters
-        if let Some(top_k) = params.get("topK") {
-            if let Some(top_k_val) = top_k.as_u64() {
-                if top_k_val == 0 || top_k_val > 40 {
-                    return Err(LlmError::InvalidParameter(
-                        "topK must be between 1 and 40 for Gemini".to_string(),
-                    ));
-                }
-            }
+        if let Some(top_k) = params.get("topK")
+            && let Some(top_k_val) = top_k.as_u64()
+            && (top_k_val == 0 || top_k_val > 40)
+        {
+            return Err(LlmError::InvalidParameter(
+                "topK must be between 1 and 40 for Gemini".to_string(),
+            ));
         }
 
-        if let Some(candidate_count) = params.get("candidateCount") {
-            if let Some(count_val) = candidate_count.as_u64() {
-                if count_val == 0 || count_val > 8 {
-                    return Err(LlmError::InvalidParameter(
-                        "candidateCount must be between 1 and 8 for Gemini".to_string(),
-                    ));
-                }
-            }
+        if let Some(candidate_count) = params.get("candidateCount")
+            && let Some(count_val) = candidate_count.as_u64()
+            && (count_val == 0 || count_val > 8)
+        {
+            return Err(LlmError::InvalidParameter(
+                "candidateCount must be between 1 and 8 for Gemini".to_string(),
+            ));
         }
 
         Ok(())

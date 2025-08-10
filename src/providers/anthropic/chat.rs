@@ -197,24 +197,24 @@ impl ChatCapability for AnthropicChatCapability {
 
             // Parse Anthropic error response according to official documentation
             // https://docs.anthropic.com/en/api/errors
-            if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_text) {
-                if let Some(error_obj) = error_json.get("error") {
-                    let error_type = error_obj
-                        .get("type")
-                        .and_then(|t| t.as_str())
-                        .unwrap_or("unknown");
-                    let error_message = error_obj
-                        .get("message")
-                        .and_then(|m| m.as_str())
-                        .unwrap_or("Unknown error");
+            if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_text)
+                && let Some(error_obj) = error_json.get("error")
+            {
+                let error_type = error_obj
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .unwrap_or("unknown");
+                let error_message = error_obj
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("Unknown error");
 
-                    return Err(map_anthropic_error(
-                        status.as_u16(),
-                        error_type,
-                        error_message,
-                        error_json.clone(),
-                    ));
-                }
+                return Err(map_anthropic_error(
+                    status.as_u16(),
+                    error_type,
+                    error_message,
+                    error_json.clone(),
+                ));
             }
 
             return Err(LlmError::ApiError {

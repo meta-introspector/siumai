@@ -94,27 +94,27 @@ impl ThinkingResponseParser {
     /// According to the API docs, thinking blocks have type "thinking" and contain "thinking" field
     pub fn extract_thinking(response: &serde_json::Value) -> Option<ThinkingBlock> {
         // Check for thinking in the response content array
-        if let Some(content) = response.get("content") {
-            if let Some(content_array) = content.as_array() {
-                for item in content_array {
-                    if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                        if item_type == "thinking" {
-                            let thinking_text = item
-                                .get("thinking")
-                                .and_then(|t| t.as_str())
-                                .map(std::string::ToString::to_string);
-                            let signature = item
-                                .get("signature")
-                                .and_then(|s| s.as_str())
-                                .map(std::string::ToString::to_string);
+        if let Some(content) = response.get("content")
+            && let Some(content_array) = content.as_array()
+        {
+            for item in content_array {
+                if let Some(item_type) = item.get("type").and_then(|t| t.as_str())
+                    && item_type == "thinking"
+                {
+                    let thinking_text = item
+                        .get("thinking")
+                        .and_then(|t| t.as_str())
+                        .map(std::string::ToString::to_string);
+                    let signature = item
+                        .get("signature")
+                        .and_then(|s| s.as_str())
+                        .map(std::string::ToString::to_string);
 
-                            if let Some(thinking) = thinking_text {
-                                return Some(ThinkingBlock {
-                                    thinking,
-                                    signature,
-                                });
-                            }
-                        }
+                    if let Some(thinking) = thinking_text {
+                        return Some(ThinkingBlock {
+                            thinking,
+                            signature,
+                        });
                     }
                 }
             }
@@ -126,20 +126,20 @@ impl ThinkingResponseParser {
     pub fn extract_redacted_thinking(
         response: &serde_json::Value,
     ) -> Option<RedactedThinkingBlock> {
-        if let Some(content) = response.get("content") {
-            if let Some(content_array) = content.as_array() {
-                for item in content_array {
-                    if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                        if item_type == "redacted_thinking" {
-                            let data = item
-                                .get("data")
-                                .and_then(|d| d.as_str())
-                                .map(std::string::ToString::to_string);
+        if let Some(content) = response.get("content")
+            && let Some(content_array) = content.as_array()
+        {
+            for item in content_array {
+                if let Some(item_type) = item.get("type").and_then(|t| t.as_str())
+                    && item_type == "redacted_thinking"
+                {
+                    let data = item
+                        .get("data")
+                        .and_then(|d| d.as_str())
+                        .map(std::string::ToString::to_string);
 
-                            if let Some(data) = data {
-                                return Some(RedactedThinkingBlock { data });
-                            }
-                        }
+                    if let Some(data) = data {
+                        return Some(RedactedThinkingBlock { data });
                     }
                 }
             }
@@ -156,18 +156,15 @@ impl ThinkingResponseParser {
             }
 
             // Check for thinking in content delta
-            if let Some(content) = delta.get("content") {
-                if let Some(content_array) = content.as_array() {
-                    for item in content_array {
-                        if let Some(item_type) = item.get("type").and_then(|t| t.as_str()) {
-                            if item_type == "thinking" {
-                                if let Some(text_delta) = item.get("text") {
-                                    return text_delta
-                                        .as_str()
-                                        .map(std::string::ToString::to_string);
-                                }
-                            }
-                        }
+            if let Some(content) = delta.get("content")
+                && let Some(content_array) = content.as_array()
+            {
+                for item in content_array {
+                    if let Some(item_type) = item.get("type").and_then(|t| t.as_str())
+                        && item_type == "thinking"
+                        && let Some(text_delta) = item.get("text")
+                    {
+                        return text_delta.as_str().map(std::string::ToString::to_string);
                     }
                 }
             }
