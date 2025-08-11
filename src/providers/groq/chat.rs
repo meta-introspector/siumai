@@ -24,15 +24,17 @@ pub struct GroqChatCapability {
     pub http_client: reqwest::Client,
     pub http_config: HttpConfig,
     pub parameter_mapper: OpenAiParameterMapper,
+    pub common_params: CommonParams,
 }
 
 impl GroqChatCapability {
     /// Create a new `Groq` chat capability instance
-    pub const fn new(
+    pub fn new(
         api_key: String,
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
+        common_params: CommonParams,
     ) -> Self {
         Self {
             api_key,
@@ -40,6 +42,7 @@ impl GroqChatCapability {
             http_client,
             http_config,
             parameter_mapper: OpenAiParameterMapper,
+            common_params,
         }
     }
 
@@ -162,7 +165,7 @@ impl ChatCapability for GroqChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -225,7 +228,7 @@ impl ChatCapability for GroqChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -236,7 +239,7 @@ impl ChatCapability for GroqChatCapability {
         let config = super::config::GroqConfig {
             api_key: self.api_key.clone(),
             base_url: self.base_url.clone(),
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             http_config: self.http_config.clone(),
             web_search_config: WebSearchConfig::default(),
             built_in_tools: Vec::new(),

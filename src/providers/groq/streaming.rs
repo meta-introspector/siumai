@@ -163,6 +163,7 @@ impl GroqStreaming {
             self.config.base_url.clone(),
             self.http_client.clone(),
             self.config.http_config.clone(),
+            self.config.common_params.clone(),
         );
 
         let mut request_body = chat_capability.build_chat_request_body(&request)?;

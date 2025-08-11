@@ -225,7 +225,7 @@ pub const fn get_default_model(provider_type: &ProviderType) -> Option<&'static 
         ProviderType::Ollama => Some("llama3.2:latest"),
         ProviderType::XAI => Some("grok-3-latest"),
         ProviderType::Custom(_) => None,
-        ProviderType::Groq => Some("https://api.groq.com/openai/v1"),
+        ProviderType::Groq => Some("llama-3.3-70b-versatile"),
     }
 }
 

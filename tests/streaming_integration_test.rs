@@ -65,8 +65,14 @@ async fn test_gemini_json_conversion() {
 
     // Test content delta
     let json_data = r#"{"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}"#;
+    let event = eventsource_stream::Event {
+        event: "".to_string(),
+        data: json_data.to_string(),
+        id: "".to_string(),
+        retry: None,
+    };
 
-    let result = converter.convert_json(json_data).await;
+    let result = converter.convert_event(event).await;
     assert!(result.is_some());
 
     if let Some(Ok(ChatStreamEvent::ContentDelta { delta, .. })) = result {
@@ -195,8 +201,14 @@ async fn test_gemini_finish_reason() {
 
     // Test finish reason
     let json_data = r#"{"candidates":[{"finishReason":"STOP"}]}"#;
+    let event = eventsource_stream::Event {
+        event: "".to_string(),
+        data: json_data.to_string(),
+        id: "".to_string(),
+        retry: None,
+    };
 
-    let result = converter.convert_json(json_data).await;
+    let result = converter.convert_event(event).await;
     assert!(result.is_some());
 
     if let Some(Ok(ChatStreamEvent::StreamEnd { response })) = result {

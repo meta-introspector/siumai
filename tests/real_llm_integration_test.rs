@@ -65,7 +65,7 @@
 
 use futures::StreamExt;
 use siumai::prelude::*;
-use siumai::providers::openai_compatible::providers::models::{deepseek, groq, openrouter, xai};
+use siumai::providers::openai_compatible::providers::models::{deepseek, groq, openrouter};
 use siumai::stream::ChatStreamEvent;
 use std::env;
 
@@ -89,7 +89,7 @@ fn get_provider_configs() -> Vec<ProviderTestConfig> {
             default_model: "gpt-4o-mini",
             supports_embedding: true,
             supports_reasoning: true,
-            reasoning_model: Some("o1-mini"),
+            reasoning_model: Some("gpt-5"),
         },
         ProviderTestConfig {
             name: "Anthropic",
@@ -97,15 +97,15 @@ fn get_provider_configs() -> Vec<ProviderTestConfig> {
             default_model: "claude-3-5-haiku-20241022",
             supports_embedding: false,
             supports_reasoning: true,
-            reasoning_model: Some("claude-3-5-sonnet-20241022"),
+            reasoning_model: Some("claude-sonnet-4-20250514"),
         },
         ProviderTestConfig {
             name: "Gemini",
             api_key_env: "GEMINI_API_KEY",
-            default_model: "gemini-1.5-flash",
+            default_model: "gemini-2.5-flash",
             supports_embedding: true,
             supports_reasoning: true,
-            reasoning_model: Some("gemini-1.5-pro"),
+            reasoning_model: Some("gemini-2.5-pro"),
         },
         ProviderTestConfig {
             name: "DeepSeek",
@@ -134,10 +134,10 @@ fn get_provider_configs() -> Vec<ProviderTestConfig> {
         ProviderTestConfig {
             name: "xAI",
             api_key_env: "XAI_API_KEY",
-            default_model: xai::GROK_BETA,
+            default_model: "grok-4-0709",
             supports_embedding: false,
             supports_reasoning: true,
-            reasoning_model: Some(xai::GROK_VISION_BETA),
+            reasoning_model: Some("grok-4-0709"),
         },
     ]
 }
@@ -169,7 +169,15 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
             if config.supports_embedding {
-                test_embedding(&client, config.name).await;
+                // Create a separate client with embedding model for OpenAI
+                let embedding_client = LlmBuilder::new()
+                    .openai()
+                    .api_key(env::var(config.api_key_env).unwrap())
+                    .model("text-embedding-3-small")
+                    .build()
+                    .await
+                    .expect("Failed to build OpenAI embedding client");
+                test_embedding(&embedding_client, config.name).await;
             }
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_openai(config).await;
@@ -210,7 +218,15 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
             if config.supports_embedding {
-                test_embedding(&client, config.name).await;
+                // Create a separate client with embedding model for Gemini
+                let embedding_client = LlmBuilder::new()
+                    .gemini()
+                    .api_key(env::var(config.api_key_env).unwrap())
+                    .model("text-embedding-004")
+                    .build()
+                    .await
+                    .expect("Failed to build Gemini embedding client");
+                test_embedding(&embedding_client, config.name).await;
             }
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_gemini(config).await;
@@ -459,9 +475,7 @@ async fn test_reasoning_openai(config: &ProviderTestConfig) {
         .await
         .expect("Failed to build OpenAI reasoning client");
 
-    let messages = vec![user!(
-        "Solve this step by step: If a train travels 60 mph for 2 hours, then 80 mph for 1.5 hours, what's the total distance?"
-    )];
+    let messages = vec![user!("What is 3 + 5? Show your work.")];
 
     match client.chat(messages).await {
         Ok(response) => {
@@ -518,9 +532,7 @@ async fn test_reasoning_anthropic(config: &ProviderTestConfig) {
         .await
         .expect("Failed to build Anthropic thinking client");
 
-    let messages = vec![user!(
-        "Think through this problem carefully: What are the key differences between machine learning and traditional programming? Consider multiple perspectives."
-    )];
+    let messages = vec![user!("What is 4 × 3? Think step by step.")];
 
     match client.chat(messages).await {
         Ok(response) => {
@@ -568,9 +580,7 @@ async fn test_reasoning_gemini(config: &ProviderTestConfig) {
         .await
         .expect("Failed to build Gemini thinking client");
 
-    let messages = vec![user!(
-        "Analyze this scenario step by step: A company wants to reduce costs by 20% while maintaining quality. What strategies would you recommend?"
-    )];
+    let messages = vec![user!("What is 10 ÷ 2? Show your reasoning.")];
 
     match client.chat(messages).await {
         Ok(response) => {
@@ -622,9 +632,7 @@ async fn test_reasoning_deepseek(config: &ProviderTestConfig) {
         .await
         .expect("Failed to build DeepSeek reasoning client");
 
-    let messages = vec![user!(
-        "Solve this logic puzzle step by step: Three friends have different colored shirts (red, blue, green). Alice doesn't wear red. Bob doesn't wear blue. Charlie doesn't wear green. What color does each person wear?"
-    )];
+    let messages = vec![user!("What is 7 - 3? Explain briefly.")];
 
     match client.chat(messages).await {
         Ok(response) => {
@@ -674,9 +682,7 @@ async fn test_reasoning_openrouter(config: &ProviderTestConfig) {
         .await
         .expect("Failed to build OpenRouter reasoning client");
 
-    let messages = vec![user!(
-        "Think through this math problem: A rectangle has a perimeter of 24 units and an area of 32 square units. What are its dimensions?"
-    )];
+    let messages = vec![user!("What is 6 + 4? Explain your answer.")];
 
     match client.chat(messages).await {
         Ok(response) => {
@@ -725,9 +731,7 @@ async fn test_reasoning_xai(config: &ProviderTestConfig) {
         .await
         .expect("Failed to build xAI reasoning client");
 
-    let messages = vec![user!(
-        "Analyze this scenario with careful reasoning: If you have a 3x3 grid and need to place 5 identical objects such that no two objects are in the same row or column, how many ways can you do this?"
-    )];
+    let messages = vec![user!("What is 8 - 5? Think about it step by step.")];
 
     match client.chat(messages).await {
         Ok(response) => {
@@ -799,7 +803,22 @@ mod tests {
 
         // Test embedding if supported
         if config.supports_embedding {
-            test_embedding(&client, config.name).await;
+            // Create a separate client with embedding model for OpenAI
+            let mut embedding_builder = LlmBuilder::new()
+                .openai()
+                .api_key(env::var(config.api_key_env).unwrap())
+                .model("text-embedding-3-small");
+
+            // Only set base URL if environment variable exists
+            if let Ok(base_url) = env::var("OPENAI_BASE_URL") {
+                embedding_builder = embedding_builder.base_url(base_url);
+            }
+
+            let embedding_client = embedding_builder
+                .build()
+                .await
+                .expect("Failed to build OpenAI embedding client");
+            test_embedding(&embedding_client, config.name).await;
         }
 
         // Test reasoning if supported
@@ -876,7 +895,15 @@ mod tests {
 
         // Test embedding if supported
         if config.supports_embedding {
-            test_embedding(&client, config.name).await;
+            // Create a separate client with embedding model for Gemini
+            let embedding_client = LlmBuilder::new()
+                .gemini()
+                .api_key(env::var(config.api_key_env).unwrap())
+                .model("text-embedding-004")
+                .build()
+                .await
+                .expect("Failed to build Gemini embedding client");
+            test_embedding(&embedding_client, config.name).await;
         }
 
         // Test reasoning if supported

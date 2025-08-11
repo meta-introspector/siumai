@@ -397,7 +397,7 @@ impl ChatCapability for GeminiChatCapability {
 
         let url = crate::utils::url::join_url(
             &self.config.base_url,
-            &format!("models/{}:streamGenerateContent", self.config.model),
+            &format!("models/{}:streamGenerateContent?alt=sse", self.config.model),
         );
 
         // Use the dedicated streaming capability

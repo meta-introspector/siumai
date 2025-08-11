@@ -15,6 +15,9 @@ use super::types::GeminiConfig;
 /// Gemini embedding request structure
 #[derive(Debug, Clone, Serialize)]
 struct GeminiEmbeddingRequest {
+    /// Model name (required for batch requests)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    model: Option<String>,
     /// Content to embed (single content object)
     content: GeminiContent,
     /// Embedding configuration
@@ -67,11 +70,8 @@ struct GeminiEmbeddingData {
 /// Gemini batch embedding request for multiple contents
 #[derive(Debug, Clone, Serialize)]
 struct GeminiBatchEmbeddingRequest {
-    /// Multiple contents to embed
-    contents: Vec<GeminiContent>,
-    /// Embedding configuration
-    #[serde(skip_serializing_if = "Option::is_none")]
-    embedding_config: Option<GeminiEmbeddingConfig>,
+    /// Multiple embedding requests
+    requests: Vec<GeminiEmbeddingRequest>,
 }
 
 /// Gemini batch embedding response
@@ -149,6 +149,7 @@ impl GeminiEmbeddings {
             };
 
         GeminiEmbeddingRequest {
+            model: None, // Single requests don't need model field
             content,
             embedding_config,
         }
@@ -162,28 +163,33 @@ impl GeminiEmbeddings {
         title: Option<&str>,
         output_dimensionality: Option<u32>,
     ) -> GeminiBatchEmbeddingRequest {
-        let contents = texts
+        let requests: Vec<GeminiEmbeddingRequest> = texts
             .iter()
-            .map(|text| GeminiContent {
-                parts: vec![GeminiPart { text: text.clone() }],
+            .map(|text| {
+                let content = GeminiContent {
+                    parts: vec![GeminiPart { text: text.clone() }],
+                };
+
+                let embedding_config =
+                    if task_type.is_some() || title.is_some() || output_dimensionality.is_some() {
+                        Some(GeminiEmbeddingConfig {
+                            task_type: task_type.map(Self::convert_task_type),
+                            title: title.map(|s| s.to_string()),
+                            output_dimensionality,
+                        })
+                    } else {
+                        None
+                    };
+
+                GeminiEmbeddingRequest {
+                    model: Some(format!("models/{}", self.config.model)),
+                    content,
+                    embedding_config,
+                }
             })
             .collect();
 
-        let embedding_config =
-            if task_type.is_some() || title.is_some() || output_dimensionality.is_some() {
-                Some(GeminiEmbeddingConfig {
-                    task_type: task_type.map(Self::convert_task_type),
-                    title: title.map(|s| s.to_string()),
-                    output_dimensionality,
-                })
-            } else {
-                None
-            };
-
-        GeminiBatchEmbeddingRequest {
-            contents,
-            embedding_config,
-        }
+        GeminiBatchEmbeddingRequest { requests }
     }
 
     /// Make HTTP request to Gemini API for single embedding

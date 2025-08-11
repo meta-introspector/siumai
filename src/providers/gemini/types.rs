@@ -64,9 +64,9 @@ pub struct Content {
 
 /// A datatype containing media that is part of a multi-part Content message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Part {
     /// Text content
-    #[serde(rename_all = "camelCase")]
     Text {
         text: String,
         /// Optional. Whether this is a thought summary (for thinking models)
@@ -74,17 +74,33 @@ pub enum Part {
         thought: Option<bool>,
     },
     /// Inline data (images, audio, etc.)
-    InlineData { inline_data: Blob },
+    InlineData {
+        #[serde(rename = "inlineData")]
+        inline_data: Blob,
+    },
     /// File data
-    FileData { file_data: FileData },
+    FileData {
+        #[serde(rename = "fileData")]
+        file_data: FileData,
+    },
     /// Function call
-    FunctionCall { function_call: FunctionCall },
+    FunctionCall {
+        #[serde(rename = "functionCall")]
+        function_call: FunctionCall,
+    },
     /// Function response
-    FunctionResponse { function_response: FunctionResponse },
+    FunctionResponse {
+        #[serde(rename = "functionResponse")]
+        function_response: FunctionResponse,
+    },
     /// Executable code
-    ExecutableCode { executable_code: ExecutableCode },
+    ExecutableCode {
+        #[serde(rename = "executableCode")]
+        executable_code: ExecutableCode,
+    },
     /// Code execution result
     CodeExecutionResult {
+        #[serde(rename = "codeExecutionResult")]
         code_execution_result: CodeExecutionResult,
     },
 }

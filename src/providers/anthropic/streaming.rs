@@ -160,14 +160,26 @@ impl SseEventConverter for AnthropicEventConverter {
 pub struct AnthropicStreaming {
     config: AnthropicParams,
     http_client: reqwest::Client,
+    api_key: String,
+    base_url: String,
+    http_config: crate::types::HttpConfig,
 }
 
 impl AnthropicStreaming {
     /// Create a new Anthropic streaming client
-    pub fn new(config: AnthropicParams, http_client: reqwest::Client) -> Self {
+    pub fn new(
+        config: AnthropicParams,
+        http_client: reqwest::Client,
+        api_key: String,
+        base_url: String,
+        http_config: crate::types::HttpConfig,
+    ) -> Self {
         Self {
             config,
             http_client,
+            api_key,
+            base_url,
+            http_config,
         }
     }
 
@@ -194,12 +206,18 @@ impl AnthropicStreaming {
         request: crate::types::ChatRequest,
     ) -> Result<ChatStream, LlmError> {
         // Build request body
+        let (messages, system) = self.convert_messages(&request.messages)?;
         let mut request_body = serde_json::json!({
             "model": request.common_params.model,
-            "messages": self.convert_messages(&request.messages)?,
+            "messages": messages,
             "stream": true,
             "max_tokens": request.common_params.max_tokens.unwrap_or(1000)
         });
+
+        // Add system message if present
+        if let Some(system_content) = system {
+            request_body["system"] = serde_json::Value::String(system_content);
+        }
 
         // Add common parameters
         if let Some(temp) = request.common_params.temperature {
@@ -235,16 +253,19 @@ impl AnthropicStreaming {
         // Merge provider-specific params before sending
         Self::merge_provider_params_into_body(&mut request_body, &request);
 
-        // Create headers
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-        headers.insert("anthropic-version", "2023-06-01".parse().unwrap());
-        // Note: API key should be provided via config
+        // Create headers with authentication
+        let headers = crate::utils::http_headers::ProviderHeaders::anthropic(
+            &self.api_key,
+            &self.http_config.headers,
+        )?;
+
+        // Build the API URL
+        let url = crate::utils::url::join_url(&self.base_url, "/v1/messages");
 
         // Create the stream using reqwest_eventsource for enhanced reliability
         let request_builder = self
             .http_client
-            .post("https://api.anthropic.com/v1/messages")
+            .post(&url)
             .headers(headers)
             .json(&request_body);
 
@@ -256,18 +277,51 @@ impl AnthropicStreaming {
     fn convert_messages(
         &self,
         messages: &[crate::types::ChatMessage],
-    ) -> Result<serde_json::Value, LlmError> {
-        let anthropic_messages: Vec<serde_json::Value> = messages
-            .iter()
-            .map(|msg| {
-                serde_json::json!({
-                    "role": format!("{:?}", msg.role).to_lowercase(),
-                    "content": msg.content_text().unwrap_or("")
-                })
-            })
-            .collect();
+    ) -> Result<(serde_json::Value, Option<String>), LlmError> {
+        let mut anthropic_messages = Vec::new();
+        let mut system_message = None;
 
-        Ok(serde_json::Value::Array(anthropic_messages))
+        for msg in messages {
+            match msg.role {
+                crate::types::MessageRole::System => {
+                    // Anthropic handles system messages separately
+                    if let Some(text) = msg.content_text() {
+                        system_message = Some(text.to_string());
+                    }
+                }
+                crate::types::MessageRole::User => {
+                    anthropic_messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": msg.content_text().unwrap_or("")
+                    }));
+                }
+                crate::types::MessageRole::Assistant => {
+                    anthropic_messages.push(serde_json::json!({
+                        "role": "assistant",
+                        "content": msg.content_text().unwrap_or("")
+                    }));
+                }
+                crate::types::MessageRole::Developer => {
+                    // Developer messages are treated as system-level instructions
+                    if let Some(text) = msg.content_text() {
+                        let developer_text = format!("Developer instructions: {text}");
+                        system_message = Some(match system_message {
+                            Some(existing) => format!("{existing}\n\n{developer_text}"),
+                            None => developer_text,
+                        });
+                    }
+                }
+                crate::types::MessageRole::Tool => {
+                    // Tool results are handled as user messages in Anthropic
+                    anthropic_messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": msg.content_text().unwrap_or("")
+                    }));
+                }
+            }
+        }
+
+        Ok((serde_json::Value::Array(anthropic_messages), system_message))
     }
 
     /// Convert tools to Anthropic format

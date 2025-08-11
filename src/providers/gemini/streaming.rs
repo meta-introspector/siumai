@@ -7,7 +7,7 @@ use crate::error::LlmError;
 use crate::providers::gemini::types::GeminiConfig;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
-use crate::utils::streaming::{JsonEventConverter, StreamProcessor};
+use crate::utils::streaming::{SseEventConverter, StreamProcessor};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::future::Future;
@@ -68,21 +68,24 @@ impl GeminiEventConverter {
 
     /// Convert Gemini stream response to ChatStreamEvent
     fn convert_gemini_response(&self, response: GeminiStreamResponse) -> Option<ChatStreamEvent> {
-        // Handle usage metadata
-        if let Some(usage) = response.usage_metadata {
-            let usage_info = Usage {
-                prompt_tokens: usage.prompt_token_count.unwrap_or(0),
-                completion_tokens: usage.candidates_token_count.unwrap_or(0),
-                total_tokens: usage.total_token_count.unwrap_or(0),
-                cached_tokens: None,
-                reasoning_tokens: None,
-            };
-            return Some(ChatStreamEvent::UsageUpdate { usage: usage_info });
-        }
-
-        // Handle candidates
+        // First, prioritize content over usage updates
+        // Handle candidates for content and finish reasons
         if let Some(candidates) = response.candidates {
             for candidate in candidates {
+                // Handle content first (most important)
+                if let Some(content) = candidate.content
+                    && let Some(parts) = content.parts
+                {
+                    for part in parts {
+                        if let Some(text) = part.text {
+                            return Some(ChatStreamEvent::ContentDelta {
+                                delta: text,
+                                index: None,
+                            });
+                        }
+                    }
+                }
+
                 // Handle finish reason
                 if let Some(finish_reason) = candidate.finish_reason {
                     let reason = match finish_reason.as_str() {
@@ -105,38 +108,42 @@ impl GeminiEventConverter {
 
                     return Some(ChatStreamEvent::StreamEnd { response });
                 }
-
-                // Handle content
-                if let Some(content) = candidate.content
-                    && let Some(parts) = content.parts
-                {
-                    for part in parts {
-                        if let Some(text) = part.text {
-                            return Some(ChatStreamEvent::ContentDelta {
-                                delta: text,
-                                index: None,
-                            });
-                        }
-                    }
-                }
             }
+        }
+
+        // Handle usage metadata only if no content was found
+        if let Some(usage) = response.usage_metadata {
+            let usage_info = Usage {
+                prompt_tokens: usage.prompt_token_count.unwrap_or(0),
+                completion_tokens: usage.candidates_token_count.unwrap_or(0),
+                total_tokens: usage.total_token_count.unwrap_or(0),
+                cached_tokens: None,
+                reasoning_tokens: None,
+            };
+            return Some(ChatStreamEvent::UsageUpdate { usage: usage_info });
         }
 
         None
     }
 }
 
-impl JsonEventConverter for GeminiEventConverter {
-    fn convert_json<'a>(
-        &'a self,
-        json_data: &'a str,
-    ) -> Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + 'a>>
+impl SseEventConverter for GeminiEventConverter {
+    fn convert_event(
+        &self,
+        event: eventsource_stream::Event,
+    ) -> Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + '_>>
     {
         Box::pin(async move {
-            match serde_json::from_str::<GeminiStreamResponse>(json_data) {
+            // Skip empty events
+            if event.data.trim().is_empty() {
+                return None;
+            }
+
+            // Parse the JSON data from the SSE event
+            match serde_json::from_str::<GeminiStreamResponse>(&event.data) {
                 Ok(gemini_response) => self.convert_gemini_response(gemini_response).map(Ok),
                 Err(e) => Some(Err(LlmError::ParseError(format!(
-                    "Failed to parse Gemini JSON: {e}"
+                    "Failed to parse Gemini SSE JSON: {e}"
                 )))),
             }
         })
@@ -190,11 +197,19 @@ impl GeminiStreaming {
             });
         }
 
-        // Create the stream using our new infrastructure
+        // Create the stream using SSE infrastructure (Gemini uses SSE format)
         let mut config = self.config;
-        config.api_key = api_key;
+        config.api_key = api_key.clone();
         let converter = GeminiEventConverter::new(config);
-        StreamProcessor::create_json_stream(response, converter).await
+        StreamProcessor::create_eventsource_stream(
+            self.http_client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .header("x-goog-api-key", &api_key)
+                .json(&request),
+            converter,
+        )
+        .await
     }
 }
 
@@ -218,8 +233,14 @@ mod tests {
 
         // Test content delta conversion
         let json_data = r#"{"candidates":[{"content":{"parts":[{"text":"Hello"}]}}]}"#;
+        let event = eventsource_stream::Event {
+            event: "".to_string(),
+            data: json_data.to_string(),
+            id: "".to_string(),
+            retry: None,
+        };
 
-        let result = converter.convert_json(json_data).await;
+        let result = converter.convert_event(event).await;
         assert!(result.is_some());
 
         if let Some(Ok(ChatStreamEvent::ContentDelta { delta, .. })) = result {
@@ -236,8 +257,14 @@ mod tests {
 
         // Test finish reason conversion
         let json_data = r#"{"candidates":[{"finishReason":"STOP"}]}"#;
+        let event = eventsource_stream::Event {
+            event: "".to_string(),
+            data: json_data.to_string(),
+            id: "".to_string(),
+            retry: None,
+        };
 
-        let result = converter.convert_json(json_data).await;
+        let result = converter.convert_event(event).await;
         assert!(result.is_some());
 
         if let Some(Ok(ChatStreamEvent::StreamEnd { response })) = result {

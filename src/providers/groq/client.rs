@@ -35,6 +35,7 @@ impl GroqClient {
             config.base_url.clone(),
             http_client.clone(),
             config.http_config.clone(),
+            config.common_params.clone(),
         );
 
         Self {
