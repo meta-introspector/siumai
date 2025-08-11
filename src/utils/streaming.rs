@@ -9,7 +9,6 @@ use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::utils::sse_stream::SseStreamExt;
 use eventsource_stream::Event;
 use futures_util::StreamExt;
-use reqwest_eventsource::{Event as ReqwestEvent, RequestBuilderExt};
 use std::future::Future;
 use std::pin::Pin;
 
@@ -101,55 +100,83 @@ impl StreamProcessor {
     where
         C: SseEventConverter + Clone + Send + 'static,
     {
-        // Create the EventSource
-        let mut event_source = request_builder
-            .eventsource()
-            .map_err(|e| LlmError::HttpError(format!("Failed to create EventSource: {e}")))?;
+        // Send the request and get the response
+        let response = request_builder
+            .send()
+            .await
+            .map_err(|e| LlmError::HttpError(format!("Failed to send request: {e}")))?;
 
-        // Collect all events into a vector first, then create a stream from it
+        // Check if the response is successful
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LlmError::HttpError(format!(
+                "HTTP error {}: {}",
+                status.as_u16(),
+                error_text
+            )));
+        }
+
+        // Process the response as a byte stream and parse SSE manually
+        let mut byte_stream = response.bytes_stream();
+        let mut buffer = String::new();
         let mut events = Vec::new();
 
-        while let Some(event_result) = event_source.next().await {
-            match event_result {
-                Ok(ReqwestEvent::Open) => {
-                    // Connection established, continue
-                    tracing::debug!("EventSource connection opened");
-                    continue;
-                }
-                Ok(ReqwestEvent::Message(message)) => {
-                    // Handle [DONE] events
-                    if message.data == "[DONE]" {
-                        if let Some(end_event) = converter.handle_stream_end() {
-                            events.push(end_event);
+        while let Some(chunk_result) = byte_stream.next().await {
+            match chunk_result {
+                Ok(chunk) => {
+                    // Convert bytes to string and add to buffer
+                    let chunk_str = String::from_utf8_lossy(&chunk);
+                    buffer.push_str(&chunk_str);
+
+                    // Process complete lines
+                    while let Some(line_end) = buffer.find('\n') {
+                        let line = buffer[..line_end].trim_end_matches('\r').to_string();
+                        buffer = buffer[line_end + 1..].to_string();
+
+                        // Process SSE data lines
+                        if let Some(data) = line.strip_prefix("data: ") {
+                            // Remove "data: " prefix
+
+                            // Handle [DONE] events
+                            if data == "[DONE]" {
+                                if let Some(end_event) = converter.handle_stream_end() {
+                                    events.push(end_event);
+                                }
+                                // Don't break here, let the stream end naturally
+                                continue;
+                            }
+
+                            // Skip empty events
+                            if data.trim().is_empty() {
+                                continue;
+                            }
+
+                            // Create an Event for the converter
+                            let event = Event {
+                                event: "".to_string(),
+                                data: data.to_string(),
+                                id: "".to_string(),
+                                retry: None,
+                            };
+
+                            // Convert using provider-specific logic
+                            if let Some(result) = converter.convert_event(event).await {
+                                events.push(result);
+                            }
                         }
-                        break;
-                    }
-
-                    // Skip empty events
-                    if message.data.trim().is_empty() {
-                        continue;
-                    }
-
-                    // The message is already an eventsource_stream::Event
-                    let sse_event = message;
-
-                    // Convert using provider-specific logic
-                    if let Some(result) = converter.convert_event(sse_event).await {
-                        events.push(result);
                     }
                 }
-                Err(err) => {
-                    events.push(Err(LlmError::StreamError(format!(
-                        "EventSource error: {err}"
-                    ))));
-                    break; // Stop on error
+                Err(e) => {
+                    events.push(Err(LlmError::StreamError(format!("Stream error: {e}"))));
+                    break;
                 }
             }
         }
 
         // Create a stream from the collected events
-        let chat_stream = futures_util::stream::iter(events);
-        Ok(Box::pin(chat_stream))
+        let stream = futures_util::stream::iter(events);
+        Ok(Box::pin(stream))
     }
 }
 

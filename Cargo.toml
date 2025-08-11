@@ -184,7 +184,6 @@ path = "examples/04_providers/openai_compatible/models_showcase.rs"
 name = "openai_responses_api"
 path = "examples/04_providers/openai/openai_responses_api.rs"
 
-
 [[example]]
 name = "api_integration"
 path = "examples/05_use_cases/api_integration.rs"

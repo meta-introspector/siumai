@@ -107,6 +107,7 @@ pub struct OpenAiChatCapability {
     pub project: Option<String>,
     pub http_config: HttpConfig,
     pub parameter_mapper: OpenAiParameterMapper,
+    pub common_params: CommonParams,
 }
 
 impl OpenAiChatCapability {
@@ -118,6 +119,7 @@ impl OpenAiChatCapability {
         organization: Option<String>,
         project: Option<String>,
         http_config: HttpConfig,
+        common_params: CommonParams,
     ) -> Self {
         Self {
             api_key,
@@ -127,6 +129,7 @@ impl OpenAiChatCapability {
             project,
             http_config,
             parameter_mapper: OpenAiParameterMapper,
+            common_params,
         }
     }
 
@@ -310,7 +313,7 @@ impl ChatCapability for OpenAiChatCapability {
         let request = ChatRequest {
             messages: messages.clone(),
             tools: tools.clone(),
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -398,7 +401,7 @@ impl ChatCapability for OpenAiChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -411,7 +414,7 @@ impl ChatCapability for OpenAiChatCapability {
             base_url: self.base_url.clone(),
             organization: self.organization.clone(),
             project: self.project.clone(),
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             openai_params: OpenAiParams::default(),
             http_config: self.http_config.clone(),
             web_search_config: crate::types::WebSearchConfig::default(),

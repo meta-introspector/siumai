@@ -53,6 +53,7 @@ impl AnthropicClient {
             http_client.clone(),
             http_config.clone(),
             specific_params.clone(),
+            common_params.clone(),
         );
 
         let models_capability = AnthropicModels::new(api_key, base_url, http_client, http_config);
@@ -202,23 +203,8 @@ impl ChatCapability for AnthropicClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // Create a ChatRequest with client's configuration for streaming
-        let request = ChatRequest {
-            messages,
-            tools,
-            common_params: self.common_params.clone(),
-            provider_params: None,
-            http_config: None,
-            web_search: None,
-            stream: true,
-        };
-
-        // Create streaming client with proper configuration
-        let streaming = super::streaming::AnthropicStreaming::new(
-            self.anthropic_params.clone(),
-            self.chat_capability.http_client.clone(),
-        );
-        streaming.create_chat_stream(request).await
+        // Now that AnthropicChatCapability has the correct common_params, we can use the trait method directly
+        self.chat_capability.chat_stream(messages, tools).await
     }
 }
 

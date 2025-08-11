@@ -24,6 +24,7 @@ pub struct XaiChatCapability {
     pub http_client: reqwest::Client,
     pub http_config: HttpConfig,
     pub parameter_mapper: OpenAiParameterMapper,
+    pub common_params: CommonParams,
 }
 
 impl XaiChatCapability {
@@ -33,6 +34,7 @@ impl XaiChatCapability {
         base_url: String,
         http_client: reqwest::Client,
         http_config: HttpConfig,
+        common_params: CommonParams,
     ) -> Self {
         Self {
             api_key,
@@ -40,6 +42,7 @@ impl XaiChatCapability {
             http_client,
             http_config,
             parameter_mapper: OpenAiParameterMapper,
+            common_params,
         }
     }
 
@@ -205,7 +208,7 @@ impl ChatCapability for XaiChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -267,7 +270,7 @@ impl ChatCapability for XaiChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -278,7 +281,7 @@ impl ChatCapability for XaiChatCapability {
         let config = super::config::XaiConfig {
             api_key: self.api_key.clone(),
             base_url: self.base_url.clone(),
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             http_config: self.http_config.clone(),
             web_search_config: crate::types::WebSearchConfig::default(),
         };

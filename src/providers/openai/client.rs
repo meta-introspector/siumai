@@ -62,6 +62,7 @@ impl OpenAiClient {
             config.organization.clone(),
             config.project.clone(),
             config.http_config.clone(),
+            config.common_params.clone(),
         );
 
         let models_capability = OpenAiModels::new(
@@ -287,35 +288,8 @@ impl ChatCapability for OpenAiClient {
             let responses = OpenAiResponses::new(self.http_client.clone(), config);
             responses.chat_stream(messages, tools).await
         } else {
-            // Create a ChatRequest with client's configuration for streaming
-            let request = ChatRequest {
-                messages,
-                tools,
-                common_params: self.common_params.clone(),
-                provider_params: Some(ProviderParams::from_openai(self.openai_params.clone())),
-                http_config: None,
-                web_search: None,
-                stream: true,
-            };
-
-            // Create streaming client with proper configuration
-            let config = super::config::OpenAiConfig {
-                api_key: self.chat_capability.api_key.clone(),
-                base_url: self.chat_capability.base_url.clone(),
-                organization: self.chat_capability.organization.clone(),
-                project: self.chat_capability.project.clone(),
-                common_params: self.common_params.clone(),
-                openai_params: self.openai_params.clone(),
-                http_config: self.chat_capability.http_config.clone(),
-                web_search_config: crate::types::WebSearchConfig::default(),
-                use_responses_api: false,
-                previous_response_id: None,
-                built_in_tools: Vec::new(),
-            };
-
-            let streaming =
-                super::streaming::OpenAiStreaming::new(config, self.http_client.clone());
-            streaming.create_chat_stream(request).await
+            // Now that OpenAiChatCapability has the correct common_params, we can use the trait method directly
+            self.chat_capability.chat_stream(messages, tools).await
         }
     }
 }

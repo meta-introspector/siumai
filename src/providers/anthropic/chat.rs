@@ -24,6 +24,7 @@ pub struct AnthropicChatCapability {
     pub http_config: HttpConfig,
     pub parameter_mapper: AnthropicParameterMapper,
     anthropic_params: AnthropicSpecificParams,
+    pub common_params: CommonParams,
 }
 
 impl AnthropicChatCapability {
@@ -34,6 +35,7 @@ impl AnthropicChatCapability {
         http_client: reqwest::Client,
         http_config: HttpConfig,
         anthropic_params: AnthropicSpecificParams,
+        common_params: CommonParams,
     ) -> Self {
         Self {
             api_key,
@@ -42,6 +44,7 @@ impl AnthropicChatCapability {
             http_config,
             parameter_mapper: AnthropicParameterMapper,
             anthropic_params,
+            common_params,
         }
     }
 
@@ -163,7 +166,7 @@ impl ChatCapability for AnthropicChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,
@@ -247,7 +250,7 @@ impl ChatCapability for AnthropicChatCapability {
         let request = ChatRequest {
             messages,
             tools,
-            common_params: CommonParams::default(),
+            common_params: self.common_params.clone(),
             provider_params: None,
             http_config: None,
             web_search: None,

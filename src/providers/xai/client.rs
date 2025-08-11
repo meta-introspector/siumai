@@ -71,6 +71,7 @@ impl XaiClient {
             config.base_url.clone(),
             http_client.clone(),
             config.http_config.clone(),
+            config.common_params.clone(),
         );
 
         Ok(Self {
@@ -181,6 +182,7 @@ impl ChatCapability for XaiClient {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
+        // Now that XaiChatCapability has the correct common_params, we can use the trait method directly
         self.chat_capability.chat_stream(messages, tools).await
     }
 }
