@@ -575,17 +575,87 @@ for image in response.images {
 
 ## 🧪 Testing
 
-Run the test suite:
+### Unit and Mock Tests
+
+Run the standard test suite (no API keys required):
 
 ```bash
 cargo test
 ```
 
-Run integration tests:
+### Integration Tests
+
+Run mock integration tests:
 
 ```bash
 cargo test --test integration_tests
 ```
+
+### Real LLM Integration Tests
+
+**⚠️ These tests use real API keys and make actual API calls!**
+
+Siumai includes comprehensive integration tests that verify functionality against real LLM providers. These tests are ignored by default to prevent accidental API usage.
+
+#### Quick Setup
+
+1. **Set API keys** (you only need keys for providers you want to test):
+   ```bash
+   export OPENAI_API_KEY="your-key"
+   export ANTHROPIC_API_KEY="your-key"
+   export GEMINI_API_KEY="your-key"
+   # ... other providers
+   ```
+
+2. **Run tests**:
+   ```bash
+   # Test all available providers
+   cargo test test_all_available_providers -- --ignored --nocapture
+
+   # Test specific provider
+   cargo test test_openai_integration -- --ignored --nocapture
+   ```
+
+#### Using Helper Scripts
+
+For easier setup, use the provided scripts that automatically load `.env` files:
+
+```bash
+# Create .env file from template (optional)
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run the script
+# Linux/macOS
+./scripts/run_integration_tests.sh
+
+# Windows
+scripts\run_integration_tests.bat
+```
+
+#### Test Coverage
+
+Each provider test includes:
+- ✅ **Non-streaming chat**: Basic request/response
+- 🌊 **Streaming chat**: Real-time response streaming
+- 🔢 **Embeddings**: Text embedding generation (if supported)
+- 🧠 **Reasoning**: Advanced reasoning/thinking capabilities (if supported)
+
+#### Supported Providers
+
+| Provider   | Chat | Streaming | Embeddings | Reasoning |
+|------------|------|-----------|------------|-----------|
+| OpenAI     | ✅   | ✅        | ✅         | ✅ (o1)   |
+| Anthropic  | ✅   | ✅        | ❌         | ✅ (thinking) |
+| Gemini     | ✅   | ✅        | ✅         | ✅ (thinking) |
+| DeepSeek   | ✅   | ✅        | ❌         | ✅ (reasoner) |
+| OpenRouter | ✅   | ✅        | ❌         | ✅ (o1 models) |
+| Groq       | ✅   | ✅        | ❌         | ❌        |
+| xAI        | ✅   | ✅        | ❌         | ✅ (Grok) |
+
+See [tests/README.md](tests/README.md) for detailed instructions.
+
+### Examples
 
 Run examples:
 
