@@ -70,7 +70,7 @@
 
 use futures::StreamExt;
 use siumai::prelude::*;
-use siumai::providers::openai_compatible::providers::models::{deepseek, groq, openrouter};
+use siumai::providers::openai_compatible::providers::models::{deepseek, groq};
 use siumai::stream::ChatStreamEvent;
 use std::env;
 
@@ -123,10 +123,10 @@ fn get_provider_configs() -> Vec<ProviderTestConfig> {
         ProviderTestConfig {
             name: "OpenRouter",
             api_key_env: "OPENROUTER_API_KEY",
-            default_model: openrouter::openai::GPT_4O,
+            default_model: "qwen/qwen3-4b:free",
             supports_embedding: false,
             supports_reasoning: true,
-            reasoning_model: Some(openrouter::openai::GPT_4_TURBO),
+            reasoning_model: Some("qwen/qwen3-4b:free"),
         },
         ProviderTestConfig {
             name: "Groq",

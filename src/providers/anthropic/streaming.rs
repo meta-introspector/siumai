@@ -15,13 +15,21 @@ use std::future::Future;
 use std::pin::Pin;
 
 /// Anthropic stream event structure
+/// This structure is flexible to handle different event types from Anthropic's SSE stream
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct AnthropicStreamEvent {
     r#type: String,
+    #[serde(default)]
     message: Option<AnthropicMessage>,
+    #[serde(default)]
     delta: Option<AnthropicDelta>,
+    #[serde(default)]
     usage: Option<AnthropicUsage>,
+    #[serde(default)]
+    index: Option<usize>,
+    #[serde(default)]
+    content_block: Option<serde_json::Value>,
 }
 
 /// Anthropic message structure
@@ -45,12 +53,23 @@ struct AnthropicContent {
 }
 
 /// Anthropic delta structure
+/// Supports different delta types: text_delta, input_json_delta, thinking_delta, etc.
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 struct AnthropicDelta {
     #[serde(rename = "type")]
-    delta_type: String,
+    #[serde(default)]
+    delta_type: Option<String>,
+    #[serde(default)]
     text: Option<String>,
+    #[serde(default)]
+    partial_json: Option<String>,
+    #[serde(default)]
+    thinking: Option<String>,
+    #[serde(default)]
+    stop_reason: Option<String>,
+    #[serde(default)]
+    stop_sequence: Option<String>,
 }
 
 /// Anthropic usage structure
@@ -91,18 +110,55 @@ impl AnthropicEventConverter {
                 None
             }
             "message_delta" => {
-                // Handle usage or finish reason
+                // Handle usage or finish reason from message_delta events
+                let mut usage_info = None;
+                let mut finish_reason = None;
+
+                // Extract usage information
                 if let Some(usage) = event.usage {
-                    let usage_info = Usage {
+                    usage_info = Some(Usage {
                         prompt_tokens: usage.input_tokens.unwrap_or(0),
                         completion_tokens: usage.output_tokens.unwrap_or(0),
                         total_tokens: usage.input_tokens.unwrap_or(0)
                             + usage.output_tokens.unwrap_or(0),
                         cached_tokens: None,
                         reasoning_tokens: None,
-                    };
-                    return Some(ChatStreamEvent::UsageUpdate { usage: usage_info });
+                    });
                 }
+
+                // Extract finish reason from delta
+                if let Some(delta) = event.delta
+                    && let Some(stop_reason) = delta.stop_reason
+                {
+                    finish_reason = Some(match stop_reason.as_str() {
+                        "end_turn" => FinishReason::Stop,
+                        "max_tokens" => FinishReason::Length,
+                        "stop_sequence" => FinishReason::Stop,
+                        "tool_use" => FinishReason::ToolCalls,
+                        _ => FinishReason::Stop,
+                    });
+                }
+
+                // If we have a finish reason, emit StreamEnd event
+                if let Some(reason) = finish_reason {
+                    let response = ChatResponse {
+                        id: None,
+                        model: None,
+                        content: MessageContent::Text("".to_string()),
+                        usage: usage_info,
+                        finish_reason: Some(reason),
+                        tool_calls: None,
+                        thinking: None,
+                        metadata: HashMap::new(),
+                    };
+                    return Some(ChatStreamEvent::StreamEnd { response });
+                }
+
+                // Otherwise, just emit usage update if available
+                if let Some(usage) = usage_info {
+                    return Some(ChatStreamEvent::UsageUpdate { usage });
+                }
+
                 None
             }
             "message_stop" => {
@@ -130,11 +186,47 @@ impl SseEventConverter for AnthropicEventConverter {
     ) -> Pin<Box<dyn Future<Output = Option<Result<ChatStreamEvent, LlmError>>> + Send + Sync + '_>>
     {
         Box::pin(async move {
+            // Log the raw event data for debugging
+            tracing::debug!("Anthropic SSE event: {}", event.data);
+
+            // Handle special cases first
+            if event.data.trim() == "[DONE]" {
+                return None;
+            }
+
+            // Try to parse as standard Anthropic event
             match serde_json::from_str::<AnthropicStreamEvent>(&event.data) {
                 Ok(anthropic_event) => self.convert_anthropic_event(anthropic_event).map(Ok),
-                Err(e) => Some(Err(LlmError::ParseError(format!(
-                    "Failed to parse Anthropic event: {e}"
-                )))),
+                Err(e) => {
+                    // Enhanced error reporting with event data
+                    tracing::warn!("Failed to parse Anthropic SSE event: {}", e);
+                    tracing::warn!("Raw event data: {}", event.data);
+
+                    // Try to parse as a generic JSON to see if it's a different format
+                    if let Ok(generic_json) = serde_json::from_str::<serde_json::Value>(&event.data)
+                    {
+                        tracing::warn!("Event parsed as generic JSON: {:#}", generic_json);
+
+                        // Check if this looks like an error response
+                        if let Some(error_obj) = generic_json.get("error") {
+                            let error_message = error_obj
+                                .get("message")
+                                .and_then(|m| m.as_str())
+                                .unwrap_or("Unknown error");
+
+                            return Some(Err(LlmError::ApiError {
+                                code: 0, // Unknown status code from SSE
+                                message: format!("Anthropic API error: {}", error_message),
+                                details: Some(error_obj.clone()),
+                            }));
+                        }
+                    }
+
+                    Some(Err(LlmError::ParseError(format!(
+                        "Failed to parse Anthropic event: {}. Raw data: {}",
+                        e, event.data
+                    ))))
+                }
             }
         })
     }
