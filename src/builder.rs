@@ -1553,13 +1553,25 @@ impl OllamaBuilder {
         self
     }
 
-    /// Enable thinking mode for thinking models
+    /// Enable reasoning mode for reasoning models
+    ///
+    /// # Arguments
+    /// * `enabled` - Whether to enable reasoning mode
+    pub const fn reasoning(mut self, enabled: bool) -> Self {
+        self.ollama_params.think = Some(enabled);
+        self
+    }
+
+    /// Enable thinking mode for thinking models (alias for reasoning)
     ///
     /// # Arguments
     /// * `think` - Whether to enable thinking mode
-    pub const fn think(mut self, think: bool) -> Self {
-        self.ollama_params.think = Some(think);
-        self
+    ///
+    /// # Deprecated
+    /// Use `reasoning()` instead for consistency with other providers
+    #[deprecated(since = "0.7.1", note = "Use `reasoning()` instead for consistency")]
+    pub const fn think(self, think: bool) -> Self {
+        self.reasoning(think)
     }
 
     // === Tracing Configuration ===

@@ -194,6 +194,51 @@ impl OllamaClient {
         self
     }
 
+    /// Enable reasoning mode for reasoning models
+    pub fn with_reasoning(mut self, enabled: bool) -> Self {
+        self.ollama_params.think = Some(enabled);
+        self
+    }
+
+    /// Enable reasoning mode (convenience method)
+    pub fn with_reasoning_enabled(mut self) -> Self {
+        self.ollama_params.think = Some(true);
+        self
+    }
+
+    /// Disable reasoning mode (convenience method)
+    pub fn with_reasoning_disabled(mut self) -> Self {
+        self.ollama_params.think = Some(false);
+        self
+    }
+
+    /// Enable thinking mode for thinking models (deprecated alias)
+    #[deprecated(
+        since = "0.7.1",
+        note = "Use `with_reasoning()` instead for consistency"
+    )]
+    pub fn with_thinking(self, enabled: bool) -> Self {
+        self.with_reasoning(enabled)
+    }
+
+    /// Enable thinking mode (deprecated alias)
+    #[deprecated(
+        since = "0.7.1",
+        note = "Use `with_reasoning_enabled()` instead for consistency"
+    )]
+    pub fn with_think(self) -> Self {
+        self.with_reasoning_enabled()
+    }
+
+    /// Disable thinking mode (deprecated alias)
+    #[deprecated(
+        since = "0.7.1",
+        note = "Use `with_reasoning_disabled()` instead for consistency"
+    )]
+    pub fn with_no_think(self) -> Self {
+        self.with_reasoning_disabled()
+    }
+
     /// Generate text completion (using /api/generate endpoint)
     pub async fn generate(&self, prompt: String) -> Result<String, LlmError> {
         self.completion_capability.generate(prompt).await

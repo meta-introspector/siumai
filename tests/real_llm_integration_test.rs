@@ -16,6 +16,10 @@
 //!
 //! export GEMINI_API_KEY="your-key"
 //! cargo test test_gemini_integration -- --ignored
+//!
+//! # For Ollama (make sure Ollama is running locally)
+//! export OLLAMA_BASE_URL="http://localhost:11434"
+//! cargo test test_ollama_integration -- --ignored
 //! ```
 //!
 //! ### All Available Providers
@@ -39,6 +43,7 @@
 //! - `OPENROUTER_API_KEY`: OpenRouter API key
 //! - `GROQ_API_KEY`: Groq API key
 //! - `XAI_API_KEY`: xAI API key
+//! - `OLLAMA_BASE_URL`: Ollama base URL (default: http://localhost:11434)
 //!
 //! ### Optional Base URL Overrides
 //! - `OPENAI_BASE_URL`: Override OpenAI base URL (for proxies/custom endpoints)
@@ -139,12 +144,25 @@ fn get_provider_configs() -> Vec<ProviderTestConfig> {
             supports_reasoning: true,
             reasoning_model: Some("grok-4-0709"),
         },
+        ProviderTestConfig {
+            name: "Ollama",
+            api_key_env: "OLLAMA_BASE_URL", // Use base URL as "key" for Ollama
+            default_model: "llama3.2:3b",
+            supports_embedding: true,
+            supports_reasoning: true,
+            reasoning_model: Some("deepseek-r1:8b"),
+        },
     ]
 }
 
 /// Check if provider environment variables are available
 fn is_provider_available(config: &ProviderTestConfig) -> bool {
-    env::var(config.api_key_env).is_ok()
+    if config.name == "Ollama" {
+        // For Ollama, we just check if the base URL is set or use default
+        true
+    } else {
+        env::var(config.api_key_env).is_ok()
+    }
 }
 
 /// Generic provider integration test
@@ -291,6 +309,37 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
             test_streaming_chat(&client, config.name).await;
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_xai(config).await;
+            }
+        }
+        "Ollama" => {
+            let base_url = env::var(config.api_key_env)
+                .unwrap_or_else(|_| "http://localhost:11434".to_string());
+
+            let client = LlmBuilder::new()
+                .ollama()
+                .base_url(&base_url)
+                .model(config.default_model)
+                .build()
+                .await
+                .expect("Failed to build Ollama client");
+
+            test_non_streaming_chat(&client, config.name).await;
+            test_streaming_chat(&client, config.name).await;
+
+            if config.supports_embedding {
+                // Create a separate client with embedding model for Ollama
+                let embedding_client = LlmBuilder::new()
+                    .ollama()
+                    .base_url(&base_url)
+                    .model("nomic-embed-text") // Common Ollama embedding model
+                    .build()
+                    .await
+                    .expect("Failed to build Ollama embedding client");
+                test_embedding(&embedding_client, config.name).await;
+            }
+
+            if config.supports_reasoning && config.reasoning_model.is_some() {
+                test_reasoning_ollama(config).await;
             }
         }
         _ => println!("⚠️ Unknown provider: {}", config.name),
@@ -763,6 +812,61 @@ async fn test_reasoning_xai(config: &ProviderTestConfig) {
     }
 }
 
+/// Test Ollama reasoning functionality
+async fn test_reasoning_ollama(config: &ProviderTestConfig) {
+    println!("  🦙 Testing Ollama reasoning for {}...", config.name);
+
+    let base_url =
+        env::var(config.api_key_env).unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let reasoning_model = config.reasoning_model.unwrap();
+
+    let client = LlmBuilder::new()
+        .ollama()
+        .base_url(&base_url)
+        .model(reasoning_model)
+        .reasoning(true) // Enable reasoning mode
+        .build()
+        .await
+        .expect("Failed to build Ollama reasoning client");
+
+    let messages = vec![user!("What is 2+2? Think step by step.")];
+
+    match client.chat(messages).await {
+        Ok(response) => {
+            let content = response.content_text().unwrap_or_default();
+            assert!(
+                !content.is_empty(),
+                "Ollama reasoning response should not be empty"
+            );
+
+            println!("    ✅ Ollama reasoning successful");
+            println!("    📝 Response: {}", content.trim());
+
+            // Check for thinking content
+            if let Some(thinking) = response.thinking {
+                println!("    🧠 Thinking content length: {} chars", thinking.len());
+            }
+
+            if let Some(usage) = response.usage {
+                println!(
+                    "    📊 Usage: {} prompt + {} completion = {} total tokens",
+                    usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
+                );
+            }
+        }
+        Err(e) => {
+            println!(
+                "    ⚠️ Ollama reasoning failed (this may be expected): {}",
+                e
+            );
+            println!(
+                "    💡 Note: Make sure Ollama is running and the reasoning model is available"
+            );
+            println!("    💡 Try: ollama pull {}", reasoning_model);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1040,6 +1144,69 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    #[ignore]
+    async fn test_ollama_integration() {
+        let config = &get_provider_configs()[7]; // Ollama
+
+        // For Ollama, we check if it's available by trying to connect
+        let base_url =
+            env::var(config.api_key_env).unwrap_or_else(|_| "http://localhost:11434".to_string());
+
+        // Try to connect to Ollama to see if it's available
+        let test_client = reqwest::Client::new();
+        match test_client
+            .get(format!("{}/api/tags", base_url))
+            .send()
+            .await
+        {
+            Ok(response) if response.status().is_success() => {
+                println!("✅ Ollama is available at {}", base_url);
+            }
+            _ => {
+                println!(
+                    "⏭️ Skipping Ollama test: Ollama not available at {}",
+                    base_url
+                );
+                println!("💡 Make sure Ollama is running: ollama serve");
+                return;
+            }
+        }
+
+        println!("🦙 Testing Ollama provider...");
+
+        // Test non-streaming chat
+        let client = LlmBuilder::new()
+            .ollama()
+            .base_url(&base_url)
+            .model(config.default_model)
+            .build()
+            .await
+            .expect("Failed to build Ollama client");
+
+        test_non_streaming_chat(&client, config.name).await;
+
+        // Test streaming chat
+        test_streaming_chat(&client, config.name).await;
+
+        // Test embedding if supported
+        if config.supports_embedding {
+            let embedding_client = LlmBuilder::new()
+                .ollama()
+                .base_url(&base_url)
+                .model("nomic-embed-text")
+                .build()
+                .await
+                .expect("Failed to build Ollama embedding client");
+            test_embedding(&embedding_client, config.name).await;
+        }
+
+        // Test reasoning if supported
+        if config.supports_reasoning && config.reasoning_model.is_some() {
+            test_reasoning_ollama(config).await;
+        }
+    }
+
     /// Run all available provider tests
     #[tokio::test]
     #[ignore]
@@ -1076,6 +1243,9 @@ mod tests {
                         test_provider_integration(config).await;
                     }
                     "xAI" => {
+                        test_provider_integration(config).await;
+                    }
+                    "Ollama" => {
                         test_provider_integration(config).await;
                     }
                     _ => println!("⚠️ Unknown provider: {}", config.name),

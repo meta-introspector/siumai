@@ -335,6 +335,9 @@ pub struct SiumaiBuilder {
     organization: Option<String>,
     project: Option<String>,
     tracing_config: Option<crate::tracing::TracingConfig>,
+    // Unified reasoning configuration
+    reasoning_enabled: Option<bool>,
+    reasoning_budget: Option<i32>,
 }
 
 impl SiumaiBuilder {
@@ -352,6 +355,8 @@ impl SiumaiBuilder {
             organization: None,
             project: None,
             tracing_config: None,
+            reasoning_enabled: None,
+            reasoning_budget: None,
         }
     }
 
@@ -467,6 +472,38 @@ impl SiumaiBuilder {
     /// Set max tokens
     pub const fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Enable or disable reasoning mode (unified interface)
+    ///
+    /// This method provides a unified interface for enabling reasoning across all providers.
+    /// It maps to provider-specific methods:
+    /// - Anthropic: `thinking_budget` (10k tokens when enabled)
+    /// - Gemini: `thinking` (dynamic when enabled)
+    /// - Ollama: `reasoning` (enabled/disabled)
+    /// - DeepSeek: `reasoning` (enabled/disabled)
+    pub const fn reasoning(mut self, enabled: bool) -> Self {
+        self.reasoning_enabled = Some(enabled);
+        self
+    }
+
+    /// Set reasoning budget (unified interface)
+    ///
+    /// This method provides a unified interface for setting reasoning budgets.
+    /// Different providers interpret this differently:
+    /// - Anthropic: Direct token budget
+    /// - Gemini: Token budget (-1 for dynamic, 0 for disabled)
+    /// - Ollama: Ignored (uses boolean reasoning mode)
+    /// - DeepSeek: Ignored (uses boolean reasoning mode)
+    pub const fn reasoning_budget(mut self, budget: i32) -> Self {
+        self.reasoning_budget = Some(budget);
+        // If budget is set, automatically enable reasoning
+        if budget > 0 {
+            self.reasoning_enabled = Some(true);
+        } else if budget == 0 {
+            self.reasoning_enabled = Some(false);
+        }
         self
     }
 
@@ -618,13 +655,23 @@ impl SiumaiBuilder {
                 let mut common_params = self.common_params;
                 common_params.model = model;
 
+                // Map unified reasoning parameters to Anthropic-specific parameters
+                let mut anthropic_params = crate::params::AnthropicParams::default();
+                if let Some(budget) = self.reasoning_budget {
+                    anthropic_params.thinking_budget = Some(budget as u32);
+                } else if let Some(enabled) = self.reasoning_enabled
+                    && enabled
+                {
+                    anthropic_params.thinking_budget = Some(10000); // Default budget
+                }
+
                 let http_client = reqwest::Client::new();
                 Box::new(crate::providers::anthropic::AnthropicClient::new(
                     api_key,
                     base_url,
                     http_client,
                     common_params,
-                    crate::params::AnthropicParams::default(),
+                    anthropic_params,
                     self.http_config,
                 ))
             }
@@ -648,11 +695,17 @@ impl SiumaiBuilder {
                 let mut common_params = self.common_params;
                 common_params.model = model.clone();
 
+                // Map unified reasoning parameters to Ollama-specific parameters
+                let mut ollama_params = crate::providers::ollama::config::OllamaParams::default();
+                if let Some(enabled) = self.reasoning_enabled {
+                    ollama_params.think = Some(enabled);
+                }
+
                 let config = crate::providers::ollama::config::OllamaConfig {
                     base_url,
                     model: Some(model),
                     common_params,
-                    ollama_params: crate::providers::ollama::config::OllamaParams::default(),
+                    ollama_params,
                     http_config: self.http_config,
                 };
 

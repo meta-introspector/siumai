@@ -58,7 +58,7 @@ echo ""
 
 # Check which providers are configured
 providers_configured=0
-total_providers=7
+total_providers=8
 
 # OpenAI
 if check_env_var "OPENAI_API_KEY"; then
@@ -130,6 +130,22 @@ else
     fi
 fi
 
+# Ollama
+echo ""
+echo "🦙 Checking Ollama availability..."
+ollama_base_url=${OLLAMA_BASE_URL:-"http://localhost:11434"}
+if curl -s "$ollama_base_url/api/tags" > /dev/null 2>&1; then
+    echo "✅ Ollama is available at $ollama_base_url"
+    export OLLAMA_BASE_URL="$ollama_base_url"
+    ((providers_configured++))
+else
+    echo "❌ Ollama is not available at $ollama_base_url"
+    echo "💡 To enable Ollama tests:"
+    echo "   1. Install Ollama: https://ollama.ai"
+    echo "   2. Start Ollama: ollama serve"
+    echo "   3. Pull models: ollama pull llama3.2:3b && ollama pull deepseek-r1:8b && ollama pull nomic-embed-text"
+fi
+
 echo ""
 echo "📊 Summary: $providers_configured/$total_providers providers configured"
 echo ""
@@ -180,6 +196,7 @@ case $choice in
         echo "- test_openrouter_integration"
         echo "- test_groq_integration"
         echo "- test_xai_integration"
+        echo "- test_ollama_integration"
         echo ""
         read -p "Enter test name: " test_name
         cargo test $test_name -- --ignored --nocapture

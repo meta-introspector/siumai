@@ -369,6 +369,9 @@ pub struct GenerationConfig {
     /// Optional. Configuration for thinking behavior.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub thinking_config: Option<ThinkingConfig>,
+    /// Optional. Output response modalities (e.g., ["TEXT", "IMAGE"]).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_modalities: Option<Vec<String>>,
 }
 
 /// Configuration for thinking behavior in Gemini models.
@@ -591,6 +594,7 @@ impl GenerationConfig {
             response_mime_type: None,
             response_schema: None,
             thinking_config: None,
+            response_modalities: None,
         }
     }
 
@@ -645,6 +649,12 @@ impl GenerationConfig {
     /// Set thinking configuration
     pub const fn with_thinking_config(mut self, config: ThinkingConfig) -> Self {
         self.thinking_config = Some(config);
+        self
+    }
+
+    /// Set response modalities
+    pub fn with_response_modalities(mut self, modalities: Vec<String>) -> Self {
+        self.response_modalities = Some(modalities);
         self
     }
 }

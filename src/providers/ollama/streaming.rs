@@ -31,6 +31,8 @@ struct OllamaStreamResponse {
 struct OllamaMessage {
     role: Option<String>,
     content: Option<String>,
+    tool_calls: Option<Vec<super::types::OllamaToolCall>>,
+    thinking: Option<String>,
 }
 
 /// Ollama event converter
@@ -80,14 +82,52 @@ impl OllamaEventConverter {
             return Some(ChatStreamEvent::StreamEnd { response });
         }
 
-        // Handle content delta
-        if let Some(message) = response.message
-            && let Some(content) = message.content
-        {
-            return Some(ChatStreamEvent::ContentDelta {
-                delta: content,
-                index: None,
-            });
+        // Handle message content
+        if let Some(message) = response.message {
+            // Handle tool calls
+            if let Some(tool_calls) = message.tool_calls {
+                // For Ollama, we typically get complete tool calls in streaming
+                // Convert to the expected ToolCallDelta format
+                for tool_call in tool_calls {
+                    let function = tool_call.function;
+                    let call_id = format!("call_{}", uuid::Uuid::new_v4());
+
+                    // Return function name first
+                    if !function.name.is_empty() {
+                        return Some(ChatStreamEvent::ToolCallDelta {
+                            id: call_id.clone(),
+                            function_name: Some(function.name.clone()),
+                            arguments_delta: None,
+                            index: None,
+                        });
+                    }
+
+                    // Then return arguments if available
+                    let arguments_json =
+                        serde_json::to_string(&function.arguments).unwrap_or_default();
+                    if !arguments_json.is_empty() && arguments_json != "null" {
+                        return Some(ChatStreamEvent::ToolCallDelta {
+                            id: call_id,
+                            function_name: None,
+                            arguments_delta: Some(arguments_json),
+                            index: None,
+                        });
+                    }
+                }
+            }
+
+            // Handle thinking content
+            if let Some(thinking) = message.thinking {
+                return Some(ChatStreamEvent::ThinkingDelta { delta: thinking });
+            }
+
+            // Handle regular content
+            if let Some(content) = message.content {
+                return Some(ChatStreamEvent::ContentDelta {
+                    delta: content,
+                    index: None,
+                });
+            }
         }
 
         None

@@ -24,7 +24,7 @@ if exist ".env" (
 )
 
 set providers_configured=0
-set total_providers=7
+set total_providers=8
 
 echo 📋 Checking environment variables...
 echo.
@@ -141,6 +141,24 @@ if defined XAI_API_KEY (
     )
 )
 
+REM Check Ollama
+echo.
+echo 🦙 Checking Ollama availability...
+if not defined OLLAMA_BASE_URL (
+    set OLLAMA_BASE_URL=http://localhost:11434
+)
+curl -s "!OLLAMA_BASE_URL!/api/tags" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo ✅ Ollama is available at !OLLAMA_BASE_URL!
+    set /a providers_configured+=1
+) else (
+    echo ❌ Ollama is not available at !OLLAMA_BASE_URL!
+    echo 💡 To enable Ollama tests:
+    echo    1. Install Ollama: https://ollama.ai
+    echo    2. Start Ollama: ollama serve
+    echo    3. Pull models: ollama pull llama3.2:3b ^&^& ollama pull deepseek-r1:8b ^&^& ollama pull nomic-embed-text
+)
+
 echo.
 echo 📊 Summary: !providers_configured!/!total_providers! providers configured
 echo.
@@ -190,6 +208,7 @@ if "%choice%"=="1" (
     echo - test_openrouter_integration
     echo - test_groq_integration
     echo - test_xai_integration
+    echo - test_ollama_integration
     echo.
     set /p "test_name=Enter test name: "
     cargo test !test_name! -- --ignored --nocapture

@@ -89,6 +89,16 @@ impl OllamaChatCapability {
             None
         };
 
+        // Determine thinking behavior
+        let think = self.ollama_params.think.or_else(|| {
+            // Check if this is a thinking model based on model name
+            if model.contains("deepseek-r1") || model.contains("qwen3") {
+                Some(true) // Enable thinking by default for thinking models
+            } else {
+                None
+            }
+        });
+
         Ok(OllamaChatRequest {
             model,
             messages,
@@ -101,7 +111,7 @@ impl OllamaChatCapability {
                 Some(options)
             },
             keep_alive: self.ollama_params.keep_alive.clone(),
-            think: self.ollama_params.think,
+            think,
         })
     }
 
@@ -177,26 +187,54 @@ impl OllamaChatCapability {
 impl ChatCapability for OllamaChatCapability {
     async fn chat_with_tools(
         &self,
-        _messages: Vec<ChatMessage>,
-        _tools: Option<Vec<Tool>>,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
     ) -> Result<ChatResponse, LlmError> {
-        // This method should not be called directly on OllamaChatCapability
-        // It should be called through OllamaClient which provides the correct configuration
-        return Err(LlmError::ConfigurationError(
-            "OllamaChatCapability should be used through OllamaClient".to_string(),
-        ));
+        // Create a default ChatRequest with empty common_params
+        // This allows the capability to work independently
+        let request = ChatRequest {
+            messages,
+            tools,
+            common_params: CommonParams {
+                model: "llama3.2".to_string(), // Default model
+                ..Default::default()
+            },
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: false,
+        };
+
+        self.chat(request).await
     }
 
     async fn chat_stream(
         &self,
-        _messages: Vec<ChatMessage>,
-        _tools: Option<Vec<Tool>>,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // This method should not be called directly on OllamaChatCapability
-        // It should be called through OllamaClient which provides the correct configuration
-        Err(LlmError::ConfigurationError(
-            "OllamaChatCapability should be used through OllamaClient".to_string(),
-        ))
+        // Create a default ChatRequest for streaming
+        let request = ChatRequest {
+            messages,
+            tools,
+            common_params: CommonParams {
+                model: "llama3.2".to_string(), // Default model
+                ..Default::default()
+            },
+            provider_params: None,
+            http_config: None,
+            web_search: None,
+            stream: true,
+        };
+
+        // Create streaming capability
+        let streaming = super::streaming::OllamaStreaming::new(reqwest::Client::new());
+
+        let headers = super::utils::build_headers(&self.http_config.headers)?;
+        let body = self.build_chat_request_body(&request)?;
+        let url = crate::utils::url::join_url(&self.base_url, "api/chat");
+
+        streaming.create_chat_stream(url, headers, body).await
     }
 }
 

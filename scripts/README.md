@@ -37,6 +37,42 @@ scripts\run_integration_tests.bat
 - Interactive prompts for API keys
 - Test selection menu
 
+### `test_ollama.sh` (Linux/macOS) / `test_ollama.bat` (Windows)
+
+Dedicated Ollama testing script with comprehensive model management.
+
+**Usage:**
+```bash
+# Linux/macOS
+./scripts/test_ollama.sh
+
+# Windows
+scripts\test_ollama.bat
+```
+
+**Features:**
+- Checks Ollama server availability
+- Verifies required model installation
+- Automatically offers to pull missing models
+- Tests all Ollama capabilities:
+  - Non-streaming chat
+  - Streaming chat
+  - Reasoning (with thinking models)
+  - Embeddings
+- Provides detailed test results and optimization tips
+- Uses simple questions to save time and tokens
+
+**Required Models:**
+- **Chat**: `llama3.2:3b` (default, lightweight)
+- **Reasoning**: `deepseek-r1:8b` (for thinking capabilities)
+- **Embedding**: `nomic-embed-text` (for embedding tests)
+
+**Environment Variables:**
+- `OLLAMA_BASE_URL`: Ollama server URL (default: `http://localhost:11434`)
+- `OLLAMA_CHAT_MODEL`: Override default chat model
+- `OLLAMA_REASONING_MODEL`: Override default reasoning model
+- `OLLAMA_EMBEDDING_MODEL`: Override default embedding model
+
 ## 🔧 Prerequisites
 
 Before running the integration test scripts:
@@ -49,17 +85,20 @@ Before running the integration test scripts:
 
 The scripts support testing with these providers:
 
-| Provider   | Environment Variable | Required |
-|------------|---------------------|----------|
-| OpenAI     | `OPENAI_API_KEY`    | No       |
-| Anthropic  | `ANTHROPIC_API_KEY` | No       |
-| Gemini     | `GEMINI_API_KEY`    | No       |
-| DeepSeek   | `DEEPSEEK_API_KEY`  | No       |
-| OpenRouter | `OPENROUTER_API_KEY`| No       |
-| Groq       | `GROQ_API_KEY`      | No       |
-| xAI        | `XAI_API_KEY`       | No       |
+| Provider   | Environment Variable | Required | Notes |
+|------------|---------------------|----------|-------|
+| OpenAI     | `OPENAI_API_KEY`    | No       | API key required |
+| Anthropic  | `ANTHROPIC_API_KEY` | No       | API key required |
+| Gemini     | `GEMINI_API_KEY`    | No       | API key required |
+| DeepSeek   | `DEEPSEEK_API_KEY`  | No       | API key required |
+| OpenRouter | `OPENROUTER_API_KEY`| No       | API key required |
+| Groq       | `GROQ_API_KEY`      | No       | API key required |
+| xAI        | `XAI_API_KEY`       | No       | API key required |
+| Ollama     | `OLLAMA_BASE_URL`   | No       | Local server required |
 
-**Note:** You only need API keys for providers you want to test. The scripts will automatically skip providers without API keys.
+**Notes:**
+- You only need API keys for providers you want to test. The scripts will automatically skip providers without API keys.
+- For Ollama, ensure the server is running locally (`ollama serve`) and required models are installed.
 
 ## 🔧 Optional Configuration
 

@@ -261,13 +261,15 @@ let ollama_client = Provider::ollama()
     .build()
     .await?;
 
-// Unified interface (common parameters only)
+// Unified interface with reasoning (works across all providers)
 let unified_client = Siumai::builder()
-    .openai()
+    .anthropic()  // or .openai(), .ollama(), etc.
     .api_key("your-key")
-    .model("gpt-4")
+    .model("claude-3-5-sonnet-20241022")
     .temperature(0.7)
     .max_tokens(1000)
+    .reasoning(true)        // ✅ Unified reasoning interface
+    .reasoning_budget(5000) // ✅ Works across all providers
     .build()
     .await?;
 ```
@@ -430,7 +432,7 @@ let client = LlmBuilder::new()
     .ollama()
     .base_url("http://localhost:11434")
     .model("deepseek-r1:latest")
-    .think(true)                // Enable thinking mode
+    .reasoning(true)            // Enable reasoning mode
     .temperature(0.7)
     .build()
     .await?;

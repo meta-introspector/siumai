@@ -41,6 +41,42 @@ impl GeminiChatCapability {
         }
     }
 
+    /// Parse data URL to extract MIME type and base64 data
+    fn parse_data_url(&self, data_url: &str) -> Option<(String, String)> {
+        if let Some(comma_pos) = data_url.find(',') {
+            let header = &data_url[5..comma_pos]; // Skip "data:"
+            let data = &data_url[comma_pos + 1..];
+
+            // Extract MIME type
+            let mime_type = if let Some(semicolon_pos) = header.find(';') {
+                header[..semicolon_pos].to_string()
+            } else {
+                header.to_string()
+            };
+
+            Some((mime_type, data.to_string()))
+        } else {
+            None
+        }
+    }
+
+    /// Guess MIME type from file extension
+    fn guess_mime_type(&self, url: &str) -> String {
+        let extension = url.split('.').next_back().unwrap_or("").to_lowercase();
+        match extension.as_str() {
+            "jpg" | "jpeg" => "image/jpeg".to_string(),
+            "png" => "image/png".to_string(),
+            "gif" => "image/gif".to_string(),
+            "webp" => "image/webp".to_string(),
+            "mp3" => "audio/mpeg".to_string(),
+            "wav" => "audio/wav".to_string(),
+            "mp4" => "video/mp4".to_string(),
+            "webm" => "video/webm".to_string(),
+            "pdf" => "application/pdf".to_string(),
+            _ => "application/octet-stream".to_string(),
+        }
+    }
+
     /// Convert `ChatMessage` to Gemini Content
     fn convert_message_to_content(&self, message: &ChatMessage) -> Result<Content, LlmError> {
         let role = match message.role {
@@ -57,16 +93,76 @@ impl GeminiChatCapability {
 
         let mut parts = Vec::new();
 
-        // Add text content
-        if let crate::types::MessageContent::Text(text) = &message.content {
-            if !text.is_empty() {
-                parts.push(Part::Text {
-                    text: text.clone(),
-                    thought: None,
-                });
+        // Add content based on type
+        match &message.content {
+            crate::types::MessageContent::Text(text) => {
+                if !text.is_empty() {
+                    parts.push(Part::Text {
+                        text: text.clone(),
+                        thought: None,
+                    });
+                }
             }
-        } else {
-            // Handle other content types if needed
+            crate::types::MessageContent::MultiModal(content_parts) => {
+                for content_part in content_parts {
+                    match content_part {
+                        crate::types::ContentPart::Text { text } => {
+                            if !text.is_empty() {
+                                parts.push(Part::Text {
+                                    text: text.clone(),
+                                    thought: None,
+                                });
+                            }
+                        }
+                        crate::types::ContentPart::Image {
+                            image_url,
+                            detail: _,
+                        } => {
+                            // Handle image URL - could be base64 data or file URI
+                            if image_url.starts_with("data:") {
+                                // Base64 encoded image
+                                if let Some((mime_type, data)) = self.parse_data_url(image_url) {
+                                    parts.push(Part::InlineData {
+                                        inline_data: super::types::Blob { mime_type, data },
+                                    });
+                                }
+                            } else if image_url.starts_with("gs://")
+                                || image_url.starts_with("https://")
+                            {
+                                // File URI
+                                parts.push(Part::FileData {
+                                    file_data: super::types::FileData {
+                                        file_uri: image_url.clone(),
+                                        mime_type: Some(self.guess_mime_type(image_url)),
+                                    },
+                                });
+                            }
+                        }
+                        crate::types::ContentPart::Audio {
+                            audio_url,
+                            format: _,
+                        } => {
+                            // Handle audio URL
+                            if audio_url.starts_with("data:") {
+                                if let Some((mime_type, data)) = self.parse_data_url(audio_url) {
+                                    parts.push(Part::InlineData {
+                                        inline_data: super::types::Blob { mime_type, data },
+                                    });
+                                }
+                            } else if audio_url.starts_with("gs://")
+                                || audio_url.starts_with("https://")
+                            {
+                                parts.push(Part::FileData {
+                                    file_data: super::types::FileData {
+                                        file_uri: audio_url.clone(),
+                                        mime_type: Some(self.guess_mime_type(audio_url)),
+                                    },
+                                });
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Add tool calls
@@ -152,10 +248,25 @@ impl GeminiChatCapability {
         for message in messages {
             if message.role == crate::types::MessageRole::System {
                 // Handle system message as system instruction
-                if let crate::types::MessageContent::Text(text) = &message.content {
-                    system_instruction = Some(Content::system_text(text.clone()));
-                } else {
-                    // Handle other content types if needed
+                let system_text = match &message.content {
+                    crate::types::MessageContent::Text(text) => text.clone(),
+                    crate::types::MessageContent::MultiModal(parts) => {
+                        // Extract text from multimodal content for system instruction
+                        parts
+                            .iter()
+                            .filter_map(|part| {
+                                if let crate::types::ContentPart::Text { text } = part {
+                                    Some(text.as_str())
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    }
+                };
+                if !system_text.is_empty() {
+                    system_instruction = Some(Content::system_text(system_text));
                 }
             } else {
                 contents.push(self.convert_message_to_content(message)?);
@@ -203,9 +314,11 @@ impl GeminiChatCapability {
 
         let mut text_content = String::new();
         let mut tool_calls = Vec::new();
+        let mut content_parts = Vec::new();
 
         // Process parts
         let mut thinking_content = String::new();
+        let mut has_multimodal_content = false;
 
         for part in &content.parts {
             match part {
@@ -222,6 +335,47 @@ impl GeminiChatCapability {
                             text_content.push('\n');
                         }
                         text_content.push_str(text);
+
+                        // Add to multimodal parts
+                        content_parts.push(crate::types::ContentPart::Text { text: text.clone() });
+                    }
+                }
+                Part::InlineData { inline_data } => {
+                    // Handle inline data (images, audio, etc.)
+                    has_multimodal_content = true;
+                    let data_url =
+                        format!("data:{};base64,{}", inline_data.mime_type, inline_data.data);
+
+                    if inline_data.mime_type.starts_with("image/") {
+                        content_parts.push(crate::types::ContentPart::Image {
+                            image_url: data_url,
+                            detail: None,
+                        });
+                    } else if inline_data.mime_type.starts_with("audio/") {
+                        content_parts.push(crate::types::ContentPart::Audio {
+                            audio_url: data_url,
+                            format: inline_data.mime_type.clone(),
+                        });
+                    }
+                }
+                Part::FileData { file_data } => {
+                    // Handle file data
+                    has_multimodal_content = true;
+                    let mime_type = file_data
+                        .mime_type
+                        .as_deref()
+                        .unwrap_or("application/octet-stream");
+
+                    if mime_type.starts_with("image/") {
+                        content_parts.push(crate::types::ContentPart::Image {
+                            image_url: file_data.file_uri.clone(),
+                            detail: None,
+                        });
+                    } else if mime_type.starts_with("audio/") {
+                        content_parts.push(crate::types::ContentPart::Audio {
+                            audio_url: file_data.file_uri.clone(),
+                            format: mime_type.to_string(),
+                        });
                     }
                 }
                 Part::FunctionCall { function_call } => {
@@ -267,7 +421,9 @@ impl GeminiChatCapability {
         });
 
         // Create content
-        let content = if text_content.is_empty() {
+        let content = if has_multimodal_content && !content_parts.is_empty() {
+            MessageContent::MultiModal(content_parts)
+        } else if text_content.is_empty() {
             MessageContent::Text(String::new())
         } else {
             MessageContent::Text(text_content)

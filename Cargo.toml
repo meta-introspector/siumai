@@ -169,6 +169,10 @@ name = "ollama_basic_setup"
 path = "examples/04_providers/ollama/basic_setup.rs"
 
 [[example]]
+name = "ollama_thinking_and_tools"
+path = "examples/04_providers/ollama/thinking_and_tools.rs"
+
+[[example]]
 name = "openai_enhanced_features"
 path = "examples/04_providers/openai/enhanced_features.rs"
 

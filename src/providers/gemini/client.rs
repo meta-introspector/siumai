@@ -25,6 +25,10 @@ pub struct GeminiClient {
     pub http_client: HttpClient,
     /// Gemini configuration
     pub config: GeminiConfig,
+    /// Common parameters
+    pub common_params: CommonParams,
+    /// Gemini-specific parameters
+    pub gemini_params: crate::params::gemini::GeminiParams,
     /// Chat capability implementation
     pub chat_capability: GeminiChatCapability,
     /// Embedding capability implementation
@@ -59,9 +63,48 @@ impl GeminiClient {
 
         let files_capability = GeminiFiles::new(config.clone(), http_client.clone());
 
+        // Extract common parameters from config
+        let common_params = CommonParams {
+            model: config.model.clone(),
+            temperature: config
+                .generation_config
+                .as_ref()
+                .and_then(|gc| gc.temperature),
+            max_tokens: config
+                .generation_config
+                .as_ref()
+                .and_then(|gc| gc.max_output_tokens)
+                .map(|t| t as u32),
+            top_p: config.generation_config.as_ref().and_then(|gc| gc.top_p),
+            stop_sequences: config
+                .generation_config
+                .as_ref()
+                .and_then(|gc| gc.stop_sequences.clone()),
+            seed: None, // Gemini doesn't support seed
+        };
+
+        // Create Gemini-specific parameters (simplified - use defaults for now)
+        let gemini_params = crate::params::gemini::GeminiParams {
+            top_k: config
+                .generation_config
+                .as_ref()
+                .and_then(|gc| gc.top_k)
+                .map(|t| t as u32),
+            candidate_count: config
+                .generation_config
+                .as_ref()
+                .and_then(|gc| gc.candidate_count)
+                .map(|t| t as u32),
+            safety_settings: None, // TODO: Convert from provider types to param types
+            generation_config: None, // TODO: Convert from provider types to param types
+            stream: None,
+        };
+
         Ok(Self {
             http_client,
             config,
+            common_params,
+            gemini_params,
             chat_capability,
             embedding_capability,
             models_capability,
@@ -79,6 +122,10 @@ impl GeminiClient {
 
     /// Set the model to use
     pub fn with_model(mut self, model: String) -> Self {
+        // Update common params
+        self.common_params.model = model.clone();
+
+        // Update config
         self.config.model = model;
         self
     }
@@ -109,6 +156,10 @@ impl GeminiClient {
 
     /// Set temperature
     pub fn with_temperature(mut self, temperature: f32) -> Self {
+        // Update common params
+        self.common_params.temperature = Some(temperature);
+
+        // Update generation config
         let mut generation_config = self.config.generation_config.unwrap_or_default();
         generation_config.temperature = Some(temperature);
         self.config.generation_config = Some(generation_config);
@@ -117,6 +168,10 @@ impl GeminiClient {
 
     /// Set max output tokens
     pub fn with_max_tokens(mut self, max_tokens: i32) -> Self {
+        // Update common params
+        self.common_params.max_tokens = Some(max_tokens as u32);
+
+        // Update generation config
         let mut generation_config = self.config.generation_config.unwrap_or_default();
         generation_config.max_output_tokens = Some(max_tokens);
         self.config.generation_config = Some(generation_config);
@@ -125,6 +180,10 @@ impl GeminiClient {
 
     /// Set top-p
     pub fn with_top_p(mut self, top_p: f32) -> Self {
+        // Update common params
+        self.common_params.top_p = Some(top_p);
+
+        // Update generation config
         let mut generation_config = self.config.generation_config.unwrap_or_default();
         generation_config.top_p = Some(top_p);
         self.config.generation_config = Some(generation_config);
@@ -133,6 +192,10 @@ impl GeminiClient {
 
     /// Set top-k
     pub fn with_top_k(mut self, top_k: i32) -> Self {
+        // Update Gemini params
+        self.gemini_params.top_k = Some(top_k as u32);
+
+        // Update generation config
         let mut generation_config = self.config.generation_config.unwrap_or_default();
         generation_config.top_k = Some(top_k);
         self.config.generation_config = Some(generation_config);
@@ -141,6 +204,10 @@ impl GeminiClient {
 
     /// Set stop sequences
     pub fn with_stop_sequences(mut self, stop_sequences: Vec<String>) -> Self {
+        // Update common params
+        self.common_params.stop_sequences = Some(stop_sequences.clone());
+
+        // Update generation config
         let mut generation_config = self.config.generation_config.unwrap_or_default();
         generation_config.stop_sequences = Some(stop_sequences);
         self.config.generation_config = Some(generation_config);
@@ -160,6 +227,111 @@ impl GeminiClient {
         let mut generation_config = self.config.generation_config.unwrap_or_default();
         generation_config.response_mime_type = Some("application/json".to_string());
         generation_config.response_schema = Some(schema);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Enable enum output with schema
+    pub fn with_enum_schema(mut self, enum_values: Vec<String>) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        generation_config.response_mime_type = Some("text/x.enum".to_string());
+
+        // Create enum schema
+        let schema = serde_json::json!({
+            "type": "STRING",
+            "enum": enum_values
+        });
+        generation_config.response_schema = Some(schema);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Set custom response MIME type and schema
+    pub fn with_response_format(
+        mut self,
+        mime_type: String,
+        schema: Option<serde_json::Value>,
+    ) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        generation_config.response_mime_type = Some(mime_type);
+        if let Some(schema) = schema {
+            generation_config.response_schema = Some(schema);
+        }
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Configure thinking behavior with specific budget
+    pub fn with_thinking_budget(mut self, budget: i32) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        let thinking_config = super::types::ThinkingConfig {
+            thinking_budget: Some(budget),
+            include_thoughts: Some(true),
+        };
+        generation_config.thinking_config = Some(thinking_config);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Enable dynamic thinking (model decides budget)
+    pub fn with_dynamic_thinking(mut self) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        let thinking_config = super::types::ThinkingConfig::dynamic();
+        generation_config.thinking_config = Some(thinking_config);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Disable thinking functionality
+    pub fn with_thinking_disabled(mut self) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        let thinking_config = super::types::ThinkingConfig::disabled();
+        generation_config.thinking_config = Some(thinking_config);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Configure thinking with custom settings
+    pub fn with_thinking_config(mut self, config: super::types::ThinkingConfig) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        generation_config.thinking_config = Some(config);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Set response format (alias for with_response_format for OpenAI compatibility)
+    pub fn with_response_format_compat(self, format: serde_json::Value) -> Self {
+        // For Gemini, we need to extract MIME type and schema from the format
+        if let Some(mime_type) = format.get("type").and_then(|t| t.as_str()) {
+            let gemini_mime_type = match mime_type {
+                "json_object" => "application/json",
+                "text" => "text/plain",
+                _ => mime_type,
+            };
+
+            let schema = format
+                .get("json_schema")
+                .and_then(|s| s.get("schema"))
+                .cloned();
+
+            self.with_response_format(gemini_mime_type.to_string(), schema)
+        } else {
+            self
+        }
+    }
+
+    /// Enable image generation capability
+    pub fn with_image_generation(mut self) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        generation_config.response_modalities = Some(vec!["TEXT".to_string(), "IMAGE".to_string()]);
+        self.config.generation_config = Some(generation_config);
+        self
+    }
+
+    /// Set custom response modalities
+    pub fn with_response_modalities(mut self, modalities: Vec<String>) -> Self {
+        let mut generation_config = self.config.generation_config.unwrap_or_default();
+        generation_config.response_modalities = Some(modalities);
         self.config.generation_config = Some(generation_config);
         self
     }
@@ -197,6 +369,26 @@ impl GeminiClient {
     /// Get chat capability (for testing and debugging)
     pub const fn chat_capability(&self) -> &GeminiChatCapability {
         &self.chat_capability
+    }
+
+    /// Get common parameters
+    pub fn common_params(&self) -> &CommonParams {
+        &self.common_params
+    }
+
+    /// Get Gemini-specific parameters
+    pub fn gemini_params(&self) -> &crate::params::gemini::GeminiParams {
+        &self.gemini_params
+    }
+
+    /// Get mutable common parameters
+    pub fn common_params_mut(&mut self) -> &mut CommonParams {
+        &mut self.common_params
+    }
+
+    /// Get mutable Gemini-specific parameters
+    pub fn gemini_params_mut(&mut self) -> &mut crate::params::gemini::GeminiParams {
+        &mut self.gemini_params
     }
 }
 
@@ -302,6 +494,8 @@ impl LlmClient for GeminiClient {
             .with_custom_feature("safety_settings", true)
             .with_custom_feature("cached_content", true)
             .with_custom_feature("json_schema", true)
+            .with_custom_feature("image_generation", true)
+            .with_custom_feature("enum_output", true)
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
