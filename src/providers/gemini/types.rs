@@ -13,22 +13,22 @@ pub struct GenerateContentRequest {
     /// Required. The content of the current conversation with the model.
     pub contents: Vec<Content>,
     /// Optional. Developer set system instructions.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "systemInstruction")]
     pub system_instruction: Option<Content>,
     /// Optional. A list of Tools the Model may use to generate the next response.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<GeminiTool>>,
     /// Optional. Tool configuration for any Tool specified in the request.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "toolConfig")]
     pub tool_config: Option<ToolConfig>,
     /// Optional. A list of unique `SafetySetting` instances for blocking unsafe content.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "safetySettings")]
     pub safety_settings: Option<Vec<SafetySetting>>,
     /// Optional. Configuration options for model generation and outputs.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "generationConfig")]
     pub generation_config: Option<GenerationConfig>,
     /// Optional. The name of the content cached to use as context.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "cachedContent")]
     pub cached_content: Option<String>,
 }
 
@@ -343,34 +343,34 @@ pub enum HarmBlockThreshold {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerationConfig {
     /// Optional. Number of generated responses to return.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "candidateCount")]
     pub candidate_count: Option<i32>,
     /// Optional. The set of character sequences that will stop output generation.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "stopSequences")]
     pub stop_sequences: Option<Vec<String>>,
     /// Optional. The maximum number of tokens to include in a candidate.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "maxOutputTokens")]
     pub max_output_tokens: Option<i32>,
     /// Optional. Controls the randomness of the output.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
     /// Optional. The maximum cumulative probability of tokens to consider when sampling.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "topP")]
     pub top_p: Option<f32>,
     /// Optional. The maximum number of tokens to consider when sampling.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "topK")]
     pub top_k: Option<i32>,
     /// Optional. Output response mimetype of the generated candidate text.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "responseMimeType")]
     pub response_mime_type: Option<String>,
     /// Optional. Output response schema of the generated candidate text.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "responseSchema")]
     pub response_schema: Option<serde_json::Value>,
     /// Optional. Configuration for thinking behavior.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "thinkingConfig")]
     pub thinking_config: Option<ThinkingConfig>,
     /// Optional. Output response modalities (e.g., ["TEXT", "IMAGE"]).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "responseModalities")]
     pub response_modalities: Option<Vec<String>>,
 }
 
@@ -386,12 +386,12 @@ pub struct ThinkingConfig {
     /// - Set to specific value to limit thinking tokens
     ///
     /// The actual supported range depends on the specific model being used.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "thinkingBudget")]
     pub thinking_budget: Option<i32>,
 
     /// Whether to include thought summaries in the response.
     /// This controls the visibility of thinking summaries, not the thinking process itself.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "includeThoughts")]
     pub include_thoughts: Option<bool>,
 }
 
@@ -721,6 +721,61 @@ impl ThinkingConfig {
 impl Default for ThinkingConfig {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_thinking_config_json_serialization() {
+        let thinking_config = ThinkingConfig {
+            thinking_budget: Some(-1),
+            include_thoughts: Some(true),
+        };
+
+        let json = serde_json::to_string(&thinking_config).unwrap();
+        println!("ThinkingConfig JSON: {}", json);
+
+        // Verify the JSON contains the correct field names
+        assert!(json.contains("thinkingBudget"));
+        assert!(json.contains("includeThoughts"));
+        assert!(!json.contains("thinking_budget"));
+        assert!(!json.contains("include_thoughts"));
+    }
+
+    #[test]
+    fn test_generation_config_json_serialization() {
+        let thinking_config = ThinkingConfig {
+            thinking_budget: Some(-1),
+            include_thoughts: Some(true),
+        };
+
+        let generation_config = GenerationConfig {
+            candidate_count: Some(1),
+            stop_sequences: None,
+            max_output_tokens: Some(1000),
+            temperature: Some(0.7),
+            top_p: Some(0.9),
+            top_k: Some(40),
+            response_mime_type: None,
+            response_schema: None,
+            thinking_config: Some(thinking_config),
+            response_modalities: None,
+        };
+
+        let json = serde_json::to_string(&generation_config).unwrap();
+        println!("GenerationConfig JSON: {}", json);
+
+        // Verify the JSON contains the correct field names
+        assert!(json.contains("candidateCount"));
+        assert!(json.contains("maxOutputTokens"));
+        assert!(json.contains("topP"));
+        assert!(json.contains("topK"));
+        assert!(json.contains("thinkingConfig"));
+        assert!(json.contains("thinkingBudget"));
+        assert!(json.contains("includeThoughts"));
     }
 }
 
