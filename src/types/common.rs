@@ -248,6 +248,36 @@ impl ProviderParams {
         Self { params }
     }
 
+    /// Creates provider parameters from `Anthropic` parameters
+    pub fn from_anthropic(anthropic_params: crate::params::AnthropicParams) -> Self {
+        let mut params = HashMap::new();
+
+        // Serialize the Anthropic params to a JSON value and then convert to HashMap
+        if let Ok(json_value) = serde_json::to_value(&anthropic_params)
+            && let Ok(map) =
+                serde_json::from_value::<HashMap<String, serde_json::Value>>(json_value)
+        {
+            params = map;
+        }
+
+        Self { params }
+    }
+
+    /// Creates provider parameters from `Gemini` parameters
+    pub fn from_gemini(gemini_params: crate::params::GeminiParams) -> Self {
+        let mut params = HashMap::new();
+
+        // Serialize the Gemini params to a JSON value and then convert to HashMap
+        if let Ok(json_value) = serde_json::to_value(&gemini_params)
+            && let Ok(map) =
+                serde_json::from_value::<HashMap<String, serde_json::Value>>(json_value)
+        {
+            params = map;
+        }
+
+        Self { params }
+    }
+
     /// Quick setup for OpenAI-specific parameters.
     pub fn openai() -> Self {
         Self::new()

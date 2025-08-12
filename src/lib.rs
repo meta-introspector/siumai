@@ -86,6 +86,7 @@ pub mod performance;
 pub mod provider;
 pub mod provider_features;
 pub mod providers;
+pub mod request_factory;
 pub mod retry;
 pub mod retry_backoff;
 pub mod retry_strategy;

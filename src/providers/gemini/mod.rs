@@ -39,6 +39,7 @@ pub mod client;
 pub mod embeddings;
 pub mod files;
 pub mod models;
+pub mod request;
 pub mod streaming;
 pub mod types;
 

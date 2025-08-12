@@ -65,6 +65,9 @@ pub mod responses;
 pub mod streaming;
 pub mod structured_output;
 
+// Request building module
+pub mod request;
+
 // Future capability modules (placeholders)
 pub mod models;
 pub mod moderation;

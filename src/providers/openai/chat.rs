@@ -95,8 +95,10 @@ fn format_headers_for_logging(headers: &reqwest::header::HeaderMap) -> String {
     }
 }
 
+use super::request::OpenAiRequestBuilder;
 use super::types::*;
 use super::utils::*;
+use crate::request_factory::RequestBuilder;
 
 /// `OpenAI` Chat Capability Implementation
 pub struct OpenAiChatCapability {
@@ -108,6 +110,7 @@ pub struct OpenAiChatCapability {
     pub http_config: HttpConfig,
     pub parameter_mapper: OpenAiParameterMapper,
     pub common_params: CommonParams,
+    pub request_builder: OpenAiRequestBuilder,
 }
 
 impl OpenAiChatCapability {
@@ -121,6 +124,11 @@ impl OpenAiChatCapability {
         http_config: HttpConfig,
         common_params: CommonParams,
     ) -> Self {
+        let request_builder = OpenAiRequestBuilder::new(
+            common_params.clone(),
+            crate::params::openai::OpenAiParams::default(),
+        );
+
         Self {
             api_key,
             base_url,
@@ -130,6 +138,7 @@ impl OpenAiChatCapability {
             http_config,
             parameter_mapper: OpenAiParameterMapper,
             common_params,
+            request_builder,
         }
     }
 
@@ -309,16 +318,10 @@ impl ChatCapability for OpenAiChatCapability {
 
         info!("Starting OpenAI chat request");
 
-        // Create a ChatRequest from messages and tools
-        let request = ChatRequest {
-            messages: messages.clone(),
-            tools: tools.clone(),
-            common_params: self.common_params.clone(),
-            provider_params: None,
-            http_config: None,
-            web_search: None,
-            stream: false,
-        };
+        // Use the request builder to create a properly configured ChatRequest
+        let request =
+            self.request_builder
+                .build_chat_request(messages.clone(), tools.clone(), false)?;
 
         let headers = build_headers(
             self.api_key.expose_secret(),
@@ -397,16 +400,10 @@ impl ChatCapability for OpenAiChatCapability {
         messages: Vec<ChatMessage>,
         tools: Option<Vec<Tool>>,
     ) -> Result<ChatStream, LlmError> {
-        // Create a ChatRequest from messages and tools
-        let request = ChatRequest {
-            messages,
-            tools,
-            common_params: self.common_params.clone(),
-            provider_params: None,
-            http_config: None,
-            web_search: None,
-            stream: true,
-        };
+        // Use the request builder to create a properly configured ChatRequest
+        let request = self
+            .request_builder
+            .build_chat_request(messages, tools, true)?;
 
         // Create streaming client
         let config = super::config::OpenAiConfig {
