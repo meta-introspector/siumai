@@ -85,6 +85,69 @@ mod tests {
             .model("claude-3-5-sonnet-20241022")
             .reasoning_budget(5000); // Should map to thinking_budget(5000)
 
+        // Test Gemini parameter mapping
+        println!("   Testing Gemini parameter mapping...");
+        let _gemini_builder = Siumai::builder()
+            .gemini()
+            .api_key("test-key")
+            .model("gemini-2.5-pro")
+            .reasoning(true); // Should map to thinking_budget(-1) + include_thoughts(true)
+
+        println!("   ✅ Gemini reasoning parameter mapping configured");
+
+        // Test Gemini budget mapping
+        let _gemini_budget_builder = Siumai::builder()
+            .gemini()
+            .api_key("test-key")
+            .model("gemini-2.5-pro")
+            .reasoning_budget(1024); // Should map to thinking_budget(1024) + include_thoughts(true)
+
+        // Test xAI parameter mapping
+        println!("   Testing xAI parameter mapping...");
+        let _xai_builder = Siumai::builder()
+            .xai()
+            .api_key("test-key")
+            .model("grok-3-latest")
+            .reasoning(true); // Basic support (advanced reasoning requires provider-specific interface)
+
+        println!("   ✅ xAI basic parameter mapping configured");
+
+        // Test Ollama parameter mapping
+        println!("   Testing Ollama parameter mapping...");
+        let _ollama_builder = Siumai::builder()
+            .ollama()
+            .api_key("test-key")
+            .model("llama3.2:latest")
+            .reasoning(true); // Should map to think parameter
+
+        println!("   ✅ Ollama reasoning parameter mapping configured");
+
+        // Test Groq parameter mapping
+        println!("   Testing Groq parameter mapping...");
+        let _groq_builder = Siumai::builder()
+            .groq()
+            .api_key("test-key")
+            .model("llama-3.3-70b-versatile")
+            .reasoning(true); // Basic support
+
+        println!("   ✅ Groq parameter mapping configured");
+
+        // Test Custom providers (DeepSeek, OpenRouter)
+        println!("   Testing Custom provider parameter mapping...");
+        let _deepseek_builder = Siumai::builder()
+            .deepseek()
+            .api_key("test-key")
+            .model("deepseek-chat")
+            .reasoning(true);
+
+        let _openrouter_builder = Siumai::builder()
+            .openrouter()
+            .api_key("test-key")
+            .model("openai/gpt-4")
+            .reasoning(true);
+
+        println!("   ✅ Custom provider parameter mapping configured");
+
         println!("   ✅ Anthropic reasoning budget parameter mapping configured");
 
         // Test Ollama parameter mapping

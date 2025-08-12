@@ -676,14 +676,71 @@ impl SiumaiBuilder {
                 ))
             }
             ProviderType::Gemini => {
-                return Err(LlmError::UnsupportedOperation(
-                    "Gemini provider not yet implemented in unified interface".to_string(),
-                ));
+                // Build common parameters for the client
+                let mut common_params = self.common_params;
+                common_params.model = self.model.unwrap_or_else(|| "gemini-2.5-flash".to_string());
+
+                // Create Gemini client using the provider-specific builder
+                // The client will use RequestBuilder internally for parameter mapping
+                let mut builder = crate::builder::LlmBuilder::new()
+                    .gemini()
+                    .api_key(api_key)
+                    .model(&common_params.model);
+
+                // Apply common parameters through builder methods
+                if let Some(temp) = common_params.temperature {
+                    builder = builder.temperature(temp);
+                }
+                if let Some(max_tokens) = common_params.max_tokens {
+                    builder = builder.max_tokens(max_tokens as i32);
+                }
+                if let Some(top_p) = common_params.top_p {
+                    builder = builder.top_p(top_p);
+                }
+
+                // Handle reasoning configuration (provider-specific)
+                if let Some(enabled) = self.reasoning_enabled {
+                    if enabled {
+                        if let Some(budget) = self.reasoning_budget {
+                            builder = builder.thinking_budget(budget);
+                        } else {
+                            builder = builder.thinking_budget(-1); // Dynamic thinking
+                        }
+                    } else {
+                        builder = builder.thinking_budget(0); // Disable thinking
+                    }
+                } else if let Some(budget) = self.reasoning_budget {
+                    builder = builder.thinking_budget(budget);
+                }
+
+                Box::new(builder.build().await.map_err(|e| {
+                    LlmError::ConfigurationError(format!("Failed to build Gemini client: {e}"))
+                })?)
             }
             ProviderType::XAI => {
-                return Err(LlmError::UnsupportedOperation(
-                    "xAI provider not yet implemented in unified interface".to_string(),
-                ));
+                let mut builder = crate::builder::LlmBuilder::new()
+                    .xai()
+                    .api_key(api_key)
+                    .model(self.model.unwrap_or_else(|| "grok-3-latest".to_string()));
+
+                // Set common parameters
+                if let Some(temp) = self.common_params.temperature {
+                    builder = builder.temperature(temp);
+                }
+                if let Some(max_tokens) = self.common_params.max_tokens {
+                    builder = builder.max_tokens(max_tokens);
+                }
+                if let Some(top_p) = self.common_params.top_p {
+                    builder = builder.top_p(top_p);
+                }
+
+                // Note: xAI reasoning is handled through provider-specific methods
+                // The unified reasoning interface doesn't directly map to xAI's reasoning_effort
+                // Users should use provider-specific client for advanced xAI reasoning features
+
+                Box::new(builder.build().await.map_err(|e| {
+                    LlmError::ConfigurationError(format!("Failed to build xAI client: {e}"))
+                })?)
             }
             ProviderType::Ollama => {
                 let base_url = self

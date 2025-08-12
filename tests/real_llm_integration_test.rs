@@ -624,7 +624,7 @@ async fn test_reasoning_gemini(config: &ProviderTestConfig) {
         .gemini()
         .api_key(api_key)
         .model(reasoning_model)
-        .thinking_budget(-1) // Dynamic thinking
+        .thinking_budget(-1) // Dynamic thinking (automatically enables thought summaries)
         .build()
         .await
         .expect("Failed to build Gemini thinking client");

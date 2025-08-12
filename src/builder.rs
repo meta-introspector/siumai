@@ -1196,12 +1196,20 @@ impl GeminiBuilder {
     /// - Use positive values to set a specific token budget
     ///
     /// The actual supported range depends on the model being used.
+    /// Note: This automatically enables thought summaries in the response.
     pub const fn thinking_budget(mut self, budget: i32) -> Self {
         if self.thinking_config.is_none() {
             self.thinking_config = Some(crate::providers::gemini::ThinkingConfig::new());
         }
         if let Some(ref mut config) = self.thinking_config {
             config.thinking_budget = Some(budget);
+            // Automatically enable thought summaries when setting a budget
+            // This is required by Gemini API to actually receive thinking content
+            if budget != 0 {
+                config.include_thoughts = Some(true);
+            } else {
+                config.include_thoughts = Some(false);
+            }
         }
         self
     }

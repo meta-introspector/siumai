@@ -175,20 +175,53 @@ echo ""
 
 # Ask user which test to run
 echo "Which test would you like to run?"
-echo "1) All available providers (recommended)"
-echo "2) Specific provider"
-echo "3) All individual provider tests"
+echo "1) All available providers - Basic tests (Chat, Streaming, Embedding, Reasoning)"
+echo "2) All capability tests - Comprehensive testing (includes Tools, Vision, Audio, etc.)"
+echo "3) Specific capability test"
+echo "4) Specific provider test"
+echo "5) Provider interface tests (Provider::* vs Siumai::builder())"
 echo ""
-read -p "Enter your choice (1-3): " choice
+read -p "Enter your choice (1-5): " choice
 
 case $choice in
     1)
-        echo "🚀 Running all available provider tests..."
+        echo "🚀 Running basic provider tests..."
         cargo test test_all_available_providers -- --ignored --nocapture
         ;;
     2)
+        echo "🚀 Running comprehensive capability tests..."
+        echo ""
+        echo "📋 Running basic provider tests..."
+        cargo test test_all_available_providers -- --ignored --nocapture
+        echo ""
+        echo "🔧 Running tool capability tests..."
+        cargo test test_all_provider_tools -- --ignored --nocapture
+        echo ""
+        echo "👁️ Running vision capability tests..."
+        cargo test test_all_provider_vision -- --ignored --nocapture
+        echo ""
+        echo "🔊 Running audio capability tests..."
+        cargo test test_all_provider_audio -- --ignored --nocapture
+        echo ""
+        echo "📦 Running provider interface tests..."
+        cargo test test_all_provider_interfaces -- --ignored --nocapture
+        ;;
+    3)
+        echo ""
+        echo "Available capability tests:"
+        echo "- test_all_provider_tools (Tool calling across all providers)"
+        echo "- test_all_provider_vision (Vision/multimodal across supported providers)"
+        echo "- test_all_provider_audio (Audio TTS/STT for OpenAI and Groq)"
+        echo "- test_all_provider_interfaces (Provider::* vs Siumai::builder())"
+        echo "- test_all_available_providers (Basic chat, streaming, embedding, reasoning)"
+        echo ""
+        read -p "Enter test name: " test_name
+        cargo test $test_name -- --ignored --nocapture
+        ;;
+    4)
         echo ""
         echo "Available provider tests:"
+        echo "Basic tests:"
         echo "- test_openai_integration"
         echo "- test_anthropic_integration"
         echo "- test_gemini_integration"
@@ -198,12 +231,35 @@ case $choice in
         echo "- test_xai_integration"
         echo "- test_ollama_integration"
         echo ""
+        echo "Tool capability tests:"
+        echo "- test_openai_tools"
+        echo "- test_anthropic_tools"
+        echo "- test_gemini_tools"
+        echo "- test_xai_tools"
+        echo "- test_ollama_tools"
+        echo ""
+        echo "Vision capability tests:"
+        echo "- test_openai_vision"
+        echo "- test_anthropic_vision"
+        echo "- test_gemini_vision"
+        echo "- test_xai_vision"
+        echo ""
+        echo "Audio capability tests:"
+        echo "- test_openai_audio_capability"
+        echo "- test_groq_audio_capability"
+        echo ""
+        echo "Provider interface tests:"
+        echo "- test_openai_provider_interface"
+        echo "- test_anthropic_provider_interface"
+        echo "- test_gemini_provider_interface"
+        echo "- test_ollama_provider_interface"
+        echo ""
         read -p "Enter test name: " test_name
         cargo test $test_name -- --ignored --nocapture
         ;;
-    3)
-        echo "🚀 Running all individual provider tests..."
-        cargo test real_llm_integration -- --ignored --nocapture
+    5)
+        echo "🚀 Running provider interface tests..."
+        cargo test test_all_provider_interfaces -- --ignored --nocapture
         ;;
     *)
         echo "❌ Invalid choice. Exiting."
@@ -214,8 +270,25 @@ esac
 echo ""
 echo "✅ Integration tests completed!"
 echo ""
+echo "📊 Test Coverage Summary:"
+echo "- ✅ Basic Chat & Streaming: All providers"
+echo "- ✅ Embedding: OpenAI, Gemini, Ollama"
+echo "- ✅ Reasoning: OpenAI (o1), Anthropic (thinking), Gemini, DeepSeek, xAI, Ollama"
+echo "- ✅ Tool Calling: OpenAI, Anthropic, Gemini, xAI, Ollama"
+echo "- ✅ Vision: OpenAI, Anthropic, Gemini, xAI"
+echo "- ✅ Audio: OpenAI, Groq"
+echo "- ✅ Provider Interfaces: Provider::* vs Siumai::builder()"
+echo ""
 echo "💡 Tips:"
 echo "- Tests automatically skip providers without API keys"
 echo "- Some features may not be available for all API keys (this is normal)"
 echo "- Check the output for any warnings about missing permissions"
+echo "- Vision tests use public images from Wikimedia Commons"
+echo "- Audio tests include TTS (Text-to-Speech) but skip STT (Speech-to-Text) without audio files"
+echo "- Tool tests use simple calculator and weather tools"
+echo ""
+echo "🔗 For more information:"
+echo "- Test documentation: tests/README.md"
+echo "- Test coverage analysis: TEST_COVERAGE_ANALYSIS.md"
+echo "- Individual test files: tests/*_test.rs"
 echo ""

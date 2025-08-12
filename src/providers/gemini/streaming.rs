@@ -41,6 +41,9 @@ struct GeminiContent {
 #[derive(Debug, Clone, Deserialize)]
 struct GeminiPart {
     text: Option<String>,
+    /// Optional. Whether this is a thought summary (for thinking models)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thought: Option<bool>,
 }
 
 /// Gemini usage metadata
@@ -52,6 +55,9 @@ struct GeminiUsageMetadata {
     candidates_token_count: Option<u32>,
     #[serde(rename = "totalTokenCount")]
     total_token_count: Option<u32>,
+    /// Number of tokens used for thinking (only for thinking models)
+    #[serde(rename = "thoughtsTokenCount")]
+    thoughts_token_count: Option<u32>,
 }
 
 /// Gemini event converter
@@ -78,10 +84,15 @@ impl GeminiEventConverter {
                 {
                     for part in parts {
                         if let Some(text) = part.text {
-                            return Some(ChatStreamEvent::ContentDelta {
-                                delta: text,
-                                index: None,
-                            });
+                            // Check if this is thinking content
+                            if part.thought.unwrap_or(false) {
+                                return Some(ChatStreamEvent::ThinkingDelta { delta: text });
+                            } else {
+                                return Some(ChatStreamEvent::ContentDelta {
+                                    delta: text,
+                                    index: None,
+                                });
+                            }
                         }
                     }
                 }
@@ -118,7 +129,7 @@ impl GeminiEventConverter {
                 completion_tokens: usage.candidates_token_count.unwrap_or(0),
                 total_tokens: usage.total_token_count.unwrap_or(0),
                 cached_tokens: None,
-                reasoning_tokens: None,
+                reasoning_tokens: usage.thoughts_token_count,
             };
             return Some(ChatStreamEvent::UsageUpdate { usage: usage_info });
         }
