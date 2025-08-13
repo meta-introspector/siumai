@@ -138,15 +138,22 @@ pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
 
 /// Get default models for `OpenAI`
 pub fn get_default_models() -> Vec<String> {
-    vec![
-        "gpt-4".to_string(),
-        "gpt-4-turbo".to_string(),
-        "gpt-4o".to_string(),
-        "gpt-4o-mini".to_string(),
-        "gpt-3.5-turbo".to_string(),
-        "o1-preview".to_string(),
-        "o1-mini".to_string(),
-    ]
+    use crate::models::openai;
+
+    let mut models = Vec::new();
+    // Add popular models from each family
+    models.push(openai::GPT_5.to_string());
+    models.push(openai::GPT_4_1.to_string());
+    models.push(openai::GPT_4O.to_string());
+    models.push(openai::GPT_4O_MINI.to_string());
+    models.push(openai::GPT_4_TURBO.to_string());
+    models.push(openai::GPT_4.to_string());
+    models.push(openai::O1.to_string());
+    models.push(openai::O1_MINI.to_string());
+    models.push(openai::O3_MINI.to_string());
+    models.push(openai::GPT_3_5_TURBO.to_string());
+
+    models
 }
 
 /// Check if content contains thinking tags (`<think>` or `</think>`)

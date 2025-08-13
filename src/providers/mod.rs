@@ -10,11 +10,10 @@ pub mod openai;
 pub mod openai_compatible;
 pub mod xai;
 
-pub mod test_provider;
-
 // Re-export main types
 pub use anthropic::AnthropicClient;
 pub use gemini::GeminiClient;
+pub use groq::GroqClient;
 pub use ollama::OllamaClient;
 pub use openai::{
     ListResponsesQuery, OpenAiClient, OpenAiResponses, ResponseMetadata, ResponseStatus,
@@ -63,23 +62,25 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
                 .with_custom_feature("structured_output", true)
                 .with_custom_feature("batch_processing", true),
             default_base_url: "https://api.openai.com/v1",
-            supported_models: vec![
-                "gpt-4",
-                "gpt-4-turbo",
-                "gpt-4o",
-                "gpt-4o-mini",
-                "gpt-3.5-turbo",
-                "o1-preview",
-                "o1-mini",
-                "dall-e-3",
-                "dall-e-2",
-                "whisper-1",
-                "tts-1",
-                "tts-1-hd",
-                "text-embedding-3-large",
-                "text-embedding-3-small",
-                "text-embedding-ada-002",
-            ],
+            supported_models: {
+                use crate::constants::openai;
+                let mut models = Vec::new();
+                models.extend_from_slice(openai::gpt_4o::ALL);
+                models.extend_from_slice(openai::gpt_4_1::ALL);
+                models.extend_from_slice(openai::gpt_4_5::ALL);
+                models.extend_from_slice(openai::gpt_4_turbo::ALL);
+                models.extend_from_slice(openai::gpt_4::ALL);
+                models.extend_from_slice(openai::o1::ALL);
+                models.extend_from_slice(openai::o3::ALL);
+                models.extend_from_slice(openai::o4::ALL);
+                models.extend_from_slice(openai::gpt_5::ALL);
+                models.extend_from_slice(openai::gpt_3_5::ALL);
+                models.extend_from_slice(openai::audio::ALL);
+                models.extend_from_slice(openai::images::ALL);
+                models.extend_from_slice(openai::embeddings::ALL);
+                models.extend_from_slice(openai::moderation::ALL);
+                models
+            },
         },
         ProviderInfo {
             provider_type: ProviderType::Anthropic,
@@ -93,14 +94,20 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
                 .with_custom_feature("prompt_caching", true)
                 .with_custom_feature("thinking_mode", true),
             default_base_url: "https://api.anthropic.com",
-            supported_models: vec![
-                "claude-3-5-sonnet-20241022",
-                "claude-3-5-sonnet-20240620",
-                "claude-3-5-haiku-20241022",
-                "claude-3-opus-20240229",
-                "claude-3-sonnet-20240229",
-                "claude-3-haiku-20240307",
-            ],
+            supported_models: {
+                use crate::constants::anthropic;
+                let mut models = Vec::new();
+                models.extend_from_slice(anthropic::claude_opus_4_1::ALL);
+                models.extend_from_slice(anthropic::claude_opus_4::ALL);
+                models.extend_from_slice(anthropic::claude_sonnet_4::ALL);
+                models.extend_from_slice(anthropic::claude_sonnet_3_7::ALL);
+                models.extend_from_slice(anthropic::claude_sonnet_3_5::ALL);
+                models.extend_from_slice(anthropic::claude_haiku_3_5::ALL);
+                models.extend_from_slice(anthropic::claude_haiku_3::ALL);
+                models.extend_from_slice(anthropic::claude_opus_3::ALL);
+                models.extend_from_slice(anthropic::claude_sonnet_3::ALL);
+                models
+            },
         },
         ProviderInfo {
             provider_type: ProviderType::Gemini,
@@ -117,15 +124,19 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
                 .with_custom_feature("cached_content", true)
                 .with_custom_feature("json_schema", true),
             default_base_url: "https://generativelanguage.googleapis.com/v1beta",
-            supported_models: vec![
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-8b",
-                "gemini-1.5-pro",
-                "gemini-2.0-flash-exp",
-                "gemini-exp-1114",
-                "gemini-exp-1121",
-                "gemini-exp-1206",
-            ],
+            supported_models: {
+                use crate::constants::gemini;
+                let mut models = Vec::new();
+                models.extend_from_slice(gemini::gemini_2_5_pro::ALL);
+                models.extend_from_slice(gemini::gemini_2_5_flash::ALL);
+                models.extend_from_slice(gemini::gemini_2_5_flash_lite::ALL);
+                models.extend_from_slice(gemini::gemini_2_0_flash::ALL);
+                models.extend_from_slice(gemini::gemini_2_0_flash_lite::ALL);
+                models.extend_from_slice(gemini::gemini_1_5_flash::ALL);
+                models.extend_from_slice(gemini::gemini_1_5_flash_8b::ALL);
+                models.extend_from_slice(gemini::gemini_1_5_pro::ALL);
+                models
+            },
         },
         ProviderInfo {
             provider_type: ProviderType::Ollama,
@@ -218,10 +229,12 @@ pub fn is_model_supported(provider_type: &ProviderType, model: &str) -> bool {
 
 /// Get the default model for a provider
 pub const fn get_default_model(provider_type: &ProviderType) -> Option<&'static str> {
+    use crate::models;
+
     match provider_type {
-        ProviderType::OpenAi => Some("gpt-4o"),
-        ProviderType::Anthropic => Some("claude-3-5-sonnet-20241022"),
-        ProviderType::Gemini => Some("gemini-1.5-flash"),
+        ProviderType::OpenAi => Some(models::openai::GPT_4O), // Popular and capable
+        ProviderType::Anthropic => Some(models::anthropic::CLAUDE_SONNET_3_5), // Good balance
+        ProviderType::Gemini => Some(models::gemini::GEMINI_2_5_FLASH), // Fast and capable
         ProviderType::Ollama => Some("llama3.2:latest"),
         ProviderType::XAI => Some("grok-3-latest"),
         ProviderType::Custom(_) => None,
@@ -356,19 +369,31 @@ mod tests {
 
     #[test]
     fn test_default_models() {
-        assert_eq!(get_default_model(&ProviderType::OpenAi), Some("gpt-4o"));
+        use crate::models;
+
+        assert_eq!(
+            get_default_model(&ProviderType::OpenAi),
+            Some(models::openai::GPT_4O)
+        );
         assert_eq!(
             get_default_model(&ProviderType::Anthropic),
-            Some("claude-3-5-sonnet-20241022")
+            Some(models::anthropic::CLAUDE_SONNET_3_5)
+        );
+        assert_eq!(
+            get_default_model(&ProviderType::Gemini),
+            Some(models::gemini::GEMINI_2_5_FLASH)
         );
     }
 
     #[test]
     fn test_config_validation() {
-        let result = ProviderFactory::validate_config(&ProviderType::OpenAi, "test-key", "gpt-4");
+        use crate::models::openai;
+
+        let result =
+            ProviderFactory::validate_config(&ProviderType::OpenAi, "test-key", openai::GPT_4);
         assert!(result.is_ok());
 
-        let result = ProviderFactory::validate_config(&ProviderType::OpenAi, "", "gpt-4");
+        let result = ProviderFactory::validate_config(&ProviderType::OpenAi, "", openai::GPT_4);
         assert!(result.is_err());
 
         let result =

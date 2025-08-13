@@ -45,6 +45,7 @@ impl Siumai {
                 "gemini" => ProviderType::Gemini,
                 "ollama" => ProviderType::Ollama,
                 "xai" => ProviderType::XAI,
+                "groq" => ProviderType::Groq,
                 name => ProviderType::Custom(name.to_string()),
             },
             provider_name: client.provider_name().to_string(),
@@ -165,7 +166,7 @@ impl EmbeddingCapability for Siumai {
                     openai_client.embed(texts).await
                 } else {
                     Err(LlmError::UnsupportedOperation(
-                        "OpenAI provider does not implement embedding functionality".to_string(),
+                        "Failed to access OpenAI client for embedding operation".to_string(),
                     ))
                 }
             }
@@ -179,7 +180,7 @@ impl EmbeddingCapability for Siumai {
                     ollama_client.embed(texts).await
                 } else {
                     Err(LlmError::UnsupportedOperation(
-                        "Ollama provider does not implement embedding functionality".to_string(),
+                        "Failed to access Ollama client for embedding operation".to_string(),
                     ))
                 }
             }
@@ -193,12 +194,12 @@ impl EmbeddingCapability for Siumai {
                     gemini_client.embed(texts).await
                 } else {
                     Err(LlmError::UnsupportedOperation(
-                        "Gemini provider does not implement embedding functionality".to_string(),
+                        "Failed to access Gemini client for embedding operation".to_string(),
                     ))
                 }
             }
             provider_name => Err(LlmError::UnsupportedOperation(format!(
-                "Provider {provider_name} does not support embedding functionality. Consider using OpenAI or Ollama for embeddings."
+                "Provider {provider_name} does not support embedding functionality. Consider using OpenAI, Gemini, or Ollama for embeddings."
             ))),
         }
     }
@@ -228,6 +229,17 @@ impl EmbeddingCapability for Siumai {
                     384 // Default Ollama dimension
                 }
             }
+            "gemini" => {
+                if let Some(gemini_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::gemini::GeminiClient>()
+                {
+                    gemini_client.embedding_dimension()
+                } else {
+                    768 // Default Gemini dimension
+                }
+            }
             _ => 1536, // Default fallback
         }
     }
@@ -255,6 +267,17 @@ impl EmbeddingCapability for Siumai {
                     ollama_client.max_tokens_per_embedding()
                 } else {
                     8192 // Default limit
+                }
+            }
+            "gemini" => {
+                if let Some(gemini_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::gemini::GeminiClient>()
+                {
+                    gemini_client.max_tokens_per_embedding()
+                } else {
+                    2048 // Default Gemini limit
                 }
             }
             _ => 8192, // Default fallback
@@ -290,6 +313,20 @@ impl EmbeddingCapability for Siumai {
                     vec!["nomic-embed-text".to_string()]
                 }
             }
+            "gemini" => {
+                if let Some(gemini_client) =
+                    self.client
+                        .as_any()
+                        .downcast_ref::<crate::providers::gemini::GeminiClient>()
+                {
+                    gemini_client.supported_embedding_models()
+                } else {
+                    vec![
+                        "text-embedding-004".to_string(),
+                        "embedding-001".to_string(),
+                    ]
+                }
+            }
             _ => vec!["default".to_string()],
         }
     }
@@ -322,13 +359,72 @@ impl LlmClient for Siumai {
     }
 }
 
-/// Builder for creating siumai providers with specific capabilities
+/// Unified Interface Builder - Provider Abstraction Layer
+///
+/// ## 🎯 Core Responsibility: Unified Provider Interface
+///
+/// SiumaiBuilder provides a **unified interface** for creating LLM clients
+/// across different providers while abstracting away provider-specific details.
+///
+/// ### ✅ What SiumaiBuilder Does:
+/// - **Provider Abstraction**: Unified interface for all LLM providers
+/// - **Parameter Unification**: Common parameter interface (temperature, max_tokens, etc.)
+/// - **Reasoning Abstraction**: Unified reasoning interface across providers
+/// - **Configuration Validation**: Validates configuration before client creation
+/// - **Provider Selection**: Determines which provider to use based on configuration
+/// - **Parameter Delegation**: Delegates to appropriate builders for actual construction
+///
+/// ### ❌ What SiumaiBuilder Does NOT Do:
+/// - **Direct Client Creation**: Does not directly create HTTP clients
+/// - **Parameter Mapping**: Does not handle provider-specific parameter mapping
+/// - **HTTP Configuration**: Does not configure HTTP settings directly
+///
+/// ## 🏗️ Architecture Position
+///
+/// ```text
+/// User Code
+///     ↓
+/// SiumaiBuilder (Unified Interface Layer) ← YOU ARE HERE
+///     ↓
+/// ┌─────────────────┬─────────────────────────────────────┐
+/// ↓                 ↓                                     ↓
+/// LlmBuilder        RequestBuilder                Provider Clients
+/// (Client Config)   (Parameter Management)        (Implementation)
+/// ```
+///
+/// ## 🔄 Delegation Pattern
+///
+/// SiumaiBuilder acts as a **coordinator** that delegates to specialized builders:
+///
+/// 1. **Parameter Validation**: Uses RequestBuilder for parameter validation
+/// 2. **Client Construction**: Uses LlmBuilder or direct client constructors
+/// 3. **Provider Selection**: Chooses appropriate implementation based on provider type
+///
+/// ### Example Flow:
+/// ```rust,no_run
+/// use siumai::prelude::*;
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     // 1. User configures through unified interface
+///     let client = Siumai::builder()
+///         .anthropic()                    // Provider selection
+///         .api_key("your-api-key")        // Required API key
+///         .model("claude-3-5-sonnet")     // Common parameter
+///         .temperature(0.7)               // Common parameter
+///         .reasoning(true)                // Unified reasoning
+///         .build().await?;                // Delegation to appropriate builders
+///     Ok(())
+/// }
+/// ```
+///
+/// This design allows users to switch providers with minimal code changes
+/// while maintaining access to provider-specific features when needed.
 pub struct SiumaiBuilder {
     provider_type: Option<ProviderType>,
     provider_name: Option<String>,
     api_key: Option<String>,
     base_url: Option<String>,
-    model: Option<String>,
     capabilities: Vec<String>,
     common_params: CommonParams,
     http_config: HttpConfig,
@@ -348,7 +444,6 @@ impl SiumaiBuilder {
             provider_name: None,
             api_key: None,
             base_url: None,
-            model: None,
             capabilities: Vec::new(),
             common_params: CommonParams::default(),
             http_config: HttpConfig::default(),
@@ -379,9 +474,9 @@ impl SiumaiBuilder {
             "gemini" => ProviderType::Gemini,
             "ollama" => ProviderType::Ollama,
             "xai" => ProviderType::XAI,
+            "groq" => ProviderType::Groq,
             "deepseek" => ProviderType::Custom("deepseek".to_string()),
             "openrouter" => ProviderType::Custom("openrouter".to_string()),
-            "groq" => ProviderType::Custom("groq".to_string()),
             _ => ProviderType::Custom(name),
         });
         self
@@ -433,7 +528,7 @@ impl SiumaiBuilder {
 
     /// Create a Groq provider (convenience method)
     pub fn groq(mut self) -> Self {
-        self.provider_type = Some(ProviderType::Custom("groq".to_string()));
+        self.provider_type = Some(ProviderType::Groq);
         self.provider_name = Some("groq".to_string());
         self
     }
@@ -459,7 +554,7 @@ impl SiumaiBuilder {
 
     /// Set the model
     pub fn model<S: Into<String>>(mut self, model: S) -> Self {
-        self.model = Some(model.into());
+        self.common_params.model = model.into();
         self
     }
 
@@ -472,6 +567,24 @@ impl SiumaiBuilder {
     /// Set max tokens
     pub const fn max_tokens(mut self, max_tokens: u32) -> Self {
         self.common_params.max_tokens = Some(max_tokens);
+        self
+    }
+
+    /// Set top_p (nucleus sampling parameter)
+    pub const fn top_p(mut self, top_p: f32) -> Self {
+        self.common_params.top_p = Some(top_p);
+        self
+    }
+
+    /// Set random seed for reproducible outputs
+    pub const fn seed(mut self, seed: u64) -> Self {
+        self.common_params.seed = Some(seed);
+        self
+    }
+
+    /// Set stop sequences
+    pub fn stop_sequences(mut self, sequences: Vec<String>) -> Self {
+        self.common_params.stop_sequences = Some(sequences);
         self
     }
 
@@ -603,37 +716,116 @@ impl SiumaiBuilder {
 
     /// Build the siumai provider
     pub async fn build(self) -> Result<Siumai, LlmError> {
-        let provider_type = self.provider_type.ok_or_else(|| {
+        // Extract all needed values first to avoid borrow checker issues
+        let provider_type = self.provider_type.clone().ok_or_else(|| {
             LlmError::ConfigurationError("Provider type not specified".to_string())
         })?;
 
         let api_key = self
             .api_key
+            .clone()
             .ok_or_else(|| LlmError::ConfigurationError("API key not specified".to_string()))?;
 
-        // Create the appropriate client based on provider type
+        // Extract all needed values to avoid borrow checker issues
+        let base_url = self.base_url.clone();
+        let organization = self.organization.clone();
+        let project = self.project.clone();
+        let reasoning_enabled = self.reasoning_enabled;
+        let reasoning_budget = self.reasoning_budget;
+        let http_config = self.http_config.clone();
+
+        // Prepare common parameters with the correct model
+        let mut common_params = self.common_params.clone();
+
+        // Set default model if none provided
+        if common_params.model.is_empty() {
+            // Set default model based on provider type
+            use crate::models;
+
+            common_params.model = match provider_type {
+                ProviderType::OpenAi => models::openai::GPT_4O.to_string(),
+                ProviderType::Anthropic => models::anthropic::CLAUDE_SONNET_3_5.to_string(),
+                ProviderType::Gemini => models::gemini::GEMINI_2_5_FLASH.to_string(),
+                ProviderType::Ollama => "llama3.2".to_string(),
+                ProviderType::XAI => "grok-beta".to_string(),
+                ProviderType::Groq => "llama-3.1-70b-versatile".to_string(),
+                ProviderType::Custom(ref name) => match name.as_str() {
+                    "deepseek" => models::openai_compatible::deepseek::CHAT.to_string(),
+                    "openrouter" => models::openai_compatible::openrouter::GPT_4O.to_string(),
+                    _ => "default-model".to_string(),
+                },
+            };
+        }
+
+        // Build provider-specific parameters
+        let provider_params = match provider_type {
+            ProviderType::Anthropic => {
+                let mut params = ProviderParams::anthropic();
+
+                // Map unified reasoning parameters to Anthropic-specific parameters
+                if let Some(budget) = reasoning_budget {
+                    params = params.with_param("thinking_budget", budget as u32);
+                }
+
+                Some(params)
+            }
+            ProviderType::Gemini => {
+                let mut params = ProviderParams::gemini();
+
+                // Map unified reasoning parameters to Gemini-specific parameters
+                if let Some(budget) = reasoning_budget {
+                    params = params.with_param("thinking_budget", budget as u32);
+                }
+
+                Some(params)
+            }
+            ProviderType::Ollama => {
+                let mut params = ProviderParams::new();
+
+                // Map unified reasoning to Ollama thinking
+                if reasoning_enabled.unwrap_or(false) {
+                    params = params.with_param("think", true);
+                }
+
+                Some(params)
+            }
+            _ => {
+                // For other providers, no specific parameters for now
+                None
+            }
+        };
+
+        // Use RequestBuilder to validate parameters
+        let _request_builder =
+            crate::request_factory::RequestBuilderFactory::create_and_validate_builder(
+                &provider_type,
+                common_params.clone(),
+                provider_params.clone(),
+            )?;
+
+        // Now create the appropriate client based on provider type
+        // Parameters have already been validated by RequestBuilder
         let client: Box<dyn LlmClient> = match provider_type {
             ProviderType::OpenAi => {
                 let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
                     .with_base_url(
-                        self.base_url
-                            .unwrap_or_else(|| "https://api.openai.com/v1".to_string()),
+                        base_url.unwrap_or_else(|| "https://api.openai.com/v1".to_string()),
                     )
-                    .with_model(self.model.unwrap_or_else(|| "gpt-4o-mini".to_string()));
+                    .with_model(common_params.model.clone());
 
-                // Set common parameters
-                if let Some(temp) = self.common_params.temperature {
+                // Use validated common parameters
+                if let Some(temp) = common_params.temperature {
                     config = config.with_temperature(temp);
                 }
-                if let Some(max_tokens) = self.common_params.max_tokens {
+                if let Some(max_tokens) = common_params.max_tokens {
                     config = config.with_max_tokens(max_tokens);
                 }
 
                 // Set organization and project if provided
-                if let Some(org) = self.organization {
+                if let Some(org) = organization {
                     config = config.with_organization(org);
                 }
-                if let Some(proj) = self.project {
+                if let Some(proj) = project {
                     config = config.with_project(proj);
                 }
 
@@ -644,50 +836,36 @@ impl SiumaiBuilder {
                 ))
             }
             ProviderType::Anthropic => {
-                let base_url = self
-                    .base_url
-                    .unwrap_or_else(|| "https://api.anthropic.com".to_string());
-                let model = self
-                    .model
-                    .unwrap_or_else(|| "claude-3-5-sonnet-20241022".to_string());
+                let anthropic_base_url =
+                    base_url.unwrap_or_else(|| "https://api.anthropic.com".to_string());
 
-                // Set model in common params
-                let mut common_params = self.common_params;
-                common_params.model = model;
-
-                // Map unified reasoning parameters to Anthropic-specific parameters
+                // Extract Anthropic-specific parameters from validated provider_params
                 let mut anthropic_params = crate::params::AnthropicParams::default();
-                if let Some(budget) = self.reasoning_budget {
-                    anthropic_params.thinking_budget = Some(budget as u32);
-                } else if let Some(enabled) = self.reasoning_enabled
-                    && enabled
+                if let Some(ref params) = provider_params
+                    && let Some(budget) = params.get::<u32>("thinking_budget")
                 {
-                    anthropic_params.thinking_budget = Some(10000); // Default budget
+                    anthropic_params.thinking_budget = Some(budget);
                 }
 
                 let http_client = reqwest::Client::new();
                 Box::new(crate::providers::anthropic::AnthropicClient::new(
                     api_key,
-                    base_url,
+                    anthropic_base_url,
                     http_client,
-                    common_params,
+                    common_params.clone(),
                     anthropic_params,
-                    self.http_config,
+                    http_config,
                 ))
             }
             ProviderType::Gemini => {
-                // Build common parameters for the client
-                let mut common_params = self.common_params;
-                common_params.model = self.model.unwrap_or_else(|| "gemini-2.5-flash".to_string());
-
                 // Create Gemini client using the provider-specific builder
-                // The client will use RequestBuilder internally for parameter mapping
+                // Parameters have already been validated by RequestBuilder
                 let mut builder = crate::builder::LlmBuilder::new()
                     .gemini()
                     .api_key(api_key)
                     .model(&common_params.model);
 
-                // Apply common parameters through builder methods
+                // Apply validated common parameters
                 if let Some(temp) = common_params.temperature {
                     builder = builder.temperature(temp);
                 }
@@ -698,19 +876,11 @@ impl SiumaiBuilder {
                     builder = builder.top_p(top_p);
                 }
 
-                // Handle reasoning configuration (provider-specific)
-                if let Some(enabled) = self.reasoning_enabled {
-                    if enabled {
-                        if let Some(budget) = self.reasoning_budget {
-                            builder = builder.thinking_budget(budget);
-                        } else {
-                            builder = builder.thinking_budget(-1); // Dynamic thinking
-                        }
-                    } else {
-                        builder = builder.thinking_budget(0); // Disable thinking
-                    }
-                } else if let Some(budget) = self.reasoning_budget {
-                    builder = builder.thinking_budget(budget);
+                // Apply provider-specific parameters from validated provider_params
+                if let Some(ref params) = provider_params
+                    && let Some(budget) = params.get::<u32>("thinking_budget")
+                {
+                    builder = builder.thinking_budget(budget as i32);
                 }
 
                 Box::new(builder.build().await.map_err(|e| {
@@ -718,52 +888,46 @@ impl SiumaiBuilder {
                 })?)
             }
             ProviderType::XAI => {
+                // Create xAI client using the provider-specific builder
+                // Parameters have already been validated by RequestBuilder
                 let mut builder = crate::builder::LlmBuilder::new()
                     .xai()
                     .api_key(api_key)
-                    .model(self.model.unwrap_or_else(|| "grok-3-latest".to_string()));
+                    .model(&common_params.model);
 
-                // Set common parameters
-                if let Some(temp) = self.common_params.temperature {
+                // Apply validated common parameters
+                if let Some(temp) = common_params.temperature {
                     builder = builder.temperature(temp);
                 }
-                if let Some(max_tokens) = self.common_params.max_tokens {
+                if let Some(max_tokens) = common_params.max_tokens {
                     builder = builder.max_tokens(max_tokens);
                 }
-                if let Some(top_p) = self.common_params.top_p {
+                if let Some(top_p) = common_params.top_p {
                     builder = builder.top_p(top_p);
                 }
-
-                // Note: xAI reasoning is handled through provider-specific methods
-                // The unified reasoning interface doesn't directly map to xAI's reasoning_effort
-                // Users should use provider-specific client for advanced xAI reasoning features
 
                 Box::new(builder.build().await.map_err(|e| {
                     LlmError::ConfigurationError(format!("Failed to build xAI client: {e}"))
                 })?)
             }
             ProviderType::Ollama => {
-                let base_url = self
-                    .base_url
-                    .unwrap_or_else(|| "http://localhost:11434".to_string());
-                let model = self.model.unwrap_or_else(|| "llama3.2:latest".to_string());
+                let ollama_base_url =
+                    base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
 
-                // Set model in common params
-                let mut common_params = self.common_params;
-                common_params.model = model.clone();
-
-                // Map unified reasoning parameters to Ollama-specific parameters
+                // Extract Ollama-specific parameters from validated provider_params
                 let mut ollama_params = crate::providers::ollama::config::OllamaParams::default();
-                if let Some(enabled) = self.reasoning_enabled {
-                    ollama_params.think = Some(enabled);
+                if let Some(ref params) = provider_params
+                    && let Some(think) = params.get::<bool>("think")
+                {
+                    ollama_params.think = Some(think);
                 }
 
                 let config = crate::providers::ollama::config::OllamaConfig {
-                    base_url,
-                    model: Some(model),
-                    common_params,
+                    base_url: ollama_base_url,
+                    model: Some(common_params.model.clone()),
+                    common_params: common_params.clone(),
                     ollama_params,
-                    http_config: self.http_config,
+                    http_config,
                 };
 
                 let http_client = reqwest::Client::new();
@@ -773,22 +937,18 @@ impl SiumaiBuilder {
                 ))
             }
             ProviderType::Groq => {
-                let base_url = self
-                    .base_url
-                    .unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
-                let model = self
-                    .model
-                    .unwrap_or_else(|| "llama-3.3-70b-versatile".to_string());
+                let groq_base_url =
+                    base_url.unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
 
                 let mut config = crate::providers::groq::GroqConfig::new(api_key)
-                    .with_base_url(base_url)
-                    .with_model(model);
+                    .with_base_url(groq_base_url)
+                    .with_model(common_params.model.clone());
 
-                // Set common parameters
-                if let Some(temp) = self.common_params.temperature {
+                // Use validated common parameters
+                if let Some(temp) = common_params.temperature {
                     config = config.with_temperature(temp);
                 }
-                if let Some(max_tokens) = self.common_params.max_tokens {
+                if let Some(max_tokens) = common_params.max_tokens {
                     config = config.with_max_tokens(max_tokens);
                 }
 
@@ -801,16 +961,15 @@ impl SiumaiBuilder {
                         // Use OpenAI-compatible client for DeepSeek
                         let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
                             .with_base_url(
-                                self.base_url
-                                    .unwrap_or_else(|| "https://api.deepseek.com".to_string()),
+                                base_url.unwrap_or_else(|| "https://api.deepseek.com".to_string()),
                             )
-                            .with_model(self.model.unwrap_or_else(|| "deepseek-chat".to_string()));
+                            .with_model(common_params.model.clone());
 
-                        // Set common parameters
-                        if let Some(temp) = self.common_params.temperature {
+                        // Use validated common parameters
+                        if let Some(temp) = common_params.temperature {
                             config = config.with_temperature(temp);
                         }
-                        if let Some(max_tokens) = self.common_params.max_tokens {
+                        if let Some(max_tokens) = common_params.max_tokens {
                             config = config.with_max_tokens(max_tokens);
                         }
 
@@ -824,19 +983,16 @@ impl SiumaiBuilder {
                         // Use OpenAI-compatible client for OpenRouter
                         let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
                             .with_base_url(
-                                self.base_url
+                                base_url
                                     .unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string()),
                             )
-                            .with_model(
-                                self.model
-                                    .unwrap_or_else(|| "openai/gpt-3.5-turbo".to_string()),
-                            );
+                            .with_model(common_params.model.clone());
 
-                        // Set common parameters
-                        if let Some(temp) = self.common_params.temperature {
+                        // Use validated common parameters
+                        if let Some(temp) = common_params.temperature {
                             config = config.with_temperature(temp);
                         }
-                        if let Some(max_tokens) = self.common_params.max_tokens {
+                        if let Some(max_tokens) = common_params.max_tokens {
                             config = config.with_max_tokens(max_tokens);
                         }
 
@@ -846,32 +1002,7 @@ impl SiumaiBuilder {
                             http_client,
                         ))
                     }
-                    "groq" => {
-                        // Use OpenAI-compatible client for Groq
-                        let mut config =
-                            crate::providers::openai::OpenAiConfig::new(api_key)
-                                .with_base_url(self.base_url.unwrap_or_else(|| {
-                                    "https://api.groq.com/openai/v1".to_string()
-                                }))
-                                .with_model(
-                                    self.model
-                                        .unwrap_or_else(|| "llama-3.3-70b-versatile".to_string()),
-                                );
 
-                        // Set common parameters
-                        if let Some(temp) = self.common_params.temperature {
-                            config = config.with_temperature(temp);
-                        }
-                        if let Some(max_tokens) = self.common_params.max_tokens {
-                            config = config.with_max_tokens(max_tokens);
-                        }
-
-                        let http_client = reqwest::Client::new();
-                        Box::new(crate::providers::openai::OpenAiClient::new(
-                            config,
-                            http_client,
-                        ))
-                    }
                     _ => {
                         return Err(LlmError::UnsupportedOperation(format!(
                             "Custom provider '{name}' not yet implemented"

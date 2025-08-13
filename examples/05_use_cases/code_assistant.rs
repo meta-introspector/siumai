@@ -21,6 +21,7 @@
 //! cargo run --example code_assistant
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use std::fs;
 use std::io::{self, Write};
@@ -149,7 +150,7 @@ impl CodeAssistant {
         let ai = Siumai::builder()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .temperature(0.1) // Low temperature for more consistent code analysis
             .max_tokens(2000)
             .build()

@@ -138,6 +138,14 @@ name = "tracing_monitoring"
 path = "examples/03_advanced_features/tracing_monitoring.rs"
 
 [[example]]
+name = "custom_configurations"
+path = "examples/03_advanced_features/custom_configurations.rs"
+
+[[example]]
+name = "multimodal_processing"
+path = "examples/03_advanced_features/multimodal_processing.rs"
+
+[[example]]
 name = "openai_response_api_http_mcp_client"
 path = "examples/04_providers/openai/openai_response_api_http_mcp_client.rs"
 

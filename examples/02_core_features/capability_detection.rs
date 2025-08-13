@@ -17,6 +17,7 @@
 //! cargo run --example capability_detection
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use siumai::traits::ChatCapability;
 use std::collections::HashMap;
@@ -195,7 +196,7 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
         && let Ok(client) = LlmBuilder::new()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .build()
             .await
     {
@@ -210,7 +211,7 @@ async fn create_test_providers() -> Vec<(String, Box<dyn ChatCapability + Send +
         && let Ok(client) = LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-haiku-20241022")
+            .model(models::anthropic::CLAUDE_HAIKU_3_5)
             .build()
             .await
     {
@@ -406,7 +407,7 @@ async fn get_provider_metadata(
     match provider_name {
         "OpenAI" => ProviderMetadata {
             provider_type: "Cloud API".to_string(),
-            model: "gpt-4o-mini".to_string(),
+            model: models::openai::GPT_4O_MINI.to_string(),
             max_tokens: Some(4096),
             context_window: 128_000,
             supports_streaming: true,
@@ -415,7 +416,7 @@ async fn get_provider_metadata(
         },
         "Anthropic" => ProviderMetadata {
             provider_type: "Cloud API".to_string(),
-            model: "claude-3-5-haiku".to_string(),
+            model: models::anthropic::CLAUDE_HAIKU_3_5.to_string(),
             max_tokens: Some(4096),
             context_window: 200_000,
             supports_streaming: true,

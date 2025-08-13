@@ -180,7 +180,8 @@ impl GroqConfig {
 
     /// Get default model
     pub fn default_model() -> &'static str {
-        "llama-3.3-70b-versatile"
+        use crate::providers::openai_compatible::providers::models::groq;
+        groq::LLAMA_3_1_70B
     }
 }
 

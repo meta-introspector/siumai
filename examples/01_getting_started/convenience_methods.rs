@@ -16,6 +16,7 @@
 //! cargo run --example convenience_methods
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -67,7 +68,7 @@ async fn quick_client_creation(api_key: &str) -> Result<(), Box<dyn std::error::
     let openai_client = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .build()
         .await?;
 
@@ -87,7 +88,7 @@ async fn quick_client_creation(api_key: &str) -> Result<(), Box<dyn std::error::
         let anthropic_client = Siumai::builder()
             .anthropic()
             .api_key(&std::env::var("ANTHROPIC_API_KEY")?)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .build()
             .await?;
 
@@ -106,7 +107,7 @@ async fn common_task_helpers(api_key: &str) -> Result<(), Box<dyn std::error::Er
     let ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.3)
         .max_tokens(200)
         .build()
@@ -147,7 +148,7 @@ async fn preset_configurations(api_key: &str) -> Result<(), Box<dyn std::error::
     let fast_ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.3)
         .max_tokens(100)
         .build()
@@ -166,7 +167,7 @@ async fn preset_configurations(api_key: &str) -> Result<(), Box<dyn std::error::
     let balanced_ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o")
+        .model(models::openai::GPT_4O)
         .temperature(0.5)
         .max_tokens(300)
         .build()
@@ -179,7 +180,7 @@ async fn preset_configurations(api_key: &str) -> Result<(), Box<dyn std::error::
     let creative_ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.8)
         .max_tokens(500)
         .build()
@@ -234,7 +235,7 @@ async fn conversation_helpers(api_key: &str) -> Result<(), Box<dyn std::error::E
     let ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.3)
         .max_tokens(200)
         .build()

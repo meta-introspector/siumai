@@ -18,6 +18,7 @@
 //! cargo run --example error_handling
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -197,7 +198,7 @@ async fn test_invalid_api_key() -> Result<ChatResponse, LlmError> {
     let client = LlmBuilder::new()
         .openai()
         .api_key("invalid-key-12345")
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .build()
         .await?;
 
@@ -347,7 +348,7 @@ async fn try_chat_request(message: &str) -> Result<ChatResponse, LlmError> {
         let client = LlmBuilder::new()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .build()
             .await?;
 

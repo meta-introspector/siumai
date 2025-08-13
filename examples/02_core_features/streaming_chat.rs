@@ -18,6 +18,7 @@
 //! ```
 
 use futures_util::StreamExt;
+use siumai::models;
 use siumai::prelude::*;
 use std::io::{self, Write};
 
@@ -31,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             LlmBuilder::new()
                 .openai()
                 .api_key(&api_key)
-                .model("gpt-4o-mini")
+                .model(models::openai::GPT_4O_MINI)
                 .temperature(0.7)
                 .max_tokens(500)
                 .build()
@@ -42,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             LlmBuilder::new()
                 .anthropic()
                 .api_key(&api_key)
-                .model("claude-3-5-haiku-20241022")
+                .model(models::anthropic::CLAUDE_HAIKU_3_5)
                 .temperature(0.7)
                 .max_tokens(500)
                 .build()
@@ -170,7 +171,7 @@ async fn demonstrate_stream_error_handling(_provider: &dyn ChatCapability) {
         let invalid_provider = LlmBuilder::new()
             .openai()
             .api_key("invalid-key") // Invalid API key
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .build()
             .await?;
 

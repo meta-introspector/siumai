@@ -4,21 +4,50 @@
 
 /// `DeepSeek` model constants
 pub mod deepseek {
-    /// `DeepSeek` Chat model
+    /// `DeepSeek` Chat model (points to DeepSeek-V3-0324)
     pub const CHAT: &str = "deepseek-chat";
-    /// `DeepSeek` Coder model
-    pub const CODER: &str = "deepseek-coder";
-    /// `DeepSeek` Reasoner model (V3)
+    /// `DeepSeek` Reasoner model (points to DeepSeek-R1-0528)
     pub const REASONER: &str = "deepseek-reasoner";
-    /// `DeepSeek` V3 model
+
+    // Specific model versions
+    /// `DeepSeek` V3 (2024-03-24)
+    pub const DEEPSEEK_V3_0324: &str = "deepseek-v3-0324";
+    /// `DeepSeek` R1 (2025-05-28)
+    pub const DEEPSEEK_R1_0528: &str = "deepseek-r1-0528";
+    /// `DeepSeek` R1 (2025-01-20)
+    pub const DEEPSEEK_R1_20250120: &str = "deepseek-r1-20250120";
+
+    // Legacy models (deprecated)
+    /// `DeepSeek` Coder model (legacy)
+    pub const CODER: &str = "deepseek-coder";
+    /// `DeepSeek` V3 model (legacy alias)
     pub const DEEPSEEK_V3: &str = "deepseek-v3";
 
     /// All `DeepSeek` models
-    pub const ALL: &[&str] = &[CHAT, CODER, REASONER, DEEPSEEK_V3];
+    pub const ALL: &[&str] = &[
+        CHAT,
+        REASONER,
+        DEEPSEEK_V3_0324,
+        DEEPSEEK_R1_0528,
+        DEEPSEEK_R1_20250120,
+        CODER,
+        DEEPSEEK_V3,
+    ];
 
     /// Get all `DeepSeek` models
     pub fn all_models() -> Vec<String> {
         ALL.iter().map(|&s| s.to_string()).collect()
+    }
+
+    /// Get current active models (non-legacy)
+    pub fn active_models() -> Vec<String> {
+        vec![
+            CHAT.to_string(),
+            REASONER.to_string(),
+            DEEPSEEK_V3_0324.to_string(),
+            DEEPSEEK_R1_0528.to_string(),
+            DEEPSEEK_R1_20250120.to_string(),
+        ]
     }
 }
 
@@ -29,36 +58,131 @@ pub mod openrouter {
         pub const GPT_4: &str = "openai/gpt-4";
         pub const GPT_4_TURBO: &str = "openai/gpt-4-turbo";
         pub const GPT_4O: &str = "openai/gpt-4o";
+        pub const GPT_4O_MINI: &str = "openai/gpt-4o-mini";
+        pub const GPT_4_1: &str = "openai/gpt-4.1";
+        pub const GPT_4_1_MINI: &str = "openai/gpt-4.1-mini";
+        pub const O1: &str = "openai/o1";
+        pub const O1_MINI: &str = "openai/o1-mini";
+        pub const O3_MINI: &str = "openai/o3-mini";
     }
 
     /// Anthropic models via `OpenRouter`
     pub mod anthropic {
         pub const CLAUDE_3_5_SONNET: &str = "anthropic/claude-3.5-sonnet";
+        pub const CLAUDE_3_5_HAIKU: &str = "anthropic/claude-3.5-haiku";
+        pub const CLAUDE_SONNET_4: &str = "anthropic/claude-sonnet-4";
+        pub const CLAUDE_OPUS_4: &str = "anthropic/claude-opus-4";
+        pub const CLAUDE_OPUS_4_1: &str = "anthropic/claude-opus-4.1";
     }
 
     /// Google models via `OpenRouter`
     pub mod google {
         pub const GEMINI_PRO: &str = "google/gemini-pro";
         pub const GEMINI_1_5_PRO: &str = "google/gemini-1.5-pro";
+        pub const GEMINI_2_0_FLASH: &str = "google/gemini-2.0-flash";
+        pub const GEMINI_2_5_FLASH: &str = "google/gemini-2.5-flash";
+        pub const GEMINI_2_5_PRO: &str = "google/gemini-2.5-pro";
+    }
+
+    /// DeepSeek models via `OpenRouter`
+    pub mod deepseek {
+        pub const DEEPSEEK_CHAT: &str = "deepseek/deepseek-chat";
+        pub const DEEPSEEK_REASONER: &str = "deepseek/deepseek-reasoner";
+        pub const DEEPSEEK_V3: &str = "deepseek/deepseek-v3";
+        pub const DEEPSEEK_R1: &str = "deepseek/deepseek-r1";
+    }
+
+    /// Meta models via `OpenRouter`
+    pub mod meta {
+        pub const LLAMA_3_1_8B: &str = "meta-llama/llama-3.1-8b-instruct";
+        pub const LLAMA_3_1_70B: &str = "meta-llama/llama-3.1-70b-instruct";
+        pub const LLAMA_3_1_405B: &str = "meta-llama/llama-3.1-405b-instruct";
+        pub const LLAMA_3_2_1B: &str = "meta-llama/llama-3.2-1b-instruct";
+        pub const LLAMA_3_2_3B: &str = "meta-llama/llama-3.2-3b-instruct";
+    }
+
+    /// Mistral models via `OpenRouter`
+    pub mod mistral {
+        pub const MISTRAL_7B: &str = "mistralai/mistral-7b-instruct";
+        pub const MIXTRAL_8X7B: &str = "mistralai/mixtral-8x7b-instruct";
+        pub const MIXTRAL_8X22B: &str = "mistralai/mixtral-8x22b-instruct";
+        pub const MISTRAL_LARGE: &str = "mistralai/mistral-large";
     }
 
     /// Popular models collection
     pub mod popular {
-        pub const GPT_4: &str = super::openai::GPT_4;
-        pub const GPT_4O: &str = super::openai::GPT_4O;
-        pub const CLAUDE_3_5_SONNET: &str = super::anthropic::CLAUDE_3_5_SONNET;
-        pub const GEMINI_PRO: &str = super::google::GEMINI_PRO;
+        use super::*;
+
+        pub const GPT_4O: &str = openai::GPT_4O;
+        pub const GPT_4_1: &str = openai::GPT_4_1;
+        pub const CLAUDE_OPUS_4_1: &str = anthropic::CLAUDE_OPUS_4_1;
+        pub const CLAUDE_SONNET_4: &str = anthropic::CLAUDE_SONNET_4;
+        pub const GEMINI_2_5_PRO: &str = google::GEMINI_2_5_PRO;
+        pub const DEEPSEEK_REASONER: &str = deepseek::DEEPSEEK_REASONER;
+        pub const LLAMA_3_1_405B: &str = meta::LLAMA_3_1_405B;
     }
 
     /// Get all `OpenRouter` models
     pub fn all_models() -> Vec<String> {
-        vec![
+        let mut models = Vec::new();
+
+        // OpenAI models
+        models.extend_from_slice(&[
+            openai::GPT_4.to_string(),
             openai::GPT_4_TURBO.to_string(),
             openai::GPT_4O.to_string(),
+            openai::GPT_4O_MINI.to_string(),
+            openai::GPT_4_1.to_string(),
+            openai::GPT_4_1_MINI.to_string(),
+            openai::O1.to_string(),
+            openai::O1_MINI.to_string(),
+            openai::O3_MINI.to_string(),
+        ]);
+
+        // Anthropic models
+        models.extend_from_slice(&[
             anthropic::CLAUDE_3_5_SONNET.to_string(),
+            anthropic::CLAUDE_3_5_HAIKU.to_string(),
+            anthropic::CLAUDE_SONNET_4.to_string(),
+            anthropic::CLAUDE_OPUS_4.to_string(),
+            anthropic::CLAUDE_OPUS_4_1.to_string(),
+        ]);
+
+        // Google models
+        models.extend_from_slice(&[
             google::GEMINI_PRO.to_string(),
             google::GEMINI_1_5_PRO.to_string(),
-        ]
+            google::GEMINI_2_0_FLASH.to_string(),
+            google::GEMINI_2_5_FLASH.to_string(),
+            google::GEMINI_2_5_PRO.to_string(),
+        ]);
+
+        // DeepSeek models
+        models.extend_from_slice(&[
+            deepseek::DEEPSEEK_CHAT.to_string(),
+            deepseek::DEEPSEEK_REASONER.to_string(),
+            deepseek::DEEPSEEK_V3.to_string(),
+            deepseek::DEEPSEEK_R1.to_string(),
+        ]);
+
+        // Meta models
+        models.extend_from_slice(&[
+            meta::LLAMA_3_1_8B.to_string(),
+            meta::LLAMA_3_1_70B.to_string(),
+            meta::LLAMA_3_1_405B.to_string(),
+            meta::LLAMA_3_2_1B.to_string(),
+            meta::LLAMA_3_2_3B.to_string(),
+        ]);
+
+        // Mistral models
+        models.extend_from_slice(&[
+            mistral::MISTRAL_7B.to_string(),
+            mistral::MIXTRAL_8X7B.to_string(),
+            mistral::MIXTRAL_8X22B.to_string(),
+            mistral::MISTRAL_LARGE.to_string(),
+        ]);
+
+        models
     }
 }
 
@@ -121,7 +245,7 @@ pub mod recommendations {
 
     /// Recommended model for coding tasks
     pub const fn for_coding() -> &'static str {
-        deepseek::CODER
+        deepseek::DEEPSEEK_V3_0324 // Use latest V3 model for coding
     }
 
     /// Recommended model for reasoning tasks

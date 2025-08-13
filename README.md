@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Siumai::builder()
         .anthropic()
         .api_key("your-anthropic-key")
-        .model("claude-3-sonnet-20240229")
+        .model("claude-3-5-sonnet-20241022")
         .build()
         .await?;
 
@@ -105,7 +105,7 @@ let message = ChatMessage::user("What do you see in this image?")
     .build();
 
 let request = ChatRequest::builder()
-    .message(message)
+    .messages(vec![message])
     .build();
 ```
 

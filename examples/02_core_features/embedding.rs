@@ -18,6 +18,7 @@
 //! cargo run --example embedding
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use siumai::traits::EmbeddingCapability;
 
@@ -82,7 +83,7 @@ async fn demonstrate_openai_embeddings(
     let client = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("text-embedding-3-small") // Specify embedding model
+        .model(models::openai::TEXT_EMBEDDING_3_SMALL) // Specify embedding model
         .build()
         .await?;
 
@@ -173,7 +174,7 @@ async fn demonstrate_capability_detection() -> Result<(), Box<dyn std::error::Er
         let client = Siumai::builder()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-haiku-20241022")
+            .model(models::anthropic::CLAUDE_HAIKU_3_5)
             .build()
             .await?;
 

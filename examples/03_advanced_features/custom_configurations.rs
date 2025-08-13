@@ -3,8 +3,8 @@
 //! This example demonstrates advanced configuration patterns for production deployments,
 //! including custom parameter mapping, provider-specific optimizations, and performance tuning.
 
-use siumai::prelude::*;
 use siumai::params::{ParameterMapperFactory, ParameterMappingUtils};
+use siumai::prelude::*;
 use siumai::types::{CommonParams, ProviderParams, ProviderType};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -16,16 +16,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 1. Environment-based Configuration
     demonstrate_environment_configs().await?;
-    
+
     // 2. Use Case Specific Configurations
     demonstrate_use_case_configs().await?;
-    
+
     // 3. Performance Optimization Configurations
     demonstrate_performance_configs().await?;
-    
+
     // 4. Multi-Provider Fallback Configuration
     demonstrate_fallback_configs().await?;
-    
+
     // 5. Custom Parameter Mapping
     demonstrate_custom_parameter_mapping().await?;
 
@@ -135,10 +135,30 @@ async fn demonstrate_fallback_configs() -> Result<(), Box<dyn std::error::Error>
     println!("   Automatic fallback between providers for reliability\n");
 
     let fallback_chain = vec![
-        ("Primary", ProviderType::OpenAi, "gpt-4o", "Main provider for best quality"),
-        ("Secondary", ProviderType::Anthropic, "claude-3-5-sonnet-20241022", "Fallback for high-quality responses"),
-        ("Tertiary", ProviderType::OpenAi, "gpt-4o-mini", "Fast fallback for basic responses"),
-        ("Emergency", ProviderType::Ollama, "llama3.2", "Local fallback when all cloud providers fail"),
+        (
+            "Primary",
+            ProviderType::OpenAi,
+            "gpt-4o",
+            "Main provider for best quality",
+        ),
+        (
+            "Secondary",
+            ProviderType::Anthropic,
+            "claude-3-5-sonnet-20241022",
+            "Fallback for high-quality responses",
+        ),
+        (
+            "Tertiary",
+            ProviderType::OpenAi,
+            "gpt-4o-mini",
+            "Fast fallback for basic responses",
+        ),
+        (
+            "Emergency",
+            ProviderType::Ollama,
+            "llama3.2",
+            "Local fallback when all cloud providers fail",
+        ),
     ];
 
     println!("   🔗 Fallback Chain:");
@@ -174,11 +194,20 @@ async fn demonstrate_custom_parameter_mapping() -> Result<(), Box<dyn std::error
 
     for (scenario, params) in scenarios {
         println!("   🔬 {}", scenario);
-        
+
         // Show how parameters map to different providers
-        for provider in [ProviderType::OpenAi, ProviderType::Anthropic, ProviderType::Gemini] {
-            let mapped = ParameterMappingUtils::convert_params(&params.0, Some(&params.1), &provider)?;
-            println!("     {:?}: {} parameters", provider, mapped.as_object().unwrap().len());
+        for provider in [
+            ProviderType::OpenAi,
+            ProviderType::Anthropic,
+            ProviderType::Gemini,
+        ] {
+            let mapped =
+                ParameterMappingUtils::convert_params(&params.0, Some(&params.1), &provider)?;
+            println!(
+                "     {:?}: {} parameters",
+                provider,
+                mapped.as_object().unwrap().len()
+            );
         }
         println!();
     }
@@ -322,11 +351,11 @@ fn create_creative_params() -> (CommonParams, ProviderParams) {
         top_p: Some(0.95),
         ..Default::default()
     };
-    
+
     let provider = ProviderParams::new()
         .with_param("frequency_penalty", 0.1)
         .with_param("presence_penalty", 0.2);
-    
+
     (common, provider)
 }
 
@@ -339,11 +368,11 @@ fn create_precise_params() -> (CommonParams, ProviderParams) {
         seed: Some(42),
         ..Default::default()
     };
-    
+
     let provider = ProviderParams::new()
         .with_param("frequency_penalty", 0.0)
         .with_param("presence_penalty", 0.0);
-    
+
     (common, provider)
 }
 
@@ -355,9 +384,9 @@ fn create_balanced_params() -> (CommonParams, ProviderParams) {
         top_p: Some(0.9),
         ..Default::default()
     };
-    
+
     let provider = ProviderParams::new();
-    
+
     (common, provider)
 }
 
@@ -369,12 +398,12 @@ fn create_experimental_params() -> (CommonParams, ProviderParams) {
         top_p: Some(0.8),
         ..Default::default()
     };
-    
+
     let provider = ProviderParams::new()
         .with_param("frequency_penalty", 0.5)
         .with_param("presence_penalty", 0.3)
         .with_param("experimental_feature", true);
-    
+
     (common, provider)
 }
 

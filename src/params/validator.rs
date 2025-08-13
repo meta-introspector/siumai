@@ -1,7 +1,17 @@
-//! Enhanced Parameter Validation System
+//! Minimal Parameter Validation System
 //!
-//! This module provides comprehensive parameter validation for all providers,
+//! This module provides minimal parameter validation for all providers,
 //! including cross-provider compatibility checks and parameter optimization.
+//!
+//! ## Validation Philosophy
+//!
+//! This validator uses a **minimal validation approach** to avoid maintenance overhead
+//! as LLM models evolve. Instead of tracking provider-specific limits:
+//!
+//! - **Basic validation only**: Only validates fundamental constraints (e.g., non-negative values)
+//! - **No warnings**: No provider-specific suggestions that require maintenance
+//! - **Provider delegation**: Lets providers handle all their own specific limits
+//! - **Zero maintenance**: Works with any new models without code changes
 
 use super::mapper::ParameterMapperFactory;
 use crate::error::LlmError;
@@ -21,36 +31,38 @@ impl EnhancedParameterValidator {
 
         // Fast validation with early returns for better performance
 
-        // Validate temperature with simplified range checks
+        // Validate temperature with minimal validation (only basic constraints)
         if let Some(temp) = params.temperature {
-            let (min, max) = Self::get_temperature_range(provider_type);
-            if temp < min || temp > max {
+            // Only validate that temperature is non-negative
+            if temp < 0.0 {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "temperature".to_string(),
                     value: temp.to_string(),
-                    min: min as f64,
-                    max: max as f64,
+                    min: 0.0,
+                    max: f64::INFINITY,
                     provider: format!("{provider_type:?}"),
                 });
                 has_errors = true;
             } else {
+                // All non-negative values are accepted - let the provider handle limits
                 report.add_valid_param("temperature".to_string());
             }
         }
 
-        // Validate max_tokens with simplified range checks
+        // Validate max_tokens with minimal validation (only basic constraints)
         if let Some(max_tokens) = params.max_tokens {
-            let (min, max) = Self::get_max_tokens_range(provider_type);
-            if max_tokens < min || max_tokens > max {
+            // Only validate that max_tokens is positive
+            if max_tokens == 0 {
                 report.add_error(ValidationError::OutOfRange {
                     parameter: "max_tokens".to_string(),
                     value: max_tokens.to_string(),
-                    min: min as f64,
-                    max: max as f64,
+                    min: 1.0,
+                    max: f64::INFINITY,
                     provider: format!("{provider_type:?}"),
                 });
                 has_errors = true;
             } else {
+                // All positive values are accepted - let the provider handle limits
                 report.add_valid_param("max_tokens".to_string());
             }
         }
@@ -158,37 +170,34 @@ impl EnhancedParameterValidator {
         let constraints =
             ParameterMapperFactory::create_mapper(provider_type).get_param_constraints();
 
-        // Optimize temperature
+        // Optimize temperature (only clamp negative values)
         if let Some(temp) = params.temperature {
-            let optimal_temp = temp.clamp(
-                constraints.temperature_min as f32,
-                constraints.temperature_max as f32,
-            );
-            if optimal_temp != temp {
+            if temp < 0.0 {
+                let optimal_temp = 0.0;
                 report.add_optimization(ParameterOptimization {
                     parameter: "temperature".to_string(),
                     original_value: temp.to_string(),
                     optimized_value: optimal_temp.to_string(),
-                    reason: "Clamped to provider constraints".to_string(),
+                    reason: "Clamped negative temperature to 0.0".to_string(),
                 });
                 params.temperature = Some(optimal_temp);
             }
+            // Note: We don't clamp high temperatures anymore, let the provider handle it
         }
 
-        // Optimize max_tokens
+        // Optimize max_tokens (only fix zero/invalid values)
         if let Some(max_tokens) = params.max_tokens {
-            let max_tokens_u64 = max_tokens as u64;
-            let optimal_tokens =
-                max_tokens_u64.clamp(constraints.max_tokens_min, constraints.max_tokens_max) as u32;
-            if optimal_tokens != max_tokens {
+            if max_tokens == 0 {
+                let optimal_tokens = 1;
                 report.add_optimization(ParameterOptimization {
                     parameter: "max_tokens".to_string(),
                     original_value: max_tokens.to_string(),
                     optimized_value: optimal_tokens.to_string(),
-                    reason: "Clamped to provider constraints".to_string(),
+                    reason: "Changed zero max_tokens to 1 (minimum valid value)".to_string(),
                 });
                 params.max_tokens = Some(optimal_tokens);
             }
+            // Note: We don't clamp large max_tokens anymore, let the provider handle it
         }
 
         // Optimize top_p
@@ -211,31 +220,8 @@ impl EnhancedParameterValidator {
 
     // Helper methods for simplified validation
 
-    /// Get temperature range for a provider (min, max)
-    const fn get_temperature_range(provider_type: &ProviderType) -> (f32, f32) {
-        match provider_type {
-            ProviderType::OpenAi => (0.0, 2.0),
-            ProviderType::Anthropic => (0.0, 1.0),
-            ProviderType::Gemini => (0.0, 2.0),
-            ProviderType::XAI => (0.0, 2.0),
-            ProviderType::Ollama => (0.0, 2.0),
-            ProviderType::Custom(_) => (0.0, 2.0),
-            ProviderType::Groq => (0.0, 2.0),
-        }
-    }
-
-    /// Get max tokens range for a provider (min, max)
-    const fn get_max_tokens_range(provider_type: &ProviderType) -> (u32, u32) {
-        match provider_type {
-            ProviderType::OpenAi => (1, 128_000),
-            ProviderType::Anthropic => (1, 200_000),
-            ProviderType::Gemini => (1, 2_097_152),
-            ProviderType::XAI => (1, 131_072),
-            ProviderType::Ollama => (1, 32_768),
-            ProviderType::Custom(_) => (1, 100_000),
-            ProviderType::Groq => (1, 32_768),
-        }
-    }
+    // Note: Removed suggested value methods as we no longer provide warnings
+    // The library now only validates basic constraints and lets providers handle their own limits
 
     fn is_model_supported(model: &str, provider_type: &ProviderType) -> bool {
         match provider_type {

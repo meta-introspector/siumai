@@ -22,7 +22,35 @@ pub trait LlmClient: ChatCapability + Send + Sync {
     fn as_any(&self) -> &dyn std::any::Any;
 }
 
-/// Client Wrapper - used to unify clients from different providers
+/// Client Wrapper - provides dynamic dispatch for different provider clients
+///
+/// This enum allows storing different provider clients in a unified way,
+/// enabling runtime polymorphism. It's primarily used internally by the library
+/// for implementing the unified interface.
+///
+/// ## Usage
+/// Most users should use the Builder pattern instead:
+/// ```rust,no_run
+/// use siumai::prelude::*;
+///
+/// // Preferred approach
+/// let client = Siumai::builder()
+///     .openai()
+///     .api_key("key")
+///     .build()
+///     .await?;
+/// ```
+///
+/// ## Advanced Usage
+/// ClientWrapper is useful for advanced scenarios like client pools or
+/// dynamic provider switching:
+/// ```rust,no_run
+/// use siumai::client::ClientWrapper;
+///
+/// let wrapper = ClientWrapper::openai(openai_client);
+/// let provider_type = wrapper.provider_type();
+/// let capabilities = wrapper.get_capabilities();
+/// ```
 pub enum ClientWrapper {
     OpenAi(Box<dyn LlmClient>),
     Anthropic(Box<dyn LlmClient>),
@@ -109,129 +137,16 @@ impl ChatCapability for ClientWrapper {
     }
 }
 
-/// Unified LLM client that provides dynamic dispatch to different providers
-///
-/// This is similar to `llm_dart`'s unified interface approach, allowing you to
-/// call different provider functionality through a single interface.
-pub struct UnifiedLlmClient {
-    inner: ClientWrapper,
-}
+// UnifiedLlmClient has been removed as it was redundant with ClientWrapper.
+//
+// Use these alternatives instead:
+// - Siumai::builder() for unified interface (recommended for most users)
+// - ClientWrapper for dynamic dispatch (used internally)
+// - Provider-specific clients for advanced features
 
-impl UnifiedLlmClient {
-    /// Create a new unified client from a provider-specific client
-    pub const fn new(client: ClientWrapper) -> Self {
-        Self { inner: client }
-    }
+// UnifiedLlmClient implementation removed - use ClientWrapper directly or Siumai::builder()
 
-    /// Create from an `OpenAI` client
-    pub fn from_openai(client: Box<dyn LlmClient>) -> Self {
-        Self::new(ClientWrapper::openai(client))
-    }
-
-    /// Create from an Anthropic client
-    pub fn from_anthropic(client: Box<dyn LlmClient>) -> Self {
-        Self::new(ClientWrapper::anthropic(client))
-    }
-
-    /// Create from a Gemini client
-    pub fn from_gemini(client: Box<dyn LlmClient>) -> Self {
-        Self::new(ClientWrapper::gemini(client))
-    }
-
-    /// Create from a Groq client
-    pub fn from_groq(client: Box<dyn LlmClient>) -> Self {
-        Self::new(ClientWrapper::groq(client))
-    }
-
-    /// Create from a custom client
-    pub fn from_custom(client: Box<dyn LlmClient>) -> Self {
-        Self::new(ClientWrapper::custom(client))
-    }
-
-    /// Get the provider name
-    pub fn provider_name(&self) -> &'static str {
-        self.inner.client().provider_name()
-    }
-
-    /// Get the provider type
-    pub fn provider_type(&self) -> ProviderType {
-        self.inner.provider_type()
-    }
-
-    /// Check if a capability is supported
-    pub fn supports(&self, capability: &str) -> bool {
-        self.inner.supports_capability(capability)
-    }
-
-    /// Get all capabilities
-    pub fn capabilities(&self) -> ProviderCapabilities {
-        self.inner.get_capabilities()
-    }
-
-    /// Try to cast to a specific capability trait
-    /// This enables dynamic dispatch to provider-specific features
-    pub fn as_audio_capability(&self) -> Option<&dyn AudioCapability> {
-        if self.supports("audio") {
-            // This would require some unsafe casting or a different approach
-            // For now, we'll return None and suggest using the provider-specific client
-            None
-        } else {
-            None
-        }
-    }
-
-    /// Try to cast to embedding capability
-    pub fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {
-        None // Embedding not implemented yet
-    }
-
-    /// Try to cast to vision capability
-    pub fn as_vision_capability(&self) -> Option<&dyn VisionCapability> {
-        None // Vision not implemented yet
-    }
-
-    /// Try to cast to image generation capability
-    pub fn as_image_generation_capability(&self) -> Option<&dyn ImageGenerationCapability> {
-        None // Image generation not implemented yet
-    }
-}
-
-#[async_trait::async_trait]
-impl ChatCapability for UnifiedLlmClient {
-    async fn chat_with_tools(
-        &self,
-        messages: Vec<ChatMessage>,
-        tools: Option<Vec<Tool>>,
-    ) -> Result<ChatResponse, LlmError> {
-        self.inner.chat_with_tools(messages, tools).await
-    }
-
-    async fn chat_stream(
-        &self,
-        messages: Vec<ChatMessage>,
-        tools: Option<Vec<Tool>>,
-    ) -> Result<ChatStream, LlmError> {
-        self.inner.chat_stream(messages, tools).await
-    }
-}
-
-impl LlmClient for UnifiedLlmClient {
-    fn provider_name(&self) -> &'static str {
-        self.inner.client().provider_name()
-    }
-
-    fn supported_models(&self) -> Vec<String> {
-        self.inner.client().supported_models()
-    }
-
-    fn capabilities(&self) -> ProviderCapabilities {
-        self.inner.client().capabilities()
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+// UnifiedLlmClient trait implementations removed - functionality available through ClientWrapper
 
 impl LlmClient for ClientWrapper {
     fn provider_name(&self) -> &'static str {
@@ -251,16 +166,24 @@ impl LlmClient for ClientWrapper {
     }
 }
 
-/// Client Configuration
+/// Client Configuration for advanced client setup
+///
+/// This configuration struct is used internally by the library and can be useful
+/// for advanced use cases where you need to configure clients programmatically.
+///
+/// For most use cases, prefer using the Builder pattern:
+/// - `Siumai::builder()` for unified interface
+/// - `Provider::openai()`, `Provider::anthropic()`, etc. for provider-specific clients
+/// - `LlmBuilder::new()` for advanced configuration
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
-    /// API Key
+    /// API Key for authentication
     pub api_key: String,
-    /// Base URL
+    /// Base URL for the provider API
     pub base_url: String,
-    /// HTTP Configuration
+    /// HTTP Configuration (timeouts, retries, etc.)
     pub http_config: HttpConfig,
-    /// Common Parameters
+    /// Common Parameters (temperature, max_tokens, etc.)
     pub common_params: CommonParams,
     /// Provider-specific Parameters
     pub provider_params: ProviderParams,
@@ -297,46 +220,13 @@ impl ClientConfig {
     }
 }
 
-/// Client Factory
-pub struct ClientFactory;
-
-impl ClientFactory {
-    /// Creates a client based on the provider type
-    pub async fn create_client(
-        provider_type: ProviderType,
-        _config: ClientConfig,
-    ) -> Result<ClientWrapper, LlmError> {
-        match provider_type {
-            ProviderType::OpenAi => {
-                // This will be filled in after the OpenAI client is implemented
-                Err(LlmError::UnsupportedOperation(
-                    "OpenAI client not yet implemented".to_string(),
-                ))
-            }
-            ProviderType::Anthropic => {
-                // This will be filled in after the Anthropic client is implemented
-                Err(LlmError::UnsupportedOperation(
-                    "Anthropic client not yet implemented".to_string(),
-                ))
-            }
-            ProviderType::Gemini => Err(LlmError::UnsupportedOperation(
-                "Gemini client not yet implemented".to_string(),
-            )),
-            ProviderType::XAI => Err(LlmError::UnsupportedOperation(
-                "xAI client not yet implemented".to_string(),
-            )),
-            ProviderType::Ollama => Err(LlmError::UnsupportedOperation(
-                "Ollama client not yet implemented in ClientWrapper".to_string(),
-            )),
-            ProviderType::Groq => Err(LlmError::UnsupportedOperation(
-                "Groq client not yet implemented in ClientWrapper".to_string(),
-            )),
-            ProviderType::Custom(_) => Err(LlmError::UnsupportedOperation(
-                "Custom client not yet implemented".to_string(),
-            )),
-        }
-    }
-}
+// ClientFactory has been removed as it duplicated functionality already provided by SiumaiBuilder.
+// The SiumaiBuilder provides a more comprehensive and user-friendly interface for client creation.
+//
+// For client creation, use:
+// - Siumai::builder() for unified interface
+// - Provider::openai(), Provider::anthropic(), etc. for provider-specific clients
+// - LlmBuilder::new() for advanced configuration
 
 /// Client Manager - used to manage multiple client instances
 pub struct ClientManager {
@@ -454,7 +344,7 @@ mod tests {
         // Test that ClientWrapper can be used in Arc (requires Send + Sync)
         fn test_arc_usage() {
             let _: Option<Arc<ClientWrapper>> = None;
-            let _: Option<Arc<UnifiedLlmClient>> = None;
+            // UnifiedLlmClient removed - use ClientWrapper directly
             let _: Option<Arc<ClientManager>> = None;
             let _: Option<Arc<ClientPool>> = None;
         }

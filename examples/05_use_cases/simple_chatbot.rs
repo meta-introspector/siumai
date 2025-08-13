@@ -22,6 +22,7 @@
 //! ```
 
 use futures_util::StreamExt;
+use siumai::models;
 use siumai::prelude::*;
 use std::collections::VecDeque;
 use std::io::{self, Write};
@@ -90,7 +91,7 @@ impl Chatbot {
             match LlmBuilder::new()
                 .openai()
                 .api_key(&api_key)
-                .model("gpt-4o-mini")
+                .model(models::openai::GPT_4O_MINI)
                 .temperature(0.7)
                 .max_tokens(1000)
                 .build()
@@ -108,7 +109,7 @@ impl Chatbot {
             match LlmBuilder::new()
                 .anthropic()
                 .api_key(&api_key)
-                .model("claude-3-5-haiku-20241022")
+                .model(models::anthropic::CLAUDE_HAIKU_3_5)
                 .temperature(0.7)
                 .max_tokens(1000)
                 .build()

@@ -248,13 +248,17 @@ impl ModelListingCapability for GeminiModels {
 /// Get default Gemini models
 pub fn get_default_models() -> Vec<String> {
     vec![
+        // Latest Gemini 2.5 models
+        "gemini-2.5-pro".to_string(),
+        "gemini-2.5-flash".to_string(),
+        "gemini-2.5-flash-lite".to_string(),
+        // Gemini 2.0 models
+        "gemini-2.0-flash".to_string(),
+        "gemini-2.0-flash-lite".to_string(),
+        // Legacy models (deprecated but still available)
         "gemini-1.5-flash".to_string(),
         "gemini-1.5-flash-8b".to_string(),
         "gemini-1.5-pro".to_string(),
-        "gemini-2.0-flash-exp".to_string(),
-        "gemini-exp-1114".to_string(),
-        "gemini-exp-1121".to_string(),
-        "gemini-exp-1206".to_string(),
     ]
 }
 
@@ -266,27 +270,50 @@ pub fn model_supports_capability(model_id: &str, capability: &str) -> bool {
         "vision" => model_id.contains("gemini"),           // Most Gemini models support vision
         "function_calling" => model_id.contains("gemini"), // Most Gemini models support function calling
         "code_execution" => model_id.contains("gemini"), // Most Gemini models support code execution
-        "thinking_mode" => model_id.contains("gemini-2.0") || model_id.contains("exp"), // Newer models support thinking
+        "thinking" => {
+            model_id.contains("gemini-2.5")
+                || model_id.contains("gemini-2.0")
+                || model_id.contains("exp")
+        } // 2.5+ models support thinking
+        "audio_generation" => {
+            model_id.contains("tts")
+                || model_id.contains("live")
+                || model_id.contains("native-audio")
+        } // Audio models
+        "image_generation" => model_id.contains("image-generation"), // Image generation models
+        "live_api" => model_id.contains("live"),         // Live API models
         _ => false,
     }
 }
 
 /// Get the context window size for a model
 pub fn get_model_context_window(model_id: &str) -> u32 {
-    if model_id.contains("1.5-pro") {
-        2_000_000 // 2M tokens for Gemini 1.5 Pro
-    } else if model_id.contains("1.5-flash") || model_id.contains("2.0") {
-        1_000_000 // 1M tokens for Gemini 1.5 Flash and 2.0
+    if model_id.contains("2.5-pro") {
+        1_048_576 // 1M tokens for Gemini 2.5 Pro
+    } else if model_id.contains("2.5-flash") || model_id.contains("2.0-flash") {
+        1_048_576 // 1M tokens for Gemini 2.5 Flash and 2.0 Flash
+    } else if model_id.contains("1.5-pro") {
+        2_097_152 // 2M tokens for Gemini 1.5 Pro
+    } else if model_id.contains("1.5-flash") {
+        1_048_576 // 1M tokens for Gemini 1.5 Flash
     } else {
-        32_000 // Default fallback
+        128_000 // Default fallback
     }
 }
 
 /// Get the maximum output tokens for a model
 pub fn get_model_max_output_tokens(model_id: &str) -> u32 {
-    if model_id.contains("1.5-pro") || model_id.contains("1.5-flash") || model_id.contains("2.0") {
-        8192 // Gemini 1.5 Pro, 1.5 Flash, and 2.0 max output
+    if model_id.contains("2.5-pro") {
+        65_536 // Gemini 2.5 Pro max output
+    } else if model_id.contains("2.5-flash") {
+        65_536 // Gemini 2.5 Flash max output
+    } else if model_id.contains("2.0-flash") {
+        8192 // Gemini 2.0 Flash max output
+    } else if model_id.contains("1.5-pro") || model_id.contains("1.5-flash") {
+        8192 // Gemini 1.5 Pro and Flash max output
+    } else if model_id.contains("tts") {
+        16_000 // TTS models have different output limits
     } else {
-        4096 // Default fallback
+        8192 // Default fallback
     }
 }

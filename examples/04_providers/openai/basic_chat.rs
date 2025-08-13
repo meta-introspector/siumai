@@ -17,6 +17,7 @@
 //! cargo run --example basic_chat
 //! ```
 
+use siumai::models;
 use siumai::params::ResponseFormat;
 use siumai::prelude::*;
 
@@ -141,7 +142,7 @@ async fn demonstrate_parameter_tuning(api_key: &str) {
         match LlmBuilder::new()
             .openai()
             .api_key(api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .temperature(temperature)
             .max_tokens(150)
             .build()
@@ -203,7 +204,7 @@ async fn demonstrate_token_optimization(api_key: &str) {
         let mut builder = LlmBuilder::new()
             .openai()
             .api_key(api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .temperature(0.7);
 
         if let Some(tokens) = max_tokens {
@@ -284,7 +285,7 @@ async fn demonstrate_response_formats(api_key: &str) {
     match LlmBuilder::new()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .response_format(ResponseFormat::JsonObject)
         .build()
         .await

@@ -17,6 +17,7 @@
 //! cargo run --example chat_basics
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use siumai::traits::ChatCapability;
 
@@ -43,7 +44,7 @@ async fn demonstrate_basic_chat() {
         match LlmBuilder::new()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .build()
             .await
         {
@@ -79,7 +80,7 @@ async fn demonstrate_message_types() {
         match LlmBuilder::new()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .build()
             .await
         {

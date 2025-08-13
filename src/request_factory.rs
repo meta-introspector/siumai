@@ -1,8 +1,46 @@
-//! Request Factory Module
+//! Request Factory Module - Parameter Management Layer
 //!
-//! Provides unified request building patterns across all providers.
-//! This module standardizes how ChatRequest objects are constructed
-//! and ensures consistent parameter handling.
+//! ## 🎯 Core Responsibility: Parameter Management and Request Building
+//!
+//! This module is the **parameter management layer** of the LLM library architecture.
+//! It is responsible for:
+//!
+//! ### ✅ What RequestBuilder Does:
+//! - **Parameter Validation**: Validates common and provider-specific parameters
+//! - **Parameter Mapping**: Maps unified parameters to provider-specific formats
+//! - **Request Construction**: Builds standardized ChatRequest objects
+//! - **Parameter Constraints**: Enforces parameter constraints (ranges, types, etc.)
+//! - **Provider Abstraction**: Provides unified parameter interface across providers
+//!
+//! ### ❌ What RequestBuilder Does NOT Do:
+//! - **Client Construction**: Does not create or configure HTTP clients
+//! - **Authentication**: Does not handle API keys or authentication
+//! - **Network Configuration**: Does not manage timeouts, retries, or HTTP settings
+//! - **Provider Selection**: Does not decide which provider to use
+//! - **Business Logic**: Does not implement chat logic or streaming
+//!
+//! ## 🏗️ Architecture Position
+//!
+//! ```text
+//! User Code
+//!     ↓
+//! SiumaiBuilder (Client Configuration Layer)
+//!     ↓
+//! RequestBuilder (Parameter Management Layer) ← YOU ARE HERE
+//!     ↓
+//! Provider Clients (Implementation Layer)
+//!     ↓
+//! HTTP/Network Layer
+//! ```
+//!
+//! ## 🔄 Relationship with LlmBuilder
+//!
+//! - **RequestBuilder**: Handles parameters, validation, and request building
+//! - **LlmBuilder**: Handles client configuration, HTTP setup, and provider instantiation
+//! - **Separation**: These are different architectural layers with distinct responsibilities
+//!
+//! This clear separation ensures maintainable code where parameter logic
+//! is centralized and client configuration is handled separately.
 
 use crate::error::LlmError;
 use crate::types::{ChatMessage, ChatRequest, CommonParams, ProviderParams, Tool};
@@ -16,10 +54,49 @@ pub struct RequestBuilderConfig {
     pub provider_validation: bool,
 }
 
-/// Trait for building standardized ChatRequest objects
+/// Core trait for parameter management and request building
 ///
-/// This trait ensures all providers follow the same pattern for
-/// constructing ChatRequest objects with proper parameter handling.
+/// ## 🎯 Primary Responsibility: Parameter Management
+///
+/// This trait defines the **parameter management layer** interface.
+/// It is responsible for taking raw parameters and converting them
+/// into validated, properly formatted ChatRequest objects.
+///
+/// ### Key Responsibilities:
+/// 1. **Parameter Validation**: Ensure parameters are within valid ranges
+/// 2. **Parameter Mapping**: Convert unified parameters to provider formats
+/// 3. **Request Building**: Construct ChatRequest objects with proper structure
+/// 4. **Constraint Enforcement**: Apply provider-specific parameter constraints
+///
+/// ### Usage Pattern:
+/// ```rust,no_run
+/// use siumai::request_factory::RequestBuilderFactory;
+/// use siumai::types::{CommonParams, ProviderParams, ProviderType, ChatMessage, Tool};
+///
+/// // 1. Create builder with parameters
+/// let provider_type = ProviderType::OpenAi;
+/// let common_params = CommonParams::default();
+/// let provider_params = None;
+/// let builder = RequestBuilderFactory::create_builder(
+///     &provider_type,
+///     common_params,
+///     provider_params,
+/// );
+///
+/// // 2. Validate configuration (used by SiumaiBuilder)
+/// builder.validate_configuration();
+///
+/// // 3. Build requests (used by client implementations)
+/// let messages = vec![ChatMessage::user("Hello").build()];
+/// let tools: Option<Vec<Tool>> = None;
+/// let stream = false;
+/// let request = builder.build_chat_request(messages, tools, stream);
+/// ```
+///
+/// ### Architecture Note:
+/// This trait operates at the **parameter layer**, not the **client layer**.
+/// It does not handle HTTP clients, authentication, or network configuration.
+/// Those responsibilities belong to LlmBuilder and provider clients.
 pub trait RequestBuilder {
     /// Build a ChatRequest with consistent parameter handling
     ///
@@ -82,6 +159,70 @@ pub trait RequestBuilder {
         }
 
         Ok(())
+    }
+
+    /// Validate configuration without building a request
+    ///
+    /// This method validates the common and provider parameters
+    /// without requiring messages or building an actual request.
+    /// Useful for validating configuration during client construction.
+    fn validate_configuration(&self) -> Result<(), LlmError> {
+        let common_params = self.get_common_params();
+
+        // Validate model
+        if common_params.model.is_empty() {
+            return Err(LlmError::ConfigurationError(
+                "Model must be specified".to_string(),
+            ));
+        }
+
+        // Validate temperature range
+        if let Some(temp) = common_params.temperature
+            && !(0.0..=2.0).contains(&temp)
+        {
+            return Err(LlmError::ConfigurationError(format!(
+                "Temperature must be between 0.0 and 2.0, got {}",
+                temp
+            )));
+        }
+
+        // Validate top_p range
+        if let Some(top_p) = common_params.top_p
+            && !(0.0..=1.0).contains(&top_p)
+        {
+            return Err(LlmError::ConfigurationError(format!(
+                "top_p must be between 0.0 and 1.0, got {}",
+                top_p
+            )));
+        }
+
+        // Validate max_tokens
+        if let Some(max_tokens) = common_params.max_tokens
+            && max_tokens == 0
+        {
+            return Err(LlmError::ConfigurationError(
+                "max_tokens must be greater than 0".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Get validated common parameters
+    ///
+    /// Returns the common parameters after validation.
+    /// This ensures that any parameters returned have been validated.
+    fn get_validated_common_params(&self) -> Result<&CommonParams, LlmError> {
+        self.validate_configuration()?;
+        Ok(self.get_common_params())
+    }
+
+    /// Get validated provider parameters
+    ///
+    /// Returns the provider parameters after validation.
+    fn get_validated_provider_params(&self) -> Result<Option<ProviderParams>, LlmError> {
+        self.validate_configuration()?;
+        Ok(self.get_provider_params())
     }
 }
 
@@ -165,6 +306,36 @@ impl RequestBuilder for StandardRequestBuilder {
 }
 
 /// Factory for creating provider-specific request builders
+///
+/// ## 🎯 Core Responsibility: RequestBuilder Instantiation
+///
+/// This factory creates the appropriate RequestBuilder implementation
+/// for each provider type, ensuring proper parameter management.
+///
+/// ### Key Functions:
+/// - **Builder Creation**: Creates provider-specific RequestBuilder instances
+/// - **Parameter Injection**: Injects common and provider parameters into builders
+/// - **Validation Coordination**: Provides validation entry points for SiumaiBuilder
+/// - **Provider Abstraction**: Hides provider-specific RequestBuilder details
+///
+/// ### Usage by SiumaiBuilder:
+/// ```rust,no_run
+/// use siumai::request_factory::RequestBuilderFactory;
+/// use siumai::types::{CommonParams, ProviderParams, ProviderType};
+///
+/// // SiumaiBuilder uses this factory to validate parameters
+/// let provider_type = ProviderType::OpenAi;
+/// let common_params = CommonParams::default();
+/// let provider_params = None;
+/// let _builder = RequestBuilderFactory::create_and_validate_builder(
+///     &provider_type,
+///     common_params,
+///     provider_params,
+/// );
+/// ```
+///
+/// This factory serves as the **bridge** between the unified interface (SiumaiBuilder)
+/// and the parameter management layer (RequestBuilder implementations).
 pub struct RequestBuilderFactory;
 
 impl RequestBuilderFactory {
@@ -197,6 +368,23 @@ impl RequestBuilderFactory {
                 Box::new(StandardRequestBuilder::new(common_params, provider_params))
             }
         }
+    }
+
+    /// Create and validate a request builder for the specified provider type
+    ///
+    /// This method creates a request builder and immediately validates its configuration.
+    /// This is useful for SiumaiBuilder to ensure parameters are valid during client construction.
+    pub fn create_and_validate_builder(
+        provider_type: &crate::types::ProviderType,
+        common_params: CommonParams,
+        provider_params: Option<ProviderParams>,
+    ) -> Result<Box<dyn RequestBuilder>, LlmError> {
+        let builder = Self::create_builder(provider_type, common_params, provider_params);
+
+        // Validate the configuration
+        builder.validate_configuration()?;
+
+        Ok(builder)
     }
 }
 
@@ -251,5 +439,81 @@ mod tests {
 
         let result = builder.build_chat_request(messages, None, false);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_configuration_validation() {
+        // Test valid configuration
+        let valid_params = CommonParams {
+            model: "test-model".to_string(),
+            temperature: Some(0.7),
+            top_p: Some(0.9),
+            max_tokens: Some(1000),
+            ..Default::default()
+        };
+
+        let builder = StandardRequestBuilder::new(valid_params, None);
+        assert!(builder.validate_configuration().is_ok());
+
+        // Test invalid temperature
+        let invalid_temp_params = CommonParams {
+            model: "test-model".to_string(),
+            temperature: Some(3.0), // Invalid: > 2.0
+            ..Default::default()
+        };
+
+        let invalid_builder = StandardRequestBuilder::new(invalid_temp_params, None);
+        assert!(invalid_builder.validate_configuration().is_err());
+
+        // Test invalid top_p
+        let invalid_top_p_params = CommonParams {
+            model: "test-model".to_string(),
+            top_p: Some(1.5), // Invalid: > 1.0
+            ..Default::default()
+        };
+
+        let invalid_top_p_builder = StandardRequestBuilder::new(invalid_top_p_params, None);
+        assert!(invalid_top_p_builder.validate_configuration().is_err());
+
+        // Test empty model
+        let empty_model_params = CommonParams {
+            model: "".to_string(), // Invalid: empty
+            ..Default::default()
+        };
+
+        let empty_model_builder = StandardRequestBuilder::new(empty_model_params, None);
+        assert!(empty_model_builder.validate_configuration().is_err());
+    }
+
+    #[test]
+    fn test_factory_validation() {
+        use crate::types::ProviderType;
+
+        // Test valid configuration
+        let valid_params = CommonParams {
+            model: "test-model".to_string(),
+            temperature: Some(0.7),
+            ..Default::default()
+        };
+
+        let result = RequestBuilderFactory::create_and_validate_builder(
+            &ProviderType::OpenAi,
+            valid_params,
+            None,
+        );
+        assert!(result.is_ok());
+
+        // Test invalid configuration
+        let invalid_params = CommonParams {
+            model: "".to_string(), // Invalid: empty
+            ..Default::default()
+        };
+
+        let invalid_result = RequestBuilderFactory::create_and_validate_builder(
+            &ProviderType::OpenAi,
+            invalid_params,
+            None,
+        );
+        assert!(invalid_result.is_err());
     }
 }

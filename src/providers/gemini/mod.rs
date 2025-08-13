@@ -38,6 +38,7 @@ pub mod chat;
 pub mod client;
 pub mod embeddings;
 pub mod files;
+pub mod model_constants;
 pub mod models;
 pub mod request;
 pub mod streaming;

@@ -1,13 +1,56 @@
-//! Builder Pattern Implementation
+//! LLM Client Builder - Client Configuration Layer
 //!
-//! This module provides the builder pattern for creating LLM clients with a fluent API.
-//! It supports custom HTTP clients, provider-specific configurations, and parameter validation.
+//! ## 🎯 Core Responsibility: Client Configuration and Construction
 //!
-//! # Design Principles
-//! - Fluent API with method chaining
-//! - Support for custom reqwest clients
-//! - Provider-specific parameter validation
-//! - Consistent interface across providers
+//! This module is the **client configuration layer** of the LLM library architecture.
+//! It is responsible for:
+//!
+//! ### ✅ What LlmBuilder Does:
+//! - **Client Construction**: Creates and configures provider-specific clients
+//! - **HTTP Configuration**: Sets up HTTP clients, timeouts, and connection settings
+//! - **Authentication**: Handles API keys and authentication configuration
+//! - **Provider Selection**: Determines which provider implementation to use
+//! - **Environment Setup**: Configures base URLs, headers, and provider-specific settings
+//! - **Fluent API**: Provides chainable method interface for easy configuration
+//!
+//! ### ❌ What LlmBuilder Does NOT Do:
+//! - **Parameter Validation**: Does not validate chat parameters (temperature, max_tokens, etc.)
+//! - **Request Building**: Does not construct ChatRequest objects
+//! - **Parameter Mapping**: Does not map parameters between formats
+//! - **Chat Logic**: Does not implement chat or streaming functionality
+//!
+//! ## 🏗️ Architecture Position
+//!
+//! ```text
+//! User Code
+//!     ↓
+//! SiumaiBuilder (Unified Interface Layer)
+//!     ↓
+//! LlmBuilder (Client Configuration Layer) ← YOU ARE HERE
+//!     ↓
+//! RequestBuilder (Parameter Management Layer)
+//!     ↓
+//! Provider Clients (Implementation Layer)
+//!     ↓
+//! HTTP/Network Layer
+//! ```
+//!
+//! ## 🔄 Relationship with RequestBuilder
+//!
+//! - **LlmBuilder**: Handles client setup, HTTP config, and provider instantiation
+//! - **RequestBuilder**: Handles parameter validation, mapping, and request building
+//! - **Separation**: These operate at different architectural layers
+//!
+//! ### Collaboration Pattern:
+//! 1. **LlmBuilder** creates and configures the client
+//! 2. **RequestBuilder** handles parameter management within the client
+//! 3. Both work together but have distinct, non-overlapping responsibilities
+//!
+//! ## 🎨 Design Principles
+//! - **Fluent API**: Method chaining for intuitive configuration
+//! - **Custom HTTP Clients**: Support for user-provided reqwest clients
+//! - **Provider Abstraction**: Consistent interface across different providers
+//! - **Environment Integration**: Automatic environment variable detection
 //!
 //! # Example Usage
 //! ```rust,no_run
@@ -135,6 +178,20 @@ pub async fn quick_groq_with_model(
     model: &str,
 ) -> Result<crate::providers::groq::GroqClient, LlmError> {
     LlmBuilder::new().groq().model(model).build().await
+}
+
+/// Quick xAI client creation with minimal configuration.
+///
+/// Uses environment variable `XAI_API_KEY` and default settings.
+pub async fn quick_xai() -> Result<crate::providers::xai::XaiClient, LlmError> {
+    quick_xai_with_model("grok-3-latest").await
+}
+
+/// Quick xAI client creation with custom model.
+pub async fn quick_xai_with_model(
+    model: &str,
+) -> Result<crate::providers::xai::XaiClient, LlmError> {
+    LlmBuilder::new().xai().model(model).build().await
 }
 
 /// Core LLM builder that provides common configuration options.
@@ -378,16 +435,16 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// xAI-specific builder for further configuration
-    pub fn xai(self) -> crate::providers::xai::XaiBuilder {
-        crate::providers::xai::XaiBuilder::new()
+    pub fn xai(self) -> XaiBuilderWrapper {
+        XaiBuilderWrapper::new(self)
     }
 
     /// Create a Groq client builder.
     ///
     /// # Returns
     /// Groq-specific builder for further configuration
-    pub fn groq(self) -> crate::providers::groq::GroqBuilder {
-        crate::providers::groq::GroqBuilder::new()
+    pub fn groq(self) -> GroqBuilderWrapper {
+        GroqBuilderWrapper::new(self)
     }
 
     // OpenAI-Compatible Providers
@@ -1691,5 +1748,188 @@ mod tests {
         let _openai_builder = builder.openai();
         // Basic test for builder creation
         // Placeholder test
+    }
+}
+
+/// Wrapper for xAI builder that supports HTTP client inheritance
+pub struct XaiBuilderWrapper {
+    base: LlmBuilder,
+    xai_builder: crate::providers::xai::XaiBuilder,
+}
+
+impl XaiBuilderWrapper {
+    fn new(base: LlmBuilder) -> Self {
+        Self {
+            base,
+            xai_builder: crate::providers::xai::XaiBuilder::new(),
+        }
+    }
+
+    /// Set the API key
+    pub fn api_key<S: Into<String>>(mut self, api_key: S) -> Self {
+        self.xai_builder = self.xai_builder.api_key(api_key);
+        self
+    }
+
+    /// Set the base URL
+    pub fn base_url<S: Into<String>>(mut self, base_url: S) -> Self {
+        self.xai_builder = self.xai_builder.base_url(base_url);
+        self
+    }
+
+    /// Set the model
+    pub fn model<S: Into<String>>(mut self, model: S) -> Self {
+        self.xai_builder = self.xai_builder.model(model);
+        self
+    }
+
+    /// Set the temperature
+    pub fn temperature(mut self, temperature: f32) -> Self {
+        self.xai_builder = self.xai_builder.temperature(temperature);
+        self
+    }
+
+    /// Set the maximum number of tokens
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.xai_builder = self.xai_builder.max_tokens(max_tokens);
+        self
+    }
+
+    /// Set the top-p value
+    pub fn top_p(mut self, top_p: f32) -> Self {
+        self.xai_builder = self.xai_builder.top_p(top_p);
+        self
+    }
+
+    /// Set the stop sequences
+    pub fn stop_sequences(mut self, sequences: Vec<String>) -> Self {
+        self.xai_builder = self.xai_builder.stop_sequences(sequences);
+        self
+    }
+
+    /// Set the random seed
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.xai_builder = self.xai_builder.seed(seed);
+        self
+    }
+
+    /// Enable tracing
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.xai_builder = self.xai_builder.tracing(config);
+        self
+    }
+
+    /// Enable debug tracing
+    pub fn debug_tracing(mut self) -> Self {
+        self.xai_builder = self.xai_builder.debug_tracing();
+        self
+    }
+
+    /// Build the xAI client
+    pub async fn build(self) -> Result<crate::providers::xai::XaiClient, LlmError> {
+        // Build HTTP client from base configuration
+        let http_client = self.base.build_http_client()?;
+
+        // Use the build_with_client method to pass the custom HTTP client
+        self.xai_builder.build_with_client(http_client).await
+    }
+}
+
+/// Wrapper for Groq builder that supports HTTP client inheritance
+pub struct GroqBuilderWrapper {
+    base: LlmBuilder,
+    groq_builder: crate::providers::groq::GroqBuilder,
+}
+
+impl GroqBuilderWrapper {
+    fn new(base: LlmBuilder) -> Self {
+        Self {
+            base,
+            groq_builder: crate::providers::groq::GroqBuilder::new(),
+        }
+    }
+
+    /// Set the API key
+    pub fn api_key<S: Into<String>>(mut self, api_key: S) -> Self {
+        self.groq_builder = self.groq_builder.api_key(api_key);
+        self
+    }
+
+    /// Set the base URL
+    pub fn base_url<S: Into<String>>(mut self, base_url: S) -> Self {
+        self.groq_builder = self.groq_builder.base_url(base_url);
+        self
+    }
+
+    /// Set the model
+    pub fn model<S: Into<String>>(mut self, model: S) -> Self {
+        self.groq_builder = self.groq_builder.model(model);
+        self
+    }
+
+    /// Set the temperature
+    pub fn temperature(mut self, temperature: f32) -> Self {
+        self.groq_builder = self.groq_builder.temperature(temperature);
+        self
+    }
+
+    /// Set the maximum number of tokens
+    pub fn max_tokens(mut self, max_tokens: u32) -> Self {
+        self.groq_builder = self.groq_builder.max_tokens(max_tokens);
+        self
+    }
+
+    /// Set the top-p value
+    pub fn top_p(mut self, top_p: f32) -> Self {
+        self.groq_builder = self.groq_builder.top_p(top_p);
+        self
+    }
+
+    /// Set the stop sequences
+    pub fn stop_sequences(mut self, sequences: Vec<String>) -> Self {
+        self.groq_builder = self.groq_builder.stop_sequences(sequences);
+        self
+    }
+
+    /// Set the random seed
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.groq_builder = self.groq_builder.seed(seed);
+        self
+    }
+
+    /// Set the timeout
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.groq_builder = self.groq_builder.timeout(timeout);
+        self
+    }
+
+    /// Enable tracing
+    pub fn tracing(mut self, config: crate::tracing::TracingConfig) -> Self {
+        self.groq_builder = self.groq_builder.tracing(config);
+        self
+    }
+
+    /// Enable debug tracing
+    pub fn debug_tracing(mut self) -> Self {
+        self.groq_builder = self.groq_builder.debug_tracing();
+        self
+    }
+
+    /// Build the Groq client
+    pub async fn build(self) -> Result<crate::providers::groq::GroqClient, LlmError> {
+        // Since Groq doesn't have build_with_client, we need to configure the HTTP settings
+        // through the builder's HTTP configuration methods
+
+        // Apply base HTTP configuration to Groq builder
+        let mut groq_builder = self.groq_builder;
+
+        if let Some(timeout) = self.base.timeout {
+            groq_builder = groq_builder.timeout(timeout);
+        }
+
+        // Note: Groq builder doesn't support all HTTP configurations from base
+        // This is a limitation of the current Groq implementation
+
+        groq_builder.build().await
     }
 }

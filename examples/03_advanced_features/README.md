@@ -173,7 +173,7 @@ if let Some(thinking) = response.thinking {
 ```rust
 // Combine text and images
 let message = ChatMessage::user("Describe this image")
-    .with_image("path/to/image.jpg", Some("high"))
+    .with_image("path/to/image.jpg".to_string(), Some("high".to_string()))
     .build();
 ```
 
@@ -307,7 +307,7 @@ fn build_multimodal_message(
     let mut builder = ChatMessage::user(text);
     
     if let Some(image) = image_path {
-        builder = builder.with_image(image, Some("high"));
+        builder = builder.with_image(image.to_string(), Some("high".to_string()));
     }
     
     if let Some(audio) = audio_path {

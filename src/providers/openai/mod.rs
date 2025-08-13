@@ -72,6 +72,9 @@ pub mod request;
 pub mod models;
 pub mod moderation;
 
+// Model constants module
+pub mod model_constants;
+
 // Re-export main types for convenience
 pub use builder::OpenAiBuilder;
 pub use client::OpenAiClient;

@@ -142,6 +142,12 @@ pub use custom_provider::{CustomProvider, CustomProviderConfig};
 // Provider features
 pub use provider_features::ProviderFeatures;
 
+// Model constants (simplified access)
+pub use types::models::models;
+
+// Model constants (detailed access)
+pub use types::models::constants;
+
 // Tracing (selective re-export)
 pub use tracing::{OutputFormat, TracingConfig, init_debug_tracing, init_tracing};
 
@@ -163,6 +169,9 @@ pub mod prelude {
     pub use crate::traits::*;
     pub use crate::types::*;
     pub use crate::web_search::*;
+    // Model constants for easy access
+    pub use crate::constants;
+    pub use crate::models;
     pub use crate::{Provider, assistant, provider, system, tool, user, user_with_image};
     pub use crate::{conversation, conversation_with_system, messages, quick_chat};
     pub use crate::{
@@ -192,6 +201,7 @@ pub mod prelude {
 ///     // You can now call both standard and OpenAI-specific methods
 ///     let messages = vec![user!("Hello!")];
 ///     let response = openai_client.chat(messages).await?;
+///     println!("OpenAI says: {}", response.text().unwrap_or_default());
 ///     // let assistant = openai_client.create_assistant(...).await?; // Example of specific feature
 ///
 ///     Ok(())

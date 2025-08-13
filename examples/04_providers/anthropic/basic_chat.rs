@@ -17,6 +17,7 @@
 //! cargo run --example anthropic_basic_chat
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -81,7 +82,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
         let ai = Siumai::builder()
             .anthropic()
             .api_key(api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .temperature(0.3)
             .max_tokens(200)
             .build()
@@ -144,7 +145,7 @@ async fn demo_parameter_optimization(api_key: &str) -> Result<(), Box<dyn std::e
         let ai = Siumai::builder()
             .anthropic()
             .api_key(api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .temperature(temperature)
             .max_tokens(max_tokens)
             .build()
@@ -174,7 +175,7 @@ async fn demo_context_management(api_key: &str) -> Result<(), Box<dyn std::error
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.3)
         .max_tokens(300)
         .build()
@@ -251,7 +252,7 @@ async fn demo_cost_effective_usage(api_key: &str) -> Result<(), Box<dyn std::err
     let simple_ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-haiku-20241022") // Fastest, most cost-effective
+        .model(models::anthropic::CLAUDE_HAIKU_3_5) // Fastest, most cost-effective
         .temperature(0.3)
         .max_tokens(100)
         .build()
@@ -316,7 +317,7 @@ async fn demo_claude_features(api_key: &str) -> Result<(), Box<dyn std::error::E
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.3)
         .max_tokens(400)
         .build()

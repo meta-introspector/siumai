@@ -822,9 +822,15 @@ mod tests {
         });
         assert!(mapper.validate_params(&valid_params).is_ok());
 
-        // Invalid temperature
-        let invalid_temp = serde_json::json!({
+        // High temperature (now allowed with relaxed validation)
+        let high_temp = serde_json::json!({
             "temperature": 3.0
+        });
+        assert!(mapper.validate_params(&high_temp).is_ok()); // Now allowed
+
+        // Negative temperature (still invalid)
+        let invalid_temp = serde_json::json!({
+            "temperature": -1.0
         });
         assert!(mapper.validate_params(&invalid_temp).is_err());
 

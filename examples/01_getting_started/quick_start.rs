@@ -13,6 +13,7 @@
 //! cargo run --example quick_start
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -37,7 +38,7 @@ async fn quick_start_with_openai() {
             match LlmBuilder::new()
                 .openai()
                 .api_key(&api_key)
-                .model("gpt-4o-mini")
+                .model(models::openai::GPT_4O_MINI)
                 .temperature(0.7)
                 .build()
                 .await
@@ -77,7 +78,7 @@ async fn quick_start_with_anthropic() {
             match LlmBuilder::new()
                 .anthropic()
                 .api_key(&api_key)
-                .model("claude-3-5-haiku-20241022")
+                .model(models::anthropic::CLAUDE_HAIKU_3_5)
                 .temperature(0.7)
                 .build()
                 .await

@@ -228,13 +228,38 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
         capabilities.push("vision".to_string());
     }
 
-    // o1 models have reasoning capability
-    if model_id.contains("o1") {
+    // GPT-4.1 models have enhanced vision and reasoning
+    if model_id.contains("gpt-4.1") {
+        capabilities.push("vision".to_string());
+        capabilities.push("advanced_reasoning".to_string());
+    }
+
+    // GPT-4.5 models have advanced capabilities
+    if model_id.contains("gpt-4.5") {
+        capabilities.push("vision".to_string());
+        capabilities.push("advanced_reasoning".to_string());
+        capabilities.push("multimodal".to_string());
+    }
+
+    // GPT-5 models have next-generation capabilities
+    if model_id.contains("gpt-5") {
+        capabilities.push("vision".to_string());
+        capabilities.push("advanced_reasoning".to_string());
+        capabilities.push("multimodal".to_string());
+        capabilities.push("long_context".to_string());
+    }
+
+    // o1, o3, o4 models have reasoning capability
+    if model_id.contains("o1") || model_id.contains("o3") || model_id.contains("o4") {
         capabilities.push("reasoning".to_string());
+        capabilities.push("advanced_reasoning".to_string());
     }
 
     // Audio capabilities for specific models
-    if model_id.contains("gpt-4o") || model_id.contains("gpt-4o-mini") {
+    if model_id.contains("gpt-4o")
+        || model_id.contains("gpt-4o-mini")
+        || model_id.contains("audio-preview")
+    {
         capabilities.push("audio".to_string());
     }
 
@@ -275,16 +300,22 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
         capabilities.push("text".to_string());
     }
 
-    // All modern chat models support tools (except o1 models which don't support tools yet)
+    // All modern chat models support tools (except reasoning models which have limited tool support)
     if capabilities.contains(&"chat".to_string())
         && !model_id.contains("o1")
+        && !model_id.contains("o3")
+        && !model_id.contains("o4")
         && (!model_id.contains("gpt-3.5") || model_id.contains("gpt-3.5-turbo"))
     {
         capabilities.push("tools".to_string());
     }
 
-    // Streaming support for chat models (o1 models don't support streaming)
-    if capabilities.contains(&"chat".to_string()) && !model_id.contains("o1") {
+    // Streaming support for chat models (reasoning models don't support streaming)
+    if capabilities.contains(&"chat".to_string())
+        && !model_id.contains("o1")
+        && !model_id.contains("o3")
+        && !model_id.contains("o4")
+    {
         capabilities.push("streaming".to_string());
     }
 
@@ -307,7 +338,49 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
             Some(0.000_000_15),
             Some(0.000_000_6),
         ),
+        "gpt-4o-audio-preview"
+        | "gpt-4o-audio-preview-2024-12-17"
+        | "gpt-4o-audio-preview-2024-10-01" => (
+            Some(128_000),
+            Some(16_384),
+            Some(0.000_002_5),
+            Some(0.000_01),
+        ),
+        "gpt-4o-mini-audio-preview" | "gpt-4o-mini-audio-preview-2024-12-17" => (
+            Some(128_000),
+            Some(16_384),
+            Some(0.000_000_15),
+            Some(0.000_000_6),
+        ),
         "gpt-4o-mini-tts" => (None, None, Some(0.000_015), None), // TTS pricing per character
+
+        // GPT-4.1 models (new)
+        "gpt-4.1" => (
+            Some(200_000),
+            Some(32_768),
+            Some(0.000_003),
+            Some(0.000_015),
+        ),
+        "gpt-4.1-mini" => (
+            Some(200_000),
+            Some(32_768),
+            Some(0.000_000_2),
+            Some(0.000_000_8),
+        ),
+        "gpt-4.1-nano" => (
+            Some(128_000),
+            Some(16_384),
+            Some(0.000_000_1),
+            Some(0.000_000_4),
+        ),
+
+        // GPT-4.5 models (new)
+        "gpt-4.5-preview-2025-02-27" | "gpt-4.5-preview" | "gpt-4.5" => (
+            Some(200_000),
+            Some(32_768),
+            Some(0.000_005),
+            Some(0.000_025),
+        ),
 
         // GPT-4 Turbo models
         id if id.contains("gpt-4-turbo") => {
@@ -319,12 +392,47 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
         "gpt-4-32k" => (Some(32_768), Some(4096), Some(0.000_06), Some(0.000_12)),
 
         // o1 models (reasoning models)
+        "o1" | "o1-2024-12-17" => (
+            Some(200_000),
+            Some(100_000),
+            Some(0.000_015),
+            Some(0.000_06),
+        ),
         "o1-preview" => (Some(128_000), Some(32_768), Some(0.000_015), Some(0.000_06)),
         "o1-mini" => (
             Some(128_000),
             Some(65_536),
             Some(0.000_003),
             Some(0.000_012),
+        ),
+
+        // o3 models (new reasoning models)
+        "o3-mini" => (
+            Some(200_000),
+            Some(65_536),
+            Some(0.000_004),
+            Some(0.000_016),
+        ),
+        "o3" => (Some(200_000), Some(100_000), Some(0.000_02), Some(0.000_08)),
+
+        // o4 models (new)
+        "o4-mini" => (Some(200_000), Some(65_536), Some(0.000_005), Some(0.000_02)),
+
+        // GPT-5 models (new)
+        "gpt-5" | "gpt-5-2025-08-07" => (
+            Some(1_000_000),
+            Some(100_000),
+            Some(0.000_01),
+            Some(0.000_05),
+        ),
+        "gpt-5-mini" | "gpt-5-mini-2025-08-07" => {
+            (Some(500_000), Some(50_000), Some(0.000_002), Some(0.000_01))
+        }
+        "gpt-5-nano" | "gpt-5-nano-2025-08-07" => (
+            Some(200_000),
+            Some(32_768),
+            Some(0.000_001),
+            Some(0.000_005),
         ),
 
         // GPT-3.5 Turbo models

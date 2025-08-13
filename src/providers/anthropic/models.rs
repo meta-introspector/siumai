@@ -211,9 +211,13 @@ fn convert_anthropic_model_to_model_info(anthropic_model: AnthropicModelInfo) ->
 fn determine_model_capabilities(model_id: &str) -> Vec<String> {
     let mut capabilities = vec!["chat".to_string(), "text".to_string()];
 
-    // Claude 4 models have thinking capability
-    if model_id.contains("claude-sonnet-4") || model_id.contains("claude-opus-4") {
+    // Claude 4+ models have thinking capability
+    if model_id.contains("claude-opus-4")
+        || model_id.contains("claude-sonnet-4")
+        || model_id.contains("claude-3-7-sonnet")
+    {
         capabilities.push("thinking".to_string());
+        capabilities.push("extended_thinking".to_string());
     }
 
     // All Claude 3+ models support vision (including Claude 4)
@@ -225,9 +229,22 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
         capabilities.push("multimodal".to_string());
     }
 
-    // All models support tools
+    // All models support tools and function calling
     capabilities.push("tools".to_string());
     capabilities.push("function_calling".to_string());
+
+    // All models support streaming
+    capabilities.push("streaming".to_string());
+
+    // Priority tier models
+    if model_id.contains("claude-opus-4")
+        || model_id.contains("claude-sonnet-4")
+        || model_id.contains("claude-3-7-sonnet")
+        || model_id.contains("claude-3-5-sonnet")
+        || model_id.contains("claude-3-5-haiku")
+    {
+        capabilities.push("priority_tier".to_string());
+    }
 
     capabilities
 }
@@ -235,18 +252,37 @@ fn determine_model_capabilities(model_id: &str) -> Vec<String> {
 /// Estimate model specifications based on model ID
 fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64>, Option<f64>) {
     match model_id {
-        // Claude 4 models
-        id if id.contains("claude-sonnet-4") => {
-            (Some(200_000), Some(8192), Some(0.000_003), Some(0.000_015))
-        }
-        id if id.contains("claude-opus-4") => {
-            (Some(200_000), Some(8192), Some(0.000_015), Some(0.000_075))
-        }
+        // Claude Opus 4.1 models (latest flagship)
+        id if id.contains("claude-opus-4-1") => (
+            Some(200_000),
+            Some(32_000),
+            Some(0.000_015),
+            Some(0.000_075),
+        ),
+
+        // Claude Opus 4 models
+        id if id.contains("claude-opus-4") => (
+            Some(200_000),
+            Some(32_000),
+            Some(0.000_015),
+            Some(0.000_075),
+        ),
+
+        // Claude Sonnet 4 models
+        id if id.contains("claude-sonnet-4") => (
+            Some(200_000),
+            Some(32_000),
+            Some(0.000_003),
+            Some(0.000_015),
+        ),
 
         // Claude 3.7 models
-        id if id.contains("claude-3-7-sonnet") => {
-            (Some(200_000), Some(8192), Some(0.000_003), Some(0.000_015))
-        }
+        id if id.contains("claude-3-7-sonnet") => (
+            Some(200_000),
+            Some(64_000),
+            Some(0.000_003),
+            Some(0.000_015),
+        ),
 
         // Claude 3.5 models
         id if id.contains("claude-3-5-sonnet") => {
@@ -274,7 +310,7 @@ fn estimate_model_specs(model_id: &str) -> (Option<u32>, Option<u32>, Option<f64
         ),
 
         // Default for unknown models
-        _ => (Some(200_000), Some(4096), None, None),
+        _ => (Some(200_000), Some(8192), None, None),
     }
 }
 

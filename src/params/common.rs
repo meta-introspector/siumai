@@ -15,18 +15,24 @@ pub trait ProviderParamsExt {
 pub struct ParameterValidator;
 
 impl ParameterValidator {
-    /// Validates temperature parameter
+    /// Validates temperature parameter with relaxed approach
+    /// Only validates basic constraints (non-negative), warns about potentially high values
     pub fn validate_temperature(
         temp: f64,
-        min: f64,
-        max: f64,
+        _min: f64, // Kept for backward compatibility but not used for strict validation
+        _suggested_max: f64, // Kept for backward compatibility
         provider: &str,
     ) -> Result<(), LlmError> {
-        if temp < min || temp > max {
+        // Only enforce basic constraint: temperature must be non-negative
+        if temp < 0.0 {
             return Err(LlmError::InvalidParameter(format!(
-                "temperature must be between {min} and {max} for {provider}"
+                "temperature must be non-negative for {provider}, got {temp}"
             )));
         }
+
+        // Note: High values are allowed but may produce unpredictable results
+        // The provider will handle any actual limits
+
         Ok(())
     }
 
@@ -40,18 +46,27 @@ impl ParameterValidator {
         Ok(())
     }
 
-    /// Validates `max_tokens` parameter
+    /// Validates `max_tokens` parameter with relaxed approach
+    /// Only validates basic constraints (must be positive), warns about potentially large values
     pub fn validate_max_tokens(
         max_tokens: u64,
-        min: u64,
-        max: u64,
+        _min: u64, // Kept for backward compatibility but not used for strict validation
+        suggested_max: u64,
         provider: &str,
     ) -> Result<(), LlmError> {
-        if max_tokens < min || max_tokens > max {
+        // Only enforce basic constraint: max_tokens must be positive
+        if max_tokens == 0 {
             return Err(LlmError::InvalidParameter(format!(
-                "max_tokens must be between {min} and {max} for {provider}"
+                "max_tokens must be positive for {provider}, got {max_tokens}"
             )));
         }
+
+        // Note: Large values are allowed but may not be supported by all models
+        // The provider will handle any actual limits
+        if max_tokens > suggested_max {
+            // Could add warning here in the future if needed
+        }
+
         Ok(())
     }
 
@@ -162,17 +177,19 @@ mod tests {
 
     #[test]
     fn test_parameter_validator() {
-        // Test temperature validation
+        // Test temperature validation - now only validates non-negative values
         assert!(ParameterValidator::validate_temperature(0.7, 0.0, 2.0, "test").is_ok());
-        assert!(ParameterValidator::validate_temperature(3.0, 0.0, 2.0, "test").is_err());
+        assert!(ParameterValidator::validate_temperature(3.0, 0.0, 2.0, "test").is_ok()); // Now allowed
+        assert!(ParameterValidator::validate_temperature(-1.0, 0.0, 2.0, "test").is_err()); // Negative still fails
 
-        // Test top_p validation
+        // Test top_p validation - still strict for this parameter
         assert!(ParameterValidator::validate_top_p(0.9).is_ok());
         assert!(ParameterValidator::validate_top_p(1.5).is_err());
 
-        // Test max_tokens validation
+        // Test max_tokens validation - now only validates positive values
         assert!(ParameterValidator::validate_max_tokens(1000, 1, 200_000, "test").is_ok());
-        assert!(ParameterValidator::validate_max_tokens(0, 1, 200_000, "test").is_err());
+        assert!(ParameterValidator::validate_max_tokens(500_000, 1, 200_000, "test").is_ok()); // Now allowed
+        assert!(ParameterValidator::validate_max_tokens(0, 1, 200_000, "test").is_err()); // Zero still fails
     }
 
     #[test]

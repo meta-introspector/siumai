@@ -167,7 +167,7 @@ let response = client.chat_with_tools(messages, tools).await?;
 ### Vision Processing
 ```rust
 let message = ChatMessage::user("What's in this image?")
-    .with_image("path/to/image.jpg", Some("high"))
+    .with_image("path/to/image.jpg".to_string(), Some("high".to_string()))
     .build();
 ```
 

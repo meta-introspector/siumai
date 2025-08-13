@@ -22,6 +22,7 @@
 //! ```
 
 use futures::stream::{self, StreamExt};
+use siumai::models;
 use siumai::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -263,7 +264,7 @@ async fn create_test_client() -> Result<Arc<dyn ChatCapability>, LlmError> {
         let client = LlmBuilder::new()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .temperature(0.7)
             .build()
             .await?;
@@ -272,7 +273,7 @@ async fn create_test_client() -> Result<Arc<dyn ChatCapability>, LlmError> {
         let client = LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-haiku-20241022")
+            .model(models::anthropic::CLAUDE_HAIKU_3_5)
             .temperature(0.7)
             .build()
             .await?;

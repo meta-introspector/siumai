@@ -132,21 +132,21 @@ pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
 
 /// Get default models for Anthropic according to latest available models
 pub fn get_default_models() -> Vec<String> {
-    vec![
-        // Claude 4 models (latest)
-        "claude-sonnet-4-20250514".to_string(),
-        "claude-opus-4-20250514".to_string(),
-        // Claude 3.7 models
-        "claude-3-7-sonnet-20250219".to_string(),
-        // Claude 3.5 models
-        "claude-3-5-sonnet-20241022".to_string(),
-        "claude-3-5-sonnet-20240620".to_string(),
-        "claude-3-5-haiku-20241022".to_string(),
-        // Claude 3 models
-        "claude-3-opus-20240229".to_string(),
-        "claude-3-sonnet-20240229".to_string(),
-        "claude-3-haiku-20240307".to_string(),
-    ]
+    use crate::models::anthropic;
+
+    let mut models = Vec::new();
+    // Add popular models from each family
+    models.push(anthropic::CLAUDE_OPUS_4_1.to_string());
+    models.push(anthropic::CLAUDE_SONNET_4.to_string());
+    models.push(anthropic::CLAUDE_SONNET_3_7.to_string());
+    models.push(anthropic::CLAUDE_SONNET_3_5.to_string());
+    models.push(anthropic::CLAUDE_SONNET_3_5_LEGACY.to_string());
+    models.push(anthropic::CLAUDE_HAIKU_3_5.to_string());
+    models.push(anthropic::CLAUDE_OPUS_3.to_string());
+    models.push(anthropic::CLAUDE_SONNET_3.to_string());
+    models.push(anthropic::CLAUDE_HAIKU_3.to_string());
+
+    models
 }
 
 /// Parse Anthropic response content with support for thinking blocks

@@ -38,12 +38,8 @@ pub struct CommonParams {
     #[validate(length(min = 1, message = "Model name cannot be empty"))]
     pub model: String,
 
-    /// Temperature parameter (0.0-2.0)
-    #[validate(range(
-        min = 0.0,
-        max = 2.0,
-        message = "Temperature must be between 0.0 and 2.0"
-    ))]
+    /// Temperature parameter (must be non-negative)
+    #[validate(range(min = 0.0, message = "Temperature must be non-negative"))]
     pub temperature: Option<f32>,
 
     /// Maximum output tokens

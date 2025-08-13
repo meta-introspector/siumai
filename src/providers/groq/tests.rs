@@ -30,10 +30,16 @@ mod groq_tests {
             .with_temperature(0.7);
         assert!(valid_config.validate().is_ok());
 
-        // Invalid temperature
-        let invalid_temp_config = GroqConfig::new("test-api-key")
+        // High temperature (now allowed with relaxed validation)
+        let high_temp_config = GroqConfig::new("test-api-key")
             .with_model("llama-3.3-70b-versatile")
             .with_temperature(3.0);
+        assert!(high_temp_config.validate().is_ok()); // Now allowed
+
+        // Negative temperature (still invalid)
+        let invalid_temp_config = GroqConfig::new("test-api-key")
+            .with_model("llama-3.3-70b-versatile")
+            .with_temperature(-1.0);
         assert!(invalid_temp_config.validate().is_err());
 
         // Empty API key

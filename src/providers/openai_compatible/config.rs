@@ -83,15 +83,17 @@ impl OpenAiCompatibleConfig {
 
         // Handle provider-specific model selection
         if self.provider_id == "deepseek" {
+            use crate::models::openai_compatible::deepseek;
+
             // Override model based on reasoning/coding parameters
             if let Some(reasoning) = self.provider_params.get("reasoning") {
                 if reasoning.as_bool() == Some(true) {
-                    model = "deepseek-reasoner".to_string();
+                    model = deepseek::REASONER.to_string();
                 }
             } else if let Some(coding) = self.provider_params.get("coding")
                 && coding.as_bool() == Some(true)
             {
-                model = "deepseek-coder".to_string();
+                model = deepseek::V3.to_string(); // Use V3 for coding
             }
         }
 

@@ -4,6 +4,7 @@
 //! You'll learn about common vs provider-specific parameters, validation, and custom mappings.
 
 use siumai::prelude::*;
+use siumai::models;
 use siumai::params::{
     ParameterMapperFactory, ParameterMappingUtils,
     AnthropicParams, AnthropicParamsBuilder, GeminiParams, GeminiParamsBuilder,
@@ -42,7 +43,7 @@ async fn demonstrate_common_parameters() -> Result<(), Box<dyn std::error::Error
 
     // Create common parameters
     let common_params = CommonParams {
-        model: "gpt-4o-mini".to_string(),
+        model: models::openai::GPT_4O_MINI.to_string(),
         temperature: Some(0.7),
         max_tokens: Some(1000),
         top_p: Some(0.9),
@@ -161,7 +162,7 @@ async fn demonstrate_parameter_validation() -> Result<(), Box<dyn std::error::Er
 
     // Valid parameters
     let valid_params = serde_json::json!({
-        "model": "gpt-4o-mini",
+        "model": models::openai::GPT_4O_MINI,
         "temperature": 0.7,
         "max_tokens": 1000,
         "top_p": 0.9
@@ -176,7 +177,7 @@ async fn demonstrate_parameter_validation() -> Result<(), Box<dyn std::error::Er
     // Invalid parameters
     println!("\n   ❌ Invalid parameters (temperature too high):");
     let invalid_params = serde_json::json!({
-        "model": "gpt-4o-mini",
+        "model": models::openai::GPT_4O_MINI,
         "temperature": 3.0,  // Too high for most providers
         "max_tokens": 1000
     });
@@ -226,7 +227,7 @@ async fn demonstrate_custom_mapping() -> Result<(), Box<dyn std::error::Error>> 
 
     // Convert and merge with common parameters
     let common_params = CommonParams {
-        model: "gpt-4o-mini".to_string(),
+        model: models::openai::GPT_4O_MINI.to_string(),
         temperature: Some(0.8),
         max_tokens: Some(500),
         ..Default::default()

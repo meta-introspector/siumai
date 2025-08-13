@@ -5,6 +5,7 @@
 pub mod cache;
 pub mod chat;
 pub mod client;
+pub mod model_constants;
 pub mod models;
 pub mod request;
 pub mod streaming;
