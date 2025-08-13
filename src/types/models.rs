@@ -36,7 +36,7 @@ pub struct ModelInfo {
 /// # Examples
 ///
 /// ```rust
-/// use siumai::models;
+/// use siumai::{models, constants};
 ///
 /// // Simple access to popular models
 /// let openai_model = models::openai::GPT_4O;
@@ -45,9 +45,9 @@ pub struct ModelInfo {
 ///
 /// // Access popular recommendations
 /// let flagship_models = [
-///     models::popular::OPENAI_FLAGSHIP,
-///     models::popular::ANTHROPIC_FLAGSHIP,
-///     models::popular::GEMINI_FLAGSHIP,
+///     constants::popular::flagship::OPENAI,
+///     constants::popular::flagship::ANTHROPIC,
+///     constants::popular::flagship::GEMINI,
 /// ];
 /// ```
 pub mod constants {
@@ -211,15 +211,12 @@ pub mod constants {
 /// # Examples
 ///
 /// ```rust
-/// use siumai::model_constants;
+/// use siumai::prelude::model_constants;
 ///
 /// // Short and sweet access
 /// let model = model_constants::openai::GPT_4O;
 /// let claude = model_constants::anthropic::CLAUDE_OPUS_4_1;
 /// let gemini = model_constants::gemini::GEMINI_2_5_PRO;
-///
-/// // Popular recommendations
-/// let flagship = model_constants::popular::OPENAI_FLAGSHIP;
 /// ```
 pub mod model_constants {
     /// OpenAI models with simplified access

@@ -33,12 +33,15 @@ pub trait LlmClient: ChatCapability + Send + Sync {
 /// ```rust,no_run
 /// use siumai::prelude::*;
 ///
-/// // Preferred approach
-/// let client = Siumai::builder()
-///     .openai()
-///     .api_key("key")
-///     .build()
-///     .await?;
+/// async fn example() -> Result<(), Box<dyn std::error::Error>> {
+///     // Preferred approach
+///     let client = Siumai::builder()
+///         .openai()
+///         .api_key("key")
+///         .build()
+///         .await?;
+///     Ok(())
+/// }
 /// ```
 ///
 /// ## Advanced Usage
@@ -46,10 +49,20 @@ pub trait LlmClient: ChatCapability + Send + Sync {
 /// dynamic provider switching:
 /// ```rust,no_run
 /// use siumai::client::ClientWrapper;
+/// use siumai::prelude::*;
 ///
-/// let wrapper = ClientWrapper::openai(openai_client);
-/// let provider_type = wrapper.provider_type();
-/// let capabilities = wrapper.get_capabilities();
+/// async fn example() -> Result<(), Box<dyn std::error::Error>> {
+///     // Create a client first
+///     let openai_client = Provider::openai()
+///         .api_key("key")
+///         .build()
+///         .await?;
+///
+///     let wrapper = ClientWrapper::openai(Box::new(openai_client));
+///     let provider_type = wrapper.provider_type();
+///     let capabilities = wrapper.get_capabilities();
+///     Ok(())
+/// }
 /// ```
 pub enum ClientWrapper {
     OpenAi(Box<dyn LlmClient>),
