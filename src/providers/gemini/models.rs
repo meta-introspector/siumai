@@ -33,7 +33,7 @@ pub struct GeminiModel {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output_token_limit: Option<i32>,
     /// The model's supported generation methods.
-    #[serde(default)]
+    #[serde(default, rename = "supportedGenerationMethods")]
     pub supported_generation_methods: Vec<String>,
     /// Controls the randomness of the output.
     #[serde(skip_serializing_if = "Option::is_none")]

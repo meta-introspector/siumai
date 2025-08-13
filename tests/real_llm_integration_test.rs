@@ -629,6 +629,8 @@ async fn test_reasoning_gemini(config: &ProviderTestConfig) {
     let api_key = env::var(config.api_key_env).unwrap();
     let reasoning_model = config.reasoning_model.unwrap();
 
+    println!("    🔍 Using model: {}", reasoning_model);
+
     let client = LlmBuilder::new()
         .gemini()
         .api_key(api_key)
@@ -654,6 +656,10 @@ async fn test_reasoning_gemini(config: &ProviderTestConfig) {
             // Check for thinking content
             if let Some(thinking) = response.thinking {
                 println!("    💎 Thinking content length: {} chars", thinking.len());
+            } else {
+                println!(
+                    "    ℹ️ No thinking content returned (this may be normal for simple questions)"
+                );
             }
 
             if let Some(usage) = response.usage {
@@ -669,6 +675,10 @@ async fn test_reasoning_gemini(config: &ProviderTestConfig) {
                 e
             );
             println!("    💡 Note: Thinking feature may not be available for all models");
+            println!("    💡 Suggestion: Check if your API key has access to Gemini 2.5 models");
+            println!(
+                "    💡 Try running: curl \"https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY\""
+            );
         }
     }
 }
