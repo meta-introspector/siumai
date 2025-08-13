@@ -19,6 +19,7 @@
 //! cargo run --example openai_compatible_models_showcase
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use std::time::Instant;
 
@@ -110,7 +111,7 @@ async fn demo_deepseek_models() -> Result<(), Box<dyn std::error::Error>> {
     let reasoning_ai = Siumai::builder()
         .deepseek()
         .api_key(&api_key)
-        .model("deepseek-reasoner")
+        .model(models::openai_compatible::deepseek::REASONER)
         .temperature(0.2)
         .max_tokens(500)
         .build()
@@ -162,7 +163,7 @@ async fn demo_groq_performance() -> Result<(), Box<dyn std::error::Error>> {
     let groq_ai = Siumai::builder()
         .openai()
         .api_key(&api_key)
-        .model("gpt-4o-mini") // Using OpenAI model as substitute
+        .model(models::openai::GPT_4O_MINI) // Using OpenAI model as substitute
         .temperature(0.3)
         .max_tokens(300)
         .build()
@@ -228,8 +229,8 @@ async fn demo_performance_comparison() -> Result<(), Box<dyn std::error::Error>>
 
     // Test different providers (Note: Using OpenAI for both since Groq is not directly supported)
     let providers = vec![
-        ("OpenAI-Fast", "gpt-4o-mini", "OPENAI_API_KEY"),
-        ("OpenAI-Quality", "gpt-4", "OPENAI_API_KEY"),
+        ("OpenAI-Fast", models::openai::GPT_4O_MINI, "OPENAI_API_KEY"),
+        ("OpenAI-Quality", models::openai::GPT_4, "OPENAI_API_KEY"),
     ];
 
     for (name, model, env_key) in providers {

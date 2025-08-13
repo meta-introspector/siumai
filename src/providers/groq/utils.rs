@@ -135,13 +135,13 @@ pub fn validate_groq_params(params: &serde_json::Value) -> Result<(), LlmError> 
         ));
     }
 
-    // Validate temperature
+    // Validate temperature (relaxed validation - only check for negative values)
     if let Some(temperature) = params.get("temperature")
         && let Some(value) = temperature.as_f64()
-        && !(0.0..=2.0).contains(&value)
+        && value < 0.0
     {
         return Err(LlmError::InvalidParameter(
-            "temperature must be between 0.0 and 2.0".to_string(),
+            "temperature cannot be negative".to_string(),
         ));
     }
 
@@ -256,9 +256,15 @@ mod tests {
         });
         assert!(validate_groq_params(&valid_params).is_ok());
 
-        // Invalid temperature
-        let invalid_temp = serde_json::json!({
+        // High temperature (now allowed with relaxed validation)
+        let high_temp = serde_json::json!({
             "temperature": 3.0
+        });
+        assert!(validate_groq_params(&high_temp).is_ok());
+
+        // Negative temperature (still invalid)
+        let invalid_temp = serde_json::json!({
+            "temperature": -1.0
         });
         assert!(validate_groq_params(&invalid_temp).is_err());
 

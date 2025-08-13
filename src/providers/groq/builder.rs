@@ -274,7 +274,7 @@ mod tests {
     fn test_groq_builder_validation() {
         let builder = GroqBuilder::new()
             .api_key("") // Empty API key should fail validation
-            .model("llama-3.3-70b-versatile");
+            .model(crate::providers::groq::models::popular::FLAGSHIP);
 
         // This should fail during build due to empty API key
         assert!(builder.config.validate().is_err());

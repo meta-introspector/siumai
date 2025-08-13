@@ -17,6 +17,7 @@
 //! cargo run --example unified_interface
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 use siumai::traits::ChatCapability;
 
@@ -198,7 +199,7 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
         && let Ok(client) = LlmBuilder::new()
             .openai()
             .api_key(&api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .build()
             .await
     {
@@ -213,7 +214,7 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
         && let Ok(client) = LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-haiku-20241022")
+            .model(models::anthropic::CLAUDE_HAIKU_3_5)
             .build()
             .await
     {
@@ -227,7 +228,7 @@ async fn create_available_providers() -> Vec<(String, Box<dyn ChatCapability + S
     if let Ok(client) = LlmBuilder::new()
         .ollama()
         .base_url("http://localhost:11434")
-        .model("llama3.2")
+        .model(models::ollama::LLAMA_3_2)
         .build()
         .await
     {

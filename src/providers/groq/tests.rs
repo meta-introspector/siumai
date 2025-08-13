@@ -95,7 +95,8 @@ mod groq_tests {
 
     #[tokio::test]
     async fn test_groq_client_creation() {
-        let config = GroqConfig::new("test-api-key").with_model("llama-3.3-70b-versatile");
+        let config = GroqConfig::new("test-api-key")
+            .with_model(crate::providers::groq::models::popular::FLAGSHIP);
 
         let http_client = reqwest::Client::new();
         let client = GroqClient::new(config, http_client);
@@ -104,7 +105,7 @@ mod groq_tests {
         assert!(
             client
                 .supported_models()
-                .contains(&"llama-3.3-70b-versatile".to_string())
+                .contains(&crate::providers::groq::models::popular::FLAGSHIP.to_string())
         );
 
         let capabilities = client.capabilities();
@@ -180,9 +181,15 @@ mod groq_tests {
         });
         assert!(validate_groq_params(&valid_params).is_ok());
 
-        // Invalid temperature
-        let invalid_temp = serde_json::json!({
+        // High temperature (now allowed with relaxed validation)
+        let high_temp = serde_json::json!({
             "temperature": 3.0
+        });
+        assert!(validate_groq_params(&high_temp).is_ok());
+
+        // Negative temperature (still invalid)
+        let invalid_temp = serde_json::json!({
+            "temperature": -1.0
         });
         assert!(validate_groq_params(&invalid_temp).is_err());
 
@@ -250,7 +257,7 @@ mod groq_tests {
 
     #[test]
     fn test_groq_models_capability() {
-        use super::super::models::GroqModels;
+        use super::super::api::GroqModels;
         use crate::types::HttpConfig;
 
         let _models = GroqModels::new(

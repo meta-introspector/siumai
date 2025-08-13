@@ -288,10 +288,11 @@ pub fn model_supports_capability(model_id: &str, capability: &str) -> bool {
 
 /// Get the context window size for a model
 pub fn get_model_context_window(model_id: &str) -> u32 {
-    if model_id.contains("2.5-pro") {
-        1_048_576 // 1M tokens for Gemini 2.5 Pro
-    } else if model_id.contains("2.5-flash") || model_id.contains("2.0-flash") {
-        1_048_576 // 1M tokens for Gemini 2.5 Flash and 2.0 Flash
+    if model_id.contains("2.5-pro")
+        || model_id.contains("2.5-flash")
+        || model_id.contains("2.0-flash")
+    {
+        1_048_576 // 1M tokens for Gemini 2.5 Pro, 2.5 Flash and 2.0 Flash
     } else if model_id.contains("1.5-pro") {
         2_097_152 // 2M tokens for Gemini 1.5 Pro
     } else if model_id.contains("1.5-flash") {
@@ -303,14 +304,13 @@ pub fn get_model_context_window(model_id: &str) -> u32 {
 
 /// Get the maximum output tokens for a model
 pub fn get_model_max_output_tokens(model_id: &str) -> u32 {
-    if model_id.contains("2.5-pro") {
-        65_536 // Gemini 2.5 Pro max output
-    } else if model_id.contains("2.5-flash") {
-        65_536 // Gemini 2.5 Flash max output
-    } else if model_id.contains("2.0-flash") {
-        8192 // Gemini 2.0 Flash max output
-    } else if model_id.contains("1.5-pro") || model_id.contains("1.5-flash") {
-        8192 // Gemini 1.5 Pro and Flash max output
+    if model_id.contains("2.5-pro") || model_id.contains("2.5-flash") {
+        65_536 // Gemini 2.5 Pro and Flash max output
+    } else if model_id.contains("2.0-flash")
+        || model_id.contains("1.5-pro")
+        || model_id.contains("1.5-flash")
+    {
+        8192 // Gemini 2.0 Flash, 1.5 Pro and Flash max output
     } else if model_id.contains("tts") {
         16_000 // TTS models have different output limits
     } else {

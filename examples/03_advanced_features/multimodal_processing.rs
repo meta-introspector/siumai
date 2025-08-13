@@ -40,7 +40,7 @@ async fn demonstrate_image_analysis() -> Result<(), Box<dyn std::error::Error>> 
         });
 
     // Create a vision-capable client
-    let client = if std::env::var("OPENAI_API_KEY").is_ok() {
+    let _client = if std::env::var("OPENAI_API_KEY").is_ok() {
         Siumai::builder()
             .openai()
             .api_key(&api_key)
@@ -286,17 +286,17 @@ fn get_file_extension(path: &str) -> Option<&str> {
 /// Helper function to validate image format (for real implementations)
 #[allow(dead_code)]
 fn is_supported_image_format(path: &str) -> bool {
-    match get_file_extension(path) {
-        Some("jpg") | Some("jpeg") | Some("png") | Some("gif") | Some("webp") => true,
-        _ => false,
-    }
+    matches!(
+        get_file_extension(path),
+        Some("jpg") | Some("jpeg") | Some("png") | Some("gif") | Some("webp")
+    )
 }
 
 /// Helper function to validate audio format (for real implementations)
 #[allow(dead_code)]
 fn is_supported_audio_format(path: &str) -> bool {
-    match get_file_extension(path) {
-        Some("mp3") | Some("wav") | Some("m4a") | Some("ogg") => true,
-        _ => false,
-    }
+    matches!(
+        get_file_extension(path),
+        Some("mp3") | Some("wav") | Some("m4a") | Some("ogg")
+    )
 }

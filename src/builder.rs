@@ -170,7 +170,7 @@ pub async fn quick_ollama_with_model(
 ///
 /// Uses environment variable `GROQ_API_KEY` and default settings.
 pub async fn quick_groq() -> Result<crate::providers::groq::GroqClient, LlmError> {
-    quick_groq_with_model("llama-3.3-70b-versatile").await
+    quick_groq_with_model(crate::providers::groq::models::popular::FLAGSHIP).await
 }
 
 /// Quick Groq client creation with custom model.
@@ -184,7 +184,7 @@ pub async fn quick_groq_with_model(
 ///
 /// Uses environment variable `XAI_API_KEY` and default settings.
 pub async fn quick_xai() -> Result<crate::providers::xai::XaiClient, LlmError> {
-    quick_xai_with_model("grok-3-latest").await
+    quick_xai_with_model(crate::providers::xai::models::popular::LATEST).await
 }
 
 /// Quick xAI client creation with custom model.
@@ -452,7 +452,7 @@ impl LlmBuilder {
     /// Create a `DeepSeek` client builder (OpenAI-compatible).
     ///
     /// `DeepSeek` provides cost-effective AI with reasoning capabilities.
-    /// Uses OpenAI-compatible API with provider-specific optimizations.
+    /// Uses OpenAI-compatible API by configuring the OpenAI client with DeepSeek's endpoint.
     ///
     /// # Example
     /// ```rust,no_run
@@ -463,8 +463,7 @@ impl LlmBuilder {
     ///     let client = LlmBuilder::new()
     ///         .deepseek()
     ///         .api_key("your-deepseek-api-key")
-    ///         .model("deepseek-reasoner")
-    ///         .reasoning(true)?
+    ///         .model("deepseek-chat")
     ///         .temperature(0.1)
     ///         .build()
     ///         .await?;
@@ -472,18 +471,17 @@ impl LlmBuilder {
     ///     Ok(())
     /// }
     /// ```
-    pub fn deepseek(
-        self,
-    ) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
-        crate::providers::openai_compatible::DeepSeekProvider,
-    > {
-        crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
+    pub fn deepseek(self) -> crate::providers::openai::OpenAiBuilder {
+        // Create OpenAI builder with DeepSeek-specific defaults
+        crate::providers::openai::OpenAiBuilder::new(self)
+            .base_url("https://api.deepseek.com/v1")
+            .model("deepseek-chat")
     }
 
     /// Create an `OpenRouter` client builder (OpenAI-compatible).
     ///
     /// `OpenRouter` provides access to multiple AI models through a unified API.
-    /// Supports model routing and fallback strategies.
+    /// Uses OpenAI-compatible API by configuring the OpenAI client with OpenRouter's endpoint.
     ///
     /// # Example
     /// ```rust,no_run
@@ -495,8 +493,6 @@ impl LlmBuilder {
     ///         .openrouter()
     ///         .api_key("your-openrouter-api-key")
     ///         .model("openai/gpt-4")
-    ///         .site_url("https://myapp.com")?
-    ///         .app_name("My App")?
     ///         .temperature(0.7)
     ///         .build()
     ///         .await?;
@@ -504,12 +500,11 @@ impl LlmBuilder {
     ///     Ok(())
     /// }
     /// ```
-    pub fn openrouter(
-        self,
-    ) -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
-        crate::providers::openai_compatible::OpenRouterProvider,
-    > {
-        crate::providers::openai_compatible::OpenAiCompatibleBuilder::new(self)
+    pub fn openrouter(self) -> crate::providers::openai::OpenAiBuilder {
+        // Create OpenAI builder with OpenRouter-specific defaults
+        crate::providers::openai::OpenAiBuilder::new(self)
+            .base_url("https://openrouter.ai/api/v1")
+            .model("openai/gpt-4o")
     }
 
     /// Generic provider builder (for custom providers)
@@ -1738,19 +1733,6 @@ impl GenericProviderBuilder {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_builder_creation() {
-        let builder = LlmBuilder::new();
-        let _openai_builder = builder.openai();
-        // Basic test for builder creation
-        // Placeholder test
-    }
-}
-
 /// Wrapper for xAI builder that supports HTTP client inheritance
 pub struct XaiBuilderWrapper {
     base: LlmBuilder,
@@ -1931,5 +1913,18 @@ impl GroqBuilderWrapper {
         // This is a limitation of the current Groq implementation
 
         groq_builder.build().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builder_creation() {
+        let builder = LlmBuilder::new();
+        let _openai_builder = builder.openai();
+        // Basic test for builder creation
+        // Placeholder test
     }
 }

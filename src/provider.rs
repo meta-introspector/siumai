@@ -740,7 +740,7 @@ impl SiumaiBuilder {
         // Set default model if none provided
         if common_params.model.is_empty() {
             // Set default model based on provider type
-            use crate::models;
+            use crate::types::models::model_constants as models;
 
             common_params.model = match provider_type {
                 ProviderType::OpenAi => models::openai::GPT_4O.to_string(),

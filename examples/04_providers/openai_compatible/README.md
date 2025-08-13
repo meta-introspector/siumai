@@ -54,25 +54,25 @@ use siumai::prelude::*;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // DeepSeek - cost-effective
     let deepseek = LlmBuilder::new()
-        .openai_compatible("https://api.deepseek.com/v1")
+        .deepseek()
         .api_key(&std::env::var("DEEPSEEK_API_KEY")?)
         .model("deepseek-chat")
         .build()
         .await?;
 
-    // Groq - ultra-fast
-    let groq = LlmBuilder::new()
-        .openai_compatible("https://api.groq.com/openai/v1")
-        .api_key(&std::env::var("GROQ_API_KEY")?)
-        .model("llama-3.1-70b-versatile")
+    // OpenRouter - access to multiple models
+    let openrouter = LlmBuilder::new()
+        .openrouter()
+        .api_key(&std::env::var("OPENROUTER_API_KEY")?)
+        .model("openai/gpt-4")
         .build()
         .await?;
 
     let messages = vec![user!("Explain the benefits of AI")];
-    
+
     let response = deepseek.chat(messages.clone()).await?;
     println!("DeepSeek: {}", response.content_text().unwrap_or_default());
-    
+
     Ok(())
 }
 ```
@@ -86,46 +86,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 let deepseek = LlmBuilder::new()
-    .openai_compatible("https://api.deepseek.com/v1")
+    .deepseek()
     .api_key(&deepseek_key)
     .model("deepseek-chat")
     .build().await?;
 ```
 
-### Groq
-**Strengths:** Ultra-fast inference, low latency, good for real-time apps
-**Best for:** Real-time applications, chatbots, interactive systems
-**Models:** llama-3.1-70b-versatile, mixtral-8x7b-32768
+### OpenRouter
+**Strengths:** Access to multiple AI models, unified API, model routing
+**Best for:** Accessing various models through one API, fallback strategies
+**Models:** openai/gpt-4, anthropic/claude-3.5-sonnet, meta-llama/llama-3.1-70b
 
 ```rust
+let openrouter = LlmBuilder::new()
+    .openrouter()
+    .api_key(&openrouter_key)
+    .model("openai/gpt-4")
+    .build().await?;
+```
+
+### Other OpenAI-Compatible Providers
+For other providers, you can use the OpenAI client with custom base URLs:
+
+```rust
+// Groq - ultra-fast inference
 let groq = LlmBuilder::new()
-    .openai_compatible("https://api.groq.com/openai/v1")
+    .openai()
+    .base_url("https://api.groq.com/openai/v1")
     .api_key(&groq_key)
     .model("llama-3.1-70b-versatile")
     .build().await?;
-```
 
-### Together AI
-**Strengths:** Diverse model selection, open-source models, competitive pricing
-**Best for:** Experimenting with different models, specialized tasks
-**Models:** Various Llama, Mistral, and other open-source models
-
-```rust
+// Together AI - diverse model selection
 let together = LlmBuilder::new()
-    .openai_compatible("https://api.together.xyz/v1")
+    .openai()
+    .base_url("https://api.together.xyz/v1")
     .api_key(&together_key)
     .model("meta-llama/Llama-3-70b-chat-hf")
     .build().await?;
-```
 
-### Perplexity
-**Strengths:** Search-augmented responses, up-to-date information
-**Best for:** Research, current events, fact-checking
-**Models:** llama-3.1-sonar-small-128k-online, llama-3.1-sonar-large-128k-online
-
-```rust
+// Perplexity - search-augmented responses
 let perplexity = LlmBuilder::new()
-    .openai_compatible("https://api.perplexity.ai")
+    .openai()
+    .base_url("https://api.perplexity.ai")
     .api_key(&perplexity_key)
     .model("llama-3.1-sonar-small-128k-online")
     .build().await?;
@@ -160,21 +163,23 @@ let perplexity = LlmBuilder::new()
 ```rust
 // For cost-sensitive applications
 let cost_effective = LlmBuilder::new()
-    .openai_compatible("https://api.deepseek.com/v1")
+    .deepseek()
     .model("deepseek-chat")
     .temperature(0.7)
     .build().await?;
 
 // For speed-critical applications
 let ultra_fast = LlmBuilder::new()
-    .openai_compatible("https://api.groq.com/openai/v1")
+    .openai()
+    .base_url("https://api.groq.com/openai/v1")
     .model("llama-3.1-70b-versatile")
     .temperature(0.3)
     .build().await?;
 
 // For research and current information
 let research_focused = LlmBuilder::new()
-    .openai_compatible("https://api.perplexity.ai")
+    .openai()
+    .base_url("https://api.perplexity.ai")
     .model("llama-3.1-sonar-small-128k-online")
     .temperature(0.1)
     .build().await?;

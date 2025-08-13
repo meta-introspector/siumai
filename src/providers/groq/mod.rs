@@ -19,6 +19,7 @@
 //!
 //! # Example Usage
 //! ```rust,no_run
+//! use siumai::models;
 //! use siumai::prelude::*;
 //!
 //! #[tokio::main]
@@ -26,7 +27,7 @@
 //!     let client = LlmBuilder::new()
 //!         .groq()
 //!         .api_key("your-api-key")
-//!         .model("llama-3.3-70b-versatile")
+//!         .model(models::groq::LLAMA_3_3_70B_VERSATILE)
 //!         .build()
 //!         .await?;
 //!
@@ -49,6 +50,7 @@ pub mod types;
 pub mod utils;
 
 // Capability modules
+pub mod api;
 pub mod audio;
 pub mod chat;
 pub mod files;
@@ -62,10 +64,10 @@ pub use config::GroqConfig;
 pub use types::*;
 
 // Re-export capability implementations
+pub use api::GroqModels;
 pub use audio::GroqAudio;
 pub use chat::GroqChatCapability;
 pub use files::GroqFiles;
-pub use models::GroqModels;
 
 // Tests module
 #[cfg(test)]

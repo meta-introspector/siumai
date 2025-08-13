@@ -1,46 +1,37 @@
 //! OpenAI-Compatible Provider Interface
 //!
-//! This module provides a unified interface for OpenAI-compatible providers,
-//! allowing seamless integration of providers like `DeepSeek`, `OpenRouter`, etc.
+//! This module provides model constants for OpenAI-compatible providers.
+//! These providers now use the OpenAI client directly with custom base URLs.
 //!
-//! # Design Principles
-//! - **Type Safety**: Compile-time validation of provider configurations
-//! - **Zero-Cost Abstractions**: No runtime overhead for provider selection
-//! - **Ergonomic API**: Intuitive builder pattern with provider-specific methods
-//! - **Extensibility**: Easy to add new compatible providers
-//!
-//! # Example Usage
+//! # Usage
 //! ```rust,no_run
 //! use siumai::prelude::*;
-//! use siumai::providers::openai_compatible::{deepseek, openrouter, recommendations};
+//! use siumai::providers::openai_compatible::{deepseek, openrouter};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // DeepSeek with reasoning model using constants
+//!     // DeepSeek using OpenAI client with DeepSeek endpoint
 //!     let deepseek = LlmBuilder::new()
 //!         .deepseek()
 //!         .api_key("your-api-key")
 //!         .model(deepseek::REASONER)  // Using model constant
-//!         .reasoning(true)?
 //!         .build()
 //!         .await?;
 //!
-//!     // OpenRouter with GPT-4 using constants
+//!     // OpenRouter using OpenAI client with OpenRouter endpoint
 //!     let openrouter = LlmBuilder::new()
 //!         .openrouter()
 //!         .api_key("your-api-key")
 //!         .model(openrouter::openai::GPT_4)  // Using model constant
-//!         .site_url("https://myapp.com")?
-//!         .app_name("My App")?
-//!         .temperature(0.7)
 //!         .build()
 //!         .await?;
 //!
-//!     // Using recommendation helpers
-//!     let coding_model = LlmBuilder::new()
-//!         .deepseek()
+//!     // Other providers using OpenAI client with custom base URL
+//!     let groq = LlmBuilder::new()
+//!         .openai()
+//!         .base_url("https://api.groq.com/openai/v1")
 //!         .api_key("your-api-key")
-//!         .model(recommendations::for_coding())  // Gets deepseek::CODER
+//!         .model("llama-3.1-70b-versatile")
 //!         .build()
 //!         .await?;
 //!
@@ -48,58 +39,8 @@
 //! }
 //! ```
 
-pub mod builder;
 pub mod config;
 pub mod providers;
 
-// Re-export main types
-pub use builder::*;
-pub use config::*;
-pub use providers::*;
-
 // Re-export model constants for easy access
 pub use providers::models::{deepseek, groq, openrouter, xai};
-
-use crate::traits::*;
-
-// Implement capability traits for the OpenAI-compatible client
-#[async_trait::async_trait]
-impl<P: OpenAiCompatibleProvider> ChatCapability for OpenAiCompatibleClient<P> {
-    async fn chat_with_tools(
-        &self,
-        messages: Vec<crate::types::ChatMessage>,
-        tools: Option<Vec<crate::types::Tool>>,
-    ) -> Result<crate::types::ChatResponse, crate::error::LlmError> {
-        self.client.chat_with_tools(messages, tools).await
-    }
-
-    async fn chat_stream(
-        &self,
-        messages: Vec<crate::types::ChatMessage>,
-        tools: Option<Vec<crate::types::Tool>>,
-    ) -> Result<crate::stream::ChatStream, crate::error::LlmError> {
-        self.client.chat_stream(messages, tools).await
-    }
-}
-
-// Note: ChatCapability already includes streaming and tool functionality
-// through chat_stream() and chat_with_tools() methods
-
-impl<P: OpenAiCompatibleProvider> LlmProvider for OpenAiCompatibleClient<P> {
-    fn provider_name(&self) -> &'static str {
-        P::PROVIDER_ID
-    }
-
-    fn supported_models(&self) -> Vec<String> {
-        // This could be provider-specific or delegated to the OpenAI client
-        LlmProvider::supported_models(&self.client)
-    }
-
-    fn capabilities(&self) -> ProviderCapabilities {
-        P::supported_capabilities()
-    }
-
-    fn http_client(&self) -> &reqwest::Client {
-        self.client.http_client()
-    }
-}

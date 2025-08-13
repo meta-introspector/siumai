@@ -608,9 +608,10 @@ fn test_ollama_native_api_parameters() {
 /// Test OpenAI-compatible providers (DeepSeek, OpenRouter) parameter validation
 #[test]
 fn test_openai_compatible_providers_validation() {
-    use siumai::providers::openai_compatible::OpenAiCompatibleProvider;
+    use siumai::providers::openai_compatible::providers::OpenAiCompatibleProvider;
     use siumai::providers::openai_compatible::{
-        DeepSeekProvider, OpenAiCompatibleConfig, OpenRouterProvider,
+        config::OpenAiCompatibleConfig,
+        providers::{DeepSeekProvider, OpenRouterProvider},
     };
 
     // Test DeepSeek provider validation

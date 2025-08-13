@@ -3,10 +3,8 @@
 //! This example demonstrates advanced configuration patterns for production deployments,
 //! including custom parameter mapping, provider-specific optimizations, and performance tuning.
 
-use siumai::params::{ParameterMapperFactory, ParameterMappingUtils};
-use siumai::prelude::*;
+use siumai::params::ParameterMappingUtils;
 use siumai::types::{CommonParams, ProviderParams, ProviderType};
-use std::collections::HashMap;
 use std::time::Duration;
 
 #[tokio::main]
@@ -407,7 +405,8 @@ fn create_experimental_params() -> (CommonParams, ProviderParams) {
     (common, provider)
 }
 
-fn print_config_summary(name: &str, config: &ConfigProfile) {
+fn print_config_summary(_name: &str, config: &ConfigProfile) {
+    println!("     • Config Name: {}", config.name);
     println!("     • Provider: {:?}", config.provider);
     println!("     • Model: {}", config.model);
     println!("     • Temperature: {}", config.temperature);

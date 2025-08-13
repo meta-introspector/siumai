@@ -21,6 +21,7 @@
 //! ```
 
 use serde::{Deserialize, Serialize};
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -75,7 +76,7 @@ async fn demo_json_mode(api_key: &str) -> Result<(), Box<dyn std::error::Error>>
     let ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.1)
         .max_tokens(500)
         .build()
@@ -124,7 +125,7 @@ async fn demo_function_calling(api_key: &str) -> Result<(), Box<dyn std::error::
     let ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.1)
         .build()
         .await?;
@@ -168,7 +169,7 @@ async fn demo_system_fingerprints(api_key: &str) -> Result<(), Box<dyn std::erro
     let ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.0) // Very low temperature for consistency
         .build()
         .await?;
@@ -206,7 +207,7 @@ async fn demo_response_formats(api_key: &str) -> Result<(), Box<dyn std::error::
     let ai = Siumai::builder()
         .openai()
         .api_key(api_key)
-        .model("gpt-4o-mini")
+        .model(models::openai::GPT_4O_MINI)
         .temperature(0.3)
         .build()
         .await?;
@@ -268,7 +269,7 @@ async fn demo_advanced_parameters(api_key: &str) -> Result<(), Box<dyn std::erro
         let ai = Siumai::builder()
             .openai()
             .api_key(api_key)
-            .model("gpt-4o-mini")
+            .model(models::openai::GPT_4O_MINI)
             .temperature(temperature)
             .max_tokens(100)
             .build()

@@ -3,9 +3,7 @@
 //! This module contains advanced parameter tests that cover edge cases,
 //! serialization, concurrency, and other advanced scenarios.
 
-use siumai::prelude::*;
-use siumai::types::{CommonParams, ProviderParams, ProviderType};
-use std::collections::HashMap;
+use siumai::types::{CommonParams, ProviderParams};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

@@ -17,6 +17,7 @@
 //! cargo run --example google_basic_usage
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -69,9 +70,18 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
     println!("   Comparing different Gemini models...");
 
     let models = vec![
-        ("gemini-1.5-flash", "Fast and efficient for most tasks"),
-        ("gemini-1.5-pro", "Advanced reasoning and complex tasks"),
-        ("gemini-1.0-pro", "Stable version for production use"),
+        (
+            models::gemini::GEMINI_1_5_FLASH,
+            "Fast and efficient for most tasks",
+        ),
+        (
+            models::gemini::GEMINI_1_5_PRO,
+            "Advanced reasoning and complex tasks",
+        ),
+        (
+            models::gemini::GEMINI_2_5_PRO,
+            "Latest flagship model for production use",
+        ),
     ];
 
     for (model_name, description) in models {
@@ -80,7 +90,7 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
         let ai = Siumai::builder()
             .anthropic()
             .api_key(api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .temperature(0.3)
             .max_tokens(200)
             .build()
@@ -118,7 +128,7 @@ async fn demo_multimodal_features(api_key: &str) -> Result<(), Box<dyn std::erro
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.3)
         .max_tokens(400)
         .build()
@@ -200,7 +210,7 @@ async fn demo_safety_settings(api_key: &str) -> Result<(), Box<dyn std::error::E
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.3)
         .max_tokens(300)
         .build()
@@ -270,7 +280,7 @@ async fn demo_performance_optimization(api_key: &str) -> Result<(), Box<dyn std:
     let fast_ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-haiku-20241022") // Faster model for simple tasks
+        .model(models::anthropic::CLAUDE_HAIKU_3_5) // Faster model for simple tasks
         .temperature(0.3)
         .max_tokens(100)
         .build()
@@ -335,7 +345,7 @@ async fn demo_google_features(api_key: &str) -> Result<(), Box<dyn std::error::E
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.3)
         .max_tokens(400)
         .build()

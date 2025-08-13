@@ -193,14 +193,14 @@ async fn test_provider_name_mapping() {
         ("openrouter", ProviderType::Custom("openrouter".to_string())),
     ];
 
-    for (name, expected_type) in test_cases {
-        let builder = SiumaiBuilder::new().provider_name(name);
+    for (name, _expected_type) in test_cases {
+        let _builder = SiumaiBuilder::new().provider_name(name);
         // We can't easily access the internal provider_type, but we can test
         // that the builder doesn't fail with unsupported provider errors
 
         // This is a basic smoke test - the actual provider type verification
         // would require exposing internal state or building the client
-        assert!(true); // Placeholder - builder creation succeeded
+        // Placeholder - builder creation succeeded
     }
 }
 
@@ -230,9 +230,9 @@ async fn test_common_parameters_consistency() {
     ];
 
     for builder in providers {
-        let configured_builder = common_params_test(builder);
+        let _configured_builder = common_params_test(builder);
         // If we reach here without panicking, the parameters were accepted
-        assert!(true);
+        // Placeholder assertion
     }
 }
 
@@ -256,9 +256,9 @@ async fn test_reasoning_interface_consistency() {
     ];
 
     for builder in reasoning_providers {
-        let configured_builder = reasoning_test(builder);
+        let _configured_builder = reasoning_test(builder);
         // If we reach here without panicking, the reasoning parameters were accepted
-        assert!(true);
+        // Placeholder assertion
     }
 }
 
@@ -320,7 +320,7 @@ async fn test_capability_reporting() {
         }
         Err(_) => {
             // Expected with test API key, but the test structure is valid
-            assert!(true);
+            // Placeholder assertion
         }
     }
 }
@@ -331,7 +331,7 @@ async fn test_provider_specific_features() {
     // Test that provider-specific features can be configured through unified interface
 
     // Anthropic thinking mode
-    let anthropic_builder = SiumaiBuilder::new()
+    let _anthropic_builder = SiumaiBuilder::new()
         .anthropic()
         .api_key("test-key")
         .model("claude-3-5-sonnet-20241022")
@@ -339,10 +339,10 @@ async fn test_provider_specific_features() {
         .reasoning_budget(10000);
 
     // Should not panic during configuration
-    assert!(true);
+    // Should not panic during configuration
 
     // Gemini thinking mode
-    let gemini_builder = SiumaiBuilder::new()
+    let _gemini_builder = SiumaiBuilder::new()
         .gemini()
         .api_key("test-key")
         .model("gemini-1.5-flash")
@@ -350,10 +350,10 @@ async fn test_provider_specific_features() {
         .reasoning_budget(5000);
 
     // Should not panic during configuration
-    assert!(true);
+    // Should not panic during configuration
 
     // Ollama local configuration
-    let ollama_builder = SiumaiBuilder::new()
+    let _ollama_builder = SiumaiBuilder::new()
         .ollama()
         .api_key("not-needed")
         .model("llama3.2:latest")
@@ -361,7 +361,7 @@ async fn test_provider_specific_features() {
         .reasoning(true);
 
     // Should not panic during configuration
-    assert!(true);
+    // Should not panic during configuration
 }
 
 /// Test that all providers support the same core interface methods
@@ -372,7 +372,7 @@ fn test_core_interface_methods() {
     // but we can test that the interface is consistent
 
     // Test message creation (this should work without API calls)
-    let messages = vec![ChatMessage {
+    let messages = [ChatMessage {
         role: MessageRole::User,
         content: MessageContent::Text("Hello, world!".to_string()),
         metadata: Default::default(),

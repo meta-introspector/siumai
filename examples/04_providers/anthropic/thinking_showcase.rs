@@ -19,6 +19,7 @@
 //! cargo run --example anthropic_thinking_showcase
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -73,7 +74,7 @@ async fn demo_step_by_step_solving(api_key: &str) -> Result<(), Box<dyn std::err
     let ai = LlmBuilder::new()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.2)
         .max_tokens(600)
         .build()
@@ -127,7 +128,7 @@ async fn demo_complex_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
     let ai = LlmBuilder::new()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.1)
         .max_tokens(700)
         .build()
@@ -191,7 +192,7 @@ async fn demo_mathematical_reasoning(api_key: &str) -> Result<(), Box<dyn std::e
     let ai = LlmBuilder::new()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.0)
         .max_tokens(500)
         .build()
@@ -260,7 +261,7 @@ async fn demo_logical_reasoning(api_key: &str) -> Result<(), Box<dyn std::error:
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-sonnet")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.1)
         .max_tokens(500)
         .build()
@@ -341,7 +342,7 @@ async fn demo_creative_reasoning(api_key: &str) -> Result<(), Box<dyn std::error
     let ai = Siumai::builder()
         .anthropic()
         .api_key(api_key)
-        .model("claude-3-sonnet")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .temperature(0.6) // Higher temperature for creativity
         .max_tokens(600)
         .build()

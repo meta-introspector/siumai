@@ -185,7 +185,10 @@ async fn show_cost_considerations() {
     println!("\n💰 Cost Considerations:\n");
 
     println!("   📊 Approximate Pricing (per 1M tokens):");
-    println!("      • OpenAI GPT-4o-mini: ~$0.15 input, ~$0.60 output");
+    println!(
+        "      • OpenAI {}: ~$0.15 input, ~$0.60 output",
+        models::openai::GPT_4O_MINI
+    );
     println!("      • Anthropic Claude Haiku: ~$0.25 input, ~$1.25 output");
     println!("      • Ollama: Free after hardware investment");
     println!("      • Groq: ~$0.05 input, ~$0.08 output (very fast)");
@@ -203,7 +206,7 @@ async fn provide_recommendations() {
     println!("\n🎯 Use Case Recommendations:\n");
 
     println!("   🚀 Getting Started / Prototyping:");
-    println!("      → OpenAI GPT-4o-mini");
+    println!("      → OpenAI {}", models::openai::GPT_4O_MINI);
     println!("      • Easy to use, well-documented");
     println!("      • Good balance of cost and performance");
 

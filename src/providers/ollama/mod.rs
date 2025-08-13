@@ -42,6 +42,7 @@
 // Core modules
 pub mod client;
 pub mod config;
+pub mod model_constants;
 pub mod types;
 pub mod utils;
 

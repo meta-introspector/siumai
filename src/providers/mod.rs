@@ -19,10 +19,8 @@ pub use openai::{
     ListResponsesQuery, OpenAiClient, OpenAiResponses, ResponseMetadata, ResponseStatus,
     ResponsesApiCapability,
 };
-pub use openai_compatible::{
-    DeepSeekProvider, OpenAiCompatibleBuilder, OpenAiCompatibleClient, OpenAiCompatibleProvider,
-    OpenRouterProvider,
-};
+// Note: OpenAI-compatible providers now use OpenAI client directly
+// Model constants are still available through openai_compatible module
 pub use xai::XaiClient;
 
 use crate::traits::ProviderCapabilities;
@@ -196,17 +194,7 @@ pub fn get_supported_providers() -> Vec<ProviderInfo> {
                 .with_custom_feature("deferred_completion", true)
                 .with_custom_feature("structured_outputs", true),
             default_base_url: "https://api.x.ai/v1",
-            supported_models: vec![
-                "grok-3-latest",
-                "grok-3",
-                "grok-3-fast",
-                "grok-3-mini",
-                "grok-3-mini-fast",
-                "grok-2-vision-1212",
-                "grok-2-1212",
-                "grok-beta",
-                "grok-vision-beta",
-            ],
+            supported_models: crate::providers::xai::models::all_models(),
         },
     ]
 }
@@ -229,7 +217,7 @@ pub fn is_model_supported(provider_type: &ProviderType, model: &str) -> bool {
 
 /// Get the default model for a provider
 pub const fn get_default_model(provider_type: &ProviderType) -> Option<&'static str> {
-    use crate::models;
+    use crate::types::models::model_constants as models;
 
     match provider_type {
         ProviderType::OpenAi => Some(models::openai::GPT_4O), // Popular and capable

@@ -51,9 +51,9 @@ async fn demonstrate_model_selection(api_key: &str) {
     println!("🤖 Model Selection:\n");
 
     let models = vec![
-        ("gpt-4o-mini", "Balanced cost and performance"),
-        ("gpt-4o", "Best overall performance"),
-        ("gpt-3.5-turbo", "Fast and economical"),
+        (models::openai::GPT_4O_MINI, "Balanced cost and performance"),
+        (models::openai::GPT_4O, "Best overall performance"),
+        (models::openai::GPT_3_5_TURBO, "Fast and economical"),
     ];
 
     let test_prompt = "Explain quantum computing in exactly 50 words.";
@@ -90,9 +90,15 @@ async fn demonstrate_model_selection(api_key: &str) {
 
                             // Estimate cost (approximate rates)
                             let cost = match model {
-                                "gpt-4o-mini" => usage.total_tokens as f64 * 0.00015 / 1000.0,
-                                "gpt-4o" => usage.total_tokens as f64 * 0.005 / 1000.0,
-                                "gpt-3.5-turbo" => usage.total_tokens as f64 * 0.0015 / 1000.0,
+                                m if m == models::openai::GPT_4O_MINI => {
+                                    usage.total_tokens as f64 * 0.00015 / 1000.0
+                                }
+                                m if m == models::openai::GPT_4O => {
+                                    usage.total_tokens as f64 * 0.005 / 1000.0
+                                }
+                                m if m == models::openai::GPT_3_5_TURBO => {
+                                    usage.total_tokens as f64 * 0.0015 / 1000.0
+                                }
                                 _ => 0.0,
                             };
                             println!("      Estimated cost: ${cost:.6}");
@@ -257,7 +263,7 @@ async fn demonstrate_response_formats(api_key: &str) {
 
     // Standard text response
     println!("   Format: Standard Text");
-    match create_openai_client(api_key, "gpt-4o-mini").await {
+    match create_openai_client(api_key, models::openai::GPT_4O_MINI).await {
         Ok(client) => {
             let messages = vec![user!(
                 "What are the three primary colors? Answer in a simple list."
@@ -322,7 +328,7 @@ async fn demonstrate_response_formats(api_key: &str) {
 async fn demonstrate_conversation_patterns(api_key: &str) {
     println!("💬 Conversation Patterns:\n");
 
-    match create_openai_client(api_key, "gpt-4o-mini").await {
+    match create_openai_client(api_key, models::openai::GPT_4O_MINI).await {
         Ok(client) => {
             // Build a conversation step by step
             let mut conversation = vec![system!(

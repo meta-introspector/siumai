@@ -143,7 +143,7 @@ pub use custom_provider::{CustomProvider, CustomProviderConfig};
 pub use provider_features::ProviderFeatures;
 
 // Model constants (simplified access)
-pub use types::models::models;
+pub use types::models::model_constants as models;
 
 // Model constants (detailed access)
 pub use types::models::constants;
@@ -241,16 +241,12 @@ impl Provider {
     }
 
     /// Create an `OpenRouter` client builder
-    pub fn openrouter() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
-        crate::providers::openai_compatible::OpenRouterProvider,
-    > {
+    pub fn openrouter() -> crate::providers::openai::OpenAiBuilder {
         crate::builder::LlmBuilder::new().openrouter()
     }
 
     /// Create a `DeepSeek` client builder
-    pub fn deepseek() -> crate::providers::openai_compatible::OpenAiCompatibleBuilder<
-        crate::providers::openai_compatible::DeepSeekProvider,
-    > {
+    pub fn deepseek() -> crate::providers::openai::OpenAiBuilder {
         crate::builder::LlmBuilder::new().deepseek()
     }
 }

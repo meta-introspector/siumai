@@ -17,6 +17,7 @@
 //! cargo run --example thinking_models
 //! ```
 
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -42,7 +43,7 @@ async fn demonstrate_claude_thinking() {
         match LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .temperature(0.7)
             .build()
             .await
@@ -102,7 +103,7 @@ async fn demonstrate_reasoning_optimization() {
         match LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .temperature(0.1) // Lower temperature for more consistent reasoning
             .build()
             .await
@@ -168,7 +169,7 @@ async fn demonstrate_thinking_analysis() {
         match LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .build()
             .await
         {
@@ -237,7 +238,7 @@ async fn demonstrate_reasoning_vs_output() {
         match LlmBuilder::new()
             .anthropic()
             .api_key(&api_key)
-            .model("claude-3-5-sonnet-20241022")
+            .model(models::anthropic::CLAUDE_SONNET_3_5)
             .build()
             .await
         {

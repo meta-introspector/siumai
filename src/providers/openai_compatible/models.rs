@@ -80,7 +80,7 @@ pub mod openrouter {
 pub mod xai {
     pub const GROK_BETA: &str = "grok-beta";
     pub const GROK_3: &str = "grok-3";
-    
+
     /// All available xAI models
     pub const ALL: &[&str] = &[GROK_BETA, GROK_3];
 }

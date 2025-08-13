@@ -71,9 +71,18 @@ async fn demo_model_selection(api_key: &str) -> Result<(), Box<dyn std::error::E
 
     // Note: In real usage, you would use actual Claude model names
     let models = vec![
-        ("claude-3-haiku", "Fast and efficient for simple tasks"),
-        ("claude-3-sonnet", "Balanced performance and capability"),
-        ("claude-3-opus", "Most capable for complex reasoning"),
+        (
+            models::anthropic::CLAUDE_HAIKU_3_5,
+            "Fast and efficient for simple tasks",
+        ),
+        (
+            models::anthropic::CLAUDE_SONNET_3_5,
+            "Balanced performance and capability",
+        ),
+        (
+            models::anthropic::CLAUDE_OPUS_3,
+            "Most capable for complex reasoning",
+        ),
     ];
 
     for (model_name, description) in models {

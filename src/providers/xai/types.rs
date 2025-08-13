@@ -226,3 +226,25 @@ impl XaiParams {
         self
     }
 }
+
+/// xAI Model information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct XaiModel {
+    /// Model ID
+    pub id: String,
+    /// Object type
+    pub object: String,
+    /// Creation timestamp
+    pub created: u64,
+    /// Model owner
+    pub owned_by: String,
+}
+
+/// xAI Models API response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct XaiModelsResponse {
+    /// Object type
+    pub object: String,
+    /// List of models
+    pub data: Vec<XaiModel>,
+}

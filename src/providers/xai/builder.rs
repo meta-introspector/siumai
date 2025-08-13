@@ -164,7 +164,7 @@ impl XaiBuilder {
         // Set default model if not specified
         let mut config = self.config;
         if config.common_params.model.is_empty() {
-            config.common_params.model = "grok-3-latest".to_string();
+            config.common_params.model = crate::providers::xai::models::popular::LATEST.to_string();
         }
 
         let mut client = XaiClient::new(config).await?;
@@ -194,7 +194,7 @@ impl XaiBuilder {
         // Set default model if not specified
         let mut config = self.config;
         if config.common_params.model.is_empty() {
-            config.common_params.model = "grok-3-latest".to_string();
+            config.common_params.model = crate::providers::xai::models::popular::LATEST.to_string();
         }
 
         let mut client = XaiClient::with_http_client(config, http_client).await?;

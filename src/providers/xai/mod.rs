@@ -15,13 +15,14 @@
 //!
 //! # Example Usage
 //! ```rust,no_run
+//! use siumai::models;
 //! use siumai::prelude::*;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let client = Provider::xai()
 //!         .api_key("your-api-key")
-//!         .model("grok-3-latest")
+//!         .model(models::xai::GROK_3_LATEST)
 //!         .build()
 //!         .await?;
 //!
@@ -34,9 +35,11 @@
 //! ```
 
 // Core modules
+pub mod api;
 pub mod builder;
 pub mod client;
 pub mod config;
+pub mod models;
 pub mod types;
 pub mod utils;
 
@@ -45,6 +48,7 @@ pub mod chat;
 pub mod streaming;
 
 // Re-export main types for convenience
+pub use api::XaiModels;
 pub use builder::XaiBuilder;
 pub use client::XaiClient;
 pub use config::XaiConfig;

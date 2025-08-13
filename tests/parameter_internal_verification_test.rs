@@ -128,7 +128,7 @@ async fn test_xai_internal_parameters(
 async fn test_parameter_consistency_across_builds() {
     println!("🔍 Testing parameter consistency across multiple builds");
 
-    let test_params = vec![
+    let test_params = [
         ("model-1", 0.1, 100u32, 0.1, 1u64),
         ("model-2", 0.5, 500u32, 0.5, 2u64),
         ("model-3", 0.9, 900u32, 0.9, 3u64),

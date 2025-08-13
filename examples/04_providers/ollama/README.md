@@ -58,6 +58,7 @@ cargo run --example ollama_basic_setup
 ### Quick Start
 
 ```rust
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -65,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ai = LlmBuilder::new()
         .ollama()
         .base_url("http://localhost:11434")
-        .model("llama3.2")
+        .model(models::ollama::LLAMA_3_2)
         .temperature(0.7)
         .build()
         .await?;

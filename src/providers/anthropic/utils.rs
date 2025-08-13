@@ -132,19 +132,19 @@ pub fn parse_finish_reason(reason: Option<&str>) -> Option<FinishReason> {
 
 /// Get default models for Anthropic according to latest available models
 pub fn get_default_models() -> Vec<String> {
-    use crate::models::anthropic;
+    use crate::types::models::model_constants::anthropic;
 
-    let mut models = Vec::new();
-    // Add popular models from each family
-    models.push(anthropic::CLAUDE_OPUS_4_1.to_string());
-    models.push(anthropic::CLAUDE_SONNET_4.to_string());
-    models.push(anthropic::CLAUDE_SONNET_3_7.to_string());
-    models.push(anthropic::CLAUDE_SONNET_3_5.to_string());
-    models.push(anthropic::CLAUDE_SONNET_3_5_LEGACY.to_string());
-    models.push(anthropic::CLAUDE_HAIKU_3_5.to_string());
-    models.push(anthropic::CLAUDE_OPUS_3.to_string());
-    models.push(anthropic::CLAUDE_SONNET_3.to_string());
-    models.push(anthropic::CLAUDE_HAIKU_3.to_string());
+    let models = vec![
+        anthropic::CLAUDE_OPUS_4_1.to_string(),
+        anthropic::CLAUDE_SONNET_4.to_string(),
+        anthropic::CLAUDE_SONNET_3_7.to_string(),
+        anthropic::CLAUDE_SONNET_3_5.to_string(),
+        anthropic::CLAUDE_SONNET_3_5_LEGACY.to_string(),
+        anthropic::CLAUDE_HAIKU_3_5.to_string(),
+        anthropic::CLAUDE_OPUS_3.to_string(),
+        anthropic::CLAUDE_SONNET_3.to_string(),
+        anthropic::CLAUDE_HAIKU_3.to_string(),
+    ];
 
     models
 }

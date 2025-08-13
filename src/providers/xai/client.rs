@@ -8,9 +8,10 @@ use std::time::Duration;
 use crate::client::LlmClient;
 use crate::error::LlmError;
 use crate::stream::ChatStream;
-use crate::traits::{ChatCapability, ProviderCapabilities};
+use crate::traits::{ChatCapability, ModelListingCapability, ProviderCapabilities};
 use crate::types::*;
 
+use super::api::XaiModels;
 use super::chat::XaiChatCapability;
 use super::config::XaiConfig;
 
@@ -23,6 +24,8 @@ use super::config::XaiConfig;
 pub struct XaiClient {
     /// Chat capability
     pub chat_capability: XaiChatCapability,
+    /// Models capability
+    pub models_capability: XaiModels,
     /// Common parameters
     pub common_params: CommonParams,
     /// HTTP client
@@ -74,8 +77,17 @@ impl XaiClient {
             config.common_params.clone(),
         );
 
+        // Create models capability
+        let models_capability = XaiModels::new(
+            config.api_key.clone(),
+            config.base_url.clone(),
+            http_client.clone(),
+            config.http_config.clone(),
+        );
+
         Ok(Self {
             chat_capability,
+            models_capability,
             common_params: config.common_params,
             http_client,
             tracing_config: None,
@@ -126,17 +138,10 @@ impl LlmClient for XaiClient {
     }
 
     fn supported_models(&self) -> Vec<String> {
-        vec![
-            "grok-3-latest".to_string(),
-            "grok-3".to_string(),
-            "grok-3-fast".to_string(),
-            "grok-3-mini".to_string(),
-            "grok-3-mini-fast".to_string(),
-            "grok-2-vision-1212".to_string(),
-            "grok-2-1212".to_string(),
-            "grok-beta".to_string(),
-            "grok-vision-beta".to_string(),
-        ]
+        crate::providers::xai::models::all_models()
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect()
     }
 
     fn capabilities(&self) -> ProviderCapabilities {
@@ -299,5 +304,16 @@ impl XaiClient {
     /// Set the tracing configuration
     pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
         self.tracing_config = config;
+    }
+}
+
+#[async_trait]
+impl ModelListingCapability for XaiClient {
+    async fn list_models(&self) -> Result<Vec<ModelInfo>, LlmError> {
+        self.models_capability.list_models().await
+    }
+
+    async fn get_model(&self, model_id: String) -> Result<ModelInfo, LlmError> {
+        self.models_capability.get_model(model_id).await
     }
 }

@@ -364,8 +364,18 @@ impl RequestBuilderFactory {
             crate::types::ProviderType::Groq => {
                 Box::new(StandardRequestBuilder::new(common_params, provider_params))
             }
-            crate::types::ProviderType::Custom(_) => {
-                Box::new(StandardRequestBuilder::new(common_params, provider_params))
+            crate::types::ProviderType::Custom(name) => {
+                // Handle OpenAI-compatible providers
+                match name.as_str() {
+                    "deepseek" | "openrouter" | "groq" | "xai" => {
+                        // OpenAI-compatible providers use OpenAI request builder pattern
+                        Box::new(StandardRequestBuilder::new(common_params, provider_params))
+                    }
+                    _ => {
+                        // Other custom providers use standard builder
+                        Box::new(StandardRequestBuilder::new(common_params, provider_params))
+                    }
+                }
             }
         }
     }

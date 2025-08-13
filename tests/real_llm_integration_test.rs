@@ -72,6 +72,7 @@ use futures::StreamExt;
 use siumai::prelude::*;
 use siumai::providers::openai_compatible::providers::models::{deepseek, groq};
 use siumai::stream::ChatStreamEvent;
+use siumai::traits::ModelListingCapability;
 use std::env;
 
 /// Test configuration for a provider
@@ -186,6 +187,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
                 .expect("Failed to build OpenAI client");
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
             if config.supports_embedding {
                 // Create a separate client with embedding model for OpenAI
                 let embedding_client = LlmBuilder::new()
@@ -219,6 +221,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
                 .expect("Failed to build Anthropic client");
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_anthropic(config).await;
             }
@@ -235,6 +238,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
 
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
             if config.supports_embedding {
                 // Create a separate client with embedding model for Gemini
                 let embedding_client = LlmBuilder::new()
@@ -262,6 +266,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
 
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_deepseek(config).await;
             }
@@ -278,6 +283,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
 
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_openrouter(config).await;
             }
@@ -294,6 +300,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
 
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
         }
         "xAI" => {
             let api_key = env::var(config.api_key_env).unwrap();
@@ -307,6 +314,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
 
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
             if config.supports_reasoning && config.reasoning_model.is_some() {
                 test_reasoning_xai(config).await;
             }
@@ -325,6 +333,7 @@ async fn test_provider_integration(config: &ProviderTestConfig) {
 
             test_non_streaming_chat(&client, config.name).await;
             test_streaming_chat(&client, config.name).await;
+            test_model_listing(&client, config.name).await;
 
             if config.supports_embedding {
                 // Create a separate client with embedding model for Ollama
@@ -675,8 +684,6 @@ async fn test_reasoning_deepseek(config: &ProviderTestConfig) {
         .deepseek()
         .api_key(api_key)
         .model(reasoning_model)
-        .reasoning(true)
-        .expect("Failed to set reasoning mode")
         .build()
         .await
         .expect("Failed to build DeepSeek reasoning client");
@@ -865,6 +872,179 @@ async fn test_reasoning_ollama(config: &ProviderTestConfig) {
             println!("    💡 Try: ollama pull {}", reasoning_model);
         }
     }
+}
+
+/// Test model listing capability
+async fn test_model_listing<T>(client: &T, provider_name: &str)
+where
+    T: ModelListingCapability + Send + Sync,
+{
+    println!("  🔍 Testing model listing for {}...", provider_name);
+
+    // Test list_models
+    match client.list_models().await {
+        Ok(models) => {
+            println!("    ✅ Successfully listed {} models", models.len());
+
+            if !models.is_empty() {
+                println!("    📋 Available models:");
+                for (i, model) in models.iter().take(5).enumerate() {
+                    let name = model.name.as_ref().unwrap_or(&model.id);
+                    let capabilities = if model.capabilities.is_empty() {
+                        "none specified".to_string()
+                    } else {
+                        model.capabilities.join(", ")
+                    };
+                    println!("      {}. {} - capabilities: {}", i + 1, name, capabilities);
+
+                    if let Some(context_window) = model.context_window {
+                        println!("         Context window: {} tokens", context_window);
+                    }
+                    if let Some(max_output) = model.max_output_tokens {
+                        println!("         Max output: {} tokens", max_output);
+                    }
+                }
+
+                if models.len() > 5 {
+                    println!("      ... and {} more models", models.len() - 5);
+                }
+
+                // Test get_model with the first model
+                let first_model_id = &models[0].id;
+                println!("    🔍 Testing get_model with '{}'...", first_model_id);
+
+                match client.get_model(first_model_id.clone()).await {
+                    Ok(model_info) => {
+                        println!("    ✅ Successfully retrieved model info");
+                        println!("       ID: {}", model_info.id);
+                        if let Some(name) = &model_info.name {
+                            println!("       Name: {}", name);
+                        }
+                        if !model_info.owned_by.is_empty() {
+                            println!("       Owner: {}", model_info.owned_by);
+                        }
+                        if !model_info.capabilities.is_empty() {
+                            println!(
+                                "       Capabilities: {}",
+                                model_info.capabilities.join(", ")
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        println!("    ⚠️ Failed to get model info: {}", e);
+                    }
+                }
+            } else {
+                println!("    ⚠️ No models returned (this might be expected for some providers)");
+            }
+        }
+        Err(e) => {
+            println!("    ⚠️ Failed to list models: {}", e);
+            println!("    💡 This might be expected if the provider doesn't support model listing");
+        }
+    }
+}
+
+/// Test model listing for a specific provider
+async fn test_provider_model_listing(
+    config: &ProviderTestConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match config.name {
+        "OpenAI" => {
+            let api_key = env::var(config.api_key_env)?;
+            let mut builder = LlmBuilder::new()
+                .openai()
+                .api_key(api_key)
+                .model(config.default_model);
+
+            if let Ok(base_url) = env::var("OPENAI_BASE_URL") {
+                builder = builder.base_url(base_url);
+            }
+
+            let client = builder.build().await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "Anthropic" => {
+            let api_key = env::var(config.api_key_env)?;
+            let mut builder = LlmBuilder::new()
+                .anthropic()
+                .api_key(api_key)
+                .model(config.default_model);
+
+            if let Ok(base_url) = env::var("ANTHROPIC_BASE_URL") {
+                builder = builder.base_url(base_url);
+            }
+
+            let client = builder.build().await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "Gemini" => {
+            let api_key = env::var(config.api_key_env)?;
+            let client = LlmBuilder::new()
+                .gemini()
+                .api_key(api_key)
+                .model(config.default_model)
+                .build()
+                .await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "DeepSeek" => {
+            let api_key = env::var(config.api_key_env)?;
+            let client = LlmBuilder::new()
+                .deepseek()
+                .api_key(api_key)
+                .model(config.default_model)
+                .build()
+                .await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "OpenRouter" => {
+            let api_key = env::var(config.api_key_env)?;
+            let client = LlmBuilder::new()
+                .openrouter()
+                .api_key(api_key)
+                .model(config.default_model)
+                .build()
+                .await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "Groq" => {
+            let api_key = env::var(config.api_key_env)?;
+            let client = LlmBuilder::new()
+                .groq()
+                .api_key(api_key)
+                .model(config.default_model)
+                .build()
+                .await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "xAI" => {
+            let api_key = env::var(config.api_key_env)?;
+            let client = LlmBuilder::new()
+                .xai()
+                .api_key(api_key)
+                .model(config.default_model)
+                .build()
+                .await?;
+            test_model_listing(&client, config.name).await;
+        }
+        "Ollama" => {
+            let base_url = env::var("OLLAMA_BASE_URL")
+                .unwrap_or_else(|_| "http://localhost:11434".to_string());
+            let client = LlmBuilder::new()
+                .ollama()
+                .base_url(&base_url)
+                .model(config.default_model)
+                .build()
+                .await?;
+            test_model_listing(&client, config.name).await;
+        }
+        _ => {
+            return Err(format!("Unknown provider: {}", config.name).into());
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1262,6 +1442,54 @@ mod tests {
         println!(
             "   Total providers tested: {}/{}",
             tested_providers.len(),
+            configs.len()
+        );
+    }
+
+    /// Test model listing capability for all available providers
+    #[tokio::test]
+    #[ignore]
+    async fn test_model_listing_all_providers() {
+        println!("🔍 Testing model listing for all available providers...");
+
+        let configs = get_provider_configs();
+        let mut tested_providers = Vec::new();
+        let mut failed_providers = Vec::new();
+
+        for config in &configs {
+            // Check if API key is available
+            if env::var(config.api_key_env).is_ok() {
+                println!("\n📋 Testing model listing for {}...", config.name);
+
+                match test_provider_model_listing(config).await {
+                    Ok(()) => {
+                        tested_providers.push(config.name);
+                        println!("  ✅ {} model listing test passed", config.name);
+                    }
+                    Err(e) => {
+                        failed_providers.push((config.name, e));
+                        println!("  ❌ {} model listing test failed", config.name);
+                    }
+                }
+            } else {
+                println!("  ⏭️ Skipping {} (no API key found)", config.name);
+            }
+        }
+
+        println!("\n📊 Model Listing Test Summary:");
+        println!("   ✅ Passed: {}", tested_providers.len());
+        println!("   ❌ Failed: {}", failed_providers.len());
+
+        if !failed_providers.is_empty() {
+            println!("   Failed providers:");
+            for (name, error) in &failed_providers {
+                println!("     - {}: {}", name, error);
+            }
+        }
+
+        println!(
+            "   Total providers tested: {}/{}",
+            tested_providers.len() + failed_providers.len(),
             configs.len()
         );
     }

@@ -28,6 +28,7 @@
 //! ```
 
 use futures_util::StreamExt;
+use siumai::models;
 use siumai::prelude::*;
 use std::io::{self, Write};
 
@@ -54,7 +55,7 @@ async fn test_ollama_connection() {
     match LlmBuilder::new()
         .ollama()
         .base_url("http://localhost:11434")
-        .model("llama3.2")
+        .model(models::ollama::LLAMA_3_2)
         .temperature(0.7)
         .build()
         .await
@@ -175,10 +176,16 @@ async fn demonstrate_model_management() {
 
     // Show how to work with different models
     let models_to_try = vec![
-        ("llama3.2", "General purpose, good balance"),
-        ("llama3.2:1b", "Smaller, faster, less capable"),
-        ("codellama", "Specialized for code generation"),
-        ("mistral", "Alternative general purpose model"),
+        (models::ollama::LLAMA_3_2, "General purpose, good balance"),
+        (
+            models::ollama::LLAMA_3_2_1B,
+            "Smaller, faster, less capable",
+        ),
+        (
+            models::ollama::CODE_LLAMA,
+            "Specialized for code generation",
+        ),
+        (models::ollama::MISTRAL, "Alternative general purpose model"),
     ];
 
     println!("   📋 Available Model Options:");
@@ -189,26 +196,42 @@ async fn demonstrate_model_management() {
     println!("\n   🧪 Testing Model Availability:");
 
     // Test the primary model
-    match test_model("llama3.2").await {
-        Ok(()) => println!("      ✅ llama3.2 is available and working"),
+    match test_model(models::ollama::LLAMA_3_2).await {
+        Ok(()) => println!(
+            "      ✅ {} is available and working",
+            models::ollama::LLAMA_3_2
+        ),
         Err(e) => {
-            println!("      ❌ llama3.2 failed: {e}");
-            println!("      💡 Try: ollama pull llama3.2");
+            println!("      ❌ {} failed: {e}", models::ollama::LLAMA_3_2);
+            println!("      💡 Try: ollama pull {}", models::ollama::LLAMA_3_2);
         }
     }
 
     // Test smaller model
-    if let Ok(()) = test_model("llama3.2:1b").await {
-        println!("      ✅ llama3.2:1b is available (faster option)")
+    if let Ok(()) = test_model(models::ollama::LLAMA_3_2_1B).await {
+        println!(
+            "      ✅ {} is available (faster option)",
+            models::ollama::LLAMA_3_2_1B
+        )
     } else {
-        println!("      ⚠️  llama3.2:1b not available");
-        println!("      💡 Try: ollama pull llama3.2:1b");
+        println!("      ⚠️  {} not available", models::ollama::LLAMA_3_2_1B);
+        println!("      💡 Try: ollama pull {}", models::ollama::LLAMA_3_2_1B);
     }
 
     println!("\n   💡 Model Selection Tips:");
-    println!("      • Start with llama3.2 for general use");
-    println!("      • Use smaller models (1b, 3b) for faster responses");
-    println!("      • Use specialized models (codellama) for specific tasks");
+    println!(
+        "      • Start with {} for general use",
+        models::ollama::LLAMA_3_2
+    );
+    println!(
+        "      • Use smaller models ({}, {}) for faster responses",
+        models::ollama::LLAMA_3_2_1B,
+        models::ollama::LLAMA_3_2_3B
+    );
+    println!(
+        "      • Use specialized models ({}) for specific tasks",
+        models::ollama::CODE_LLAMA
+    );
     println!("      • Check available models: ollama list");
 }
 
@@ -269,7 +292,7 @@ async fn create_ollama_client() -> Result<siumai::providers::ollama::OllamaClien
     LlmBuilder::new()
         .ollama()
         .base_url("http://localhost:11434")
-        .model("llama3.2")
+        .model(models::ollama::LLAMA_3_2)
         .temperature(0.7)
         .max_tokens(1000)
         .build()
@@ -281,7 +304,10 @@ fn print_ollama_troubleshooting() {
     println!("\n   🔧 Troubleshooting:");
     println!("      1. Install Ollama: https://ollama.ai");
     println!("      2. Start Ollama: ollama serve");
-    println!("      3. Pull a model: ollama pull llama3.2");
+    println!(
+        "      3. Pull a model: ollama pull {}",
+        models::ollama::LLAMA_3_2
+    );
     println!("      4. Check status: ollama list");
     println!("      5. Verify URL: http://localhost:11434");
 }

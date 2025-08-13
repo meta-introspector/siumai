@@ -307,7 +307,7 @@ fn test_request_builder_consistency() {
     for i in 1..=5 {
         let request = builder
             .build_chat_request(messages.clone(), None, false)
-            .expect(&format!("Should build request {}", i));
+            .unwrap_or_else(|_| panic!("Should build request {}", i));
 
         assert_eq!(request.common_params.model, "consistency-test-model");
         assert_eq!(request.common_params.temperature, Some(0.5));

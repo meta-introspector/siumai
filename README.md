@@ -45,6 +45,7 @@ tokio = { version = "1.0", features = ["full"] }
 Use `Provider` when you need access to provider-specific features:
 
 ```rust
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -52,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get a client specifically for OpenAI
     let openai_client = Provider::openai()
         .api_key("your-openai-key")
-        .model("gpt-4")
+        .model(models::openai::GPT_4)
         .temperature(0.7)
         .build()
         .await?;
@@ -71,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Use `Siumai::builder()` when you want provider-agnostic code:
 
 ```rust
+use siumai::models;
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -79,7 +81,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = Siumai::builder()
         .anthropic()
         .api_key("your-anthropic-key")
-        .model("claude-3-5-sonnet-20241022")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
         .build()
         .await?;
 
@@ -148,10 +150,12 @@ Siumai uses a capability-based architecture that separates different AI function
 #### Provider-Specific Clients
 
 ```rust
+use siumai::models;
+
 // OpenAI - with provider-specific features
 let openai_client = Provider::openai()
     .api_key("sk-...")
-    .model("gpt-4")
+    .model(models::openai::GPT_4)
     .temperature(0.7)
     .build()
     .await?;
@@ -159,7 +163,7 @@ let openai_client = Provider::openai()
 // Anthropic - with provider-specific features
 let anthropic_client = Provider::anthropic()
     .api_key("sk-ant-...")
-    .model("claude-3-5-sonnet-20241022")
+    .model(models::anthropic::CLAUDE_SONNET_3_5)
     .temperature(0.8)
     .build()
     .await?;
@@ -167,7 +171,7 @@ let anthropic_client = Provider::anthropic()
 // Ollama - with provider-specific features
 let ollama_client = Provider::ollama()
     .base_url("http://localhost:11434")
-    .model("llama3.2:latest")
+    .model(models::ollama::LLAMA_3_2)
     .temperature(0.7)
     .build()
     .await?;
@@ -176,11 +180,13 @@ let ollama_client = Provider::ollama()
 #### Unified Interface
 
 ```rust
+use siumai::models;
+
 // OpenAI through unified interface
 let openai_unified = Siumai::builder()
     .openai()
     .api_key("sk-...")
-    .model("gpt-4")
+    .model(models::openai::GPT_4)
     .temperature(0.7)
     .build()
     .await?;
@@ -189,7 +195,7 @@ let openai_unified = Siumai::builder()
 let anthropic_unified = Siumai::builder()
     .anthropic()
     .api_key("sk-ant-...")
-    .model("claude-3-5-sonnet-20241022")
+    .model(models::anthropic::CLAUDE_SONNET_3_5)
     .temperature(0.8)
     .build()
     .await?;
@@ -198,7 +204,7 @@ let anthropic_unified = Siumai::builder()
 let ollama_unified = Siumai::builder()
     .ollama()
     .base_url("http://localhost:11434")
-    .model("llama3.2:latest")
+    .model(models::ollama::LLAMA_3_2)
     .temperature(0.7)
     .build()
     .await?;
@@ -207,6 +213,7 @@ let ollama_unified = Siumai::builder()
 ### Custom HTTP Client
 
 ```rust
+use siumai::models;
 use std::time::Duration;
 
 let custom_client = reqwest::Client::builder()
@@ -217,7 +224,7 @@ let custom_client = reqwest::Client::builder()
 // With provider-specific client
 let client = Provider::openai()
     .api_key("your-key")
-    .model("gpt-4")
+    .model(models::openai::GPT_4)
     .build()
     .await?;
 
@@ -225,7 +232,7 @@ let client = Provider::openai()
 let unified_client = Siumai::builder()
     .openai()
     .api_key("your-key")
-    .model("gpt-4")
+    .model(models::openai::GPT_4)
     .build()
     .await?;
 ```
@@ -233,10 +240,12 @@ let unified_client = Siumai::builder()
 ### Provider-Specific Features
 
 ```rust
+use siumai::models;
+
 // OpenAI with structured output (provider-specific client)
 let openai_client = Provider::openai()
     .api_key("your-key")
-    .model("gpt-4")
+    .model(models::openai::GPT_4)
     .response_format(ResponseFormat::JsonObject)
     .frequency_penalty(0.1)
     .build()
@@ -245,7 +254,7 @@ let openai_client = Provider::openai()
 // Anthropic with caching (provider-specific client)
 let anthropic_client = Provider::anthropic()
     .api_key("your-key")
-    .model("claude-3-5-sonnet-20241022")
+    .model(models::anthropic::CLAUDE_SONNET_3_5)
     .cache_control(CacheControl::Ephemeral)
     .thinking_budget(1000)
     .build()
@@ -254,7 +263,7 @@ let anthropic_client = Provider::anthropic()
 // Ollama with local model management (provider-specific client)
 let ollama_client = Provider::ollama()
     .base_url("http://localhost:11434")
-    .model("llama3.2:latest")
+    .model(models::ollama::LLAMA_3_2)
     .keep_alive("10m")
     .num_ctx(4096)
     .num_gpu(1)
@@ -265,7 +274,7 @@ let ollama_client = Provider::ollama()
 let unified_client = Siumai::builder()
     .anthropic()  // or .openai(), .ollama(), etc.
     .api_key("your-key")
-    .model("claude-3-5-sonnet-20241022")
+    .model(models::anthropic::CLAUDE_SONNET_3_5)
     .temperature(0.7)
     .max_tokens(1000)
     .reasoning(true)        // ✅ Unified reasoning interface
@@ -279,10 +288,11 @@ let unified_client = Siumai::builder()
 #### Parameter Validation and Optimization
 
 ```rust
+use siumai::models;
 use siumai::params::EnhancedParameterValidator;
 
 let params = CommonParams {
-    model: "gpt-4".to_string(),
+    model: models::openai::GPT_4.to_string(),
     temperature: Some(0.7),
     max_tokens: Some(1000),
     // ... other parameters
@@ -385,7 +395,7 @@ use siumai::prelude::*;
 // Connect to local Ollama instance
 let client = Provider::ollama()
     .base_url("http://localhost:11434")
-    .model("llama3.2:latest")
+    .model(models::ollama::LLAMA_3_2)
     .temperature(0.7)
     .build()
     .await?;
@@ -402,7 +412,7 @@ use siumai::providers::ollama::{OllamaClient, OllamaConfig};
 
 let config = OllamaConfig::builder()
     .base_url("http://localhost:11434")
-    .model("llama3.2:latest")
+    .model(models::ollama::LLAMA_3_2)
     .keep_alive("10m")           // Keep model in memory
     .num_ctx(4096)              // Context window
     .num_gpu(1)                 // Use GPU acceleration
@@ -431,7 +441,7 @@ use siumai::prelude::*;
 let client = LlmBuilder::new()
     .ollama()
     .base_url("http://localhost:11434")
-    .model("deepseek-r1:latest")
+    .model(models::ollama::DEEPSEEK_R1)
     .reasoning(true)            // Enable reasoning mode
     .temperature(0.7)
     .build()
@@ -461,6 +471,7 @@ if let Some(answer) = response.content_text() {
 OpenAI's Responses API provides stateful conversations, background processing, and built-in tools:
 
 ```rust
+use siumai::models;
 use siumai::providers::openai::responses::{OpenAiResponses, ResponsesApiCapability};
 use siumai::providers::openai::config::OpenAiConfig;
 use siumai::types::OpenAiBuiltInTool;
@@ -468,7 +479,7 @@ use siumai::prelude::*;
 
 // Create Responses API client with built-in tools
 let config = OpenAiConfig::new("your-api-key")
-    .with_model("gpt-4o")
+    .with_model(models::openai::GPT_4O)
     .with_responses_api(true)
     .with_built_in_tool(OpenAiBuiltInTool::WebSearch);
 
@@ -501,13 +512,14 @@ if is_ready {
 #### Text Embedding
 
 ```rust
+use siumai::models;
 use siumai::prelude::*;
 
 // Unified interface - works with any provider that supports embeddings
 let client = Siumai::builder()
     .openai()
     .api_key("your-api-key")
-    .model("text-embedding-3-small")
+    .model(models::openai::TEXT_EMBEDDING_3_SMALL)
     .build()
     .await?;
 
@@ -529,6 +541,7 @@ let response = embeddings_client.embed(texts).await?;
 #### Text-to-Speech
 
 ```rust
+use siumai::models;
 use siumai::providers::openai::{OpenAiConfig, OpenAiAudio};
 use siumai::traits::AudioCapability;
 use siumai::types::TtsRequest;
@@ -541,7 +554,7 @@ let request = TtsRequest {
     voice: Some("alloy".to_string()),
     format: Some("mp3".to_string()),
     speed: Some(1.0),
-    model: Some("tts-1".to_string()),
+    model: Some(models::openai::TTS_1.to_string()),
     extra_params: std::collections::HashMap::new(),
 };
 
@@ -552,6 +565,7 @@ std::fs::write("output.mp3", response.audio_data)?;
 #### Image Generation
 
 ```rust
+use siumai::models;
 use siumai::providers::openai::{OpenAiConfig, OpenAiImages};
 use siumai::traits::ImageGenerationCapability;
 use siumai::types::ImageGenerationRequest;
@@ -561,7 +575,7 @@ let client = OpenAiImages::new(config, reqwest::Client::new());
 
 let request = ImageGenerationRequest {
     prompt: "A beautiful sunset".to_string(),
-    model: Some("dall-e-3".to_string()),
+    model: Some(models::openai::DALL_E_3.to_string()),
     size: Some("1024x1024".to_string()),
     count: 1,
     ..Default::default()

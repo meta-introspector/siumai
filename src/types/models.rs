@@ -63,6 +63,15 @@ pub mod constants {
     /// Re-export OpenAI-compatible provider model constants
     pub use crate::providers::openai_compatible::providers::models as openai_compatible;
 
+    /// Re-export Ollama model constants (detailed structure)
+    pub use crate::providers::ollama::model_constants as ollama;
+
+    /// Re-export xAI model constants (detailed structure)
+    pub use crate::providers::xai::models as xai;
+
+    /// Re-export Groq model constants (detailed structure)
+    pub use crate::providers::groq::models as groq;
+
     /// Popular models across all providers
     ///
     /// This module provides curated selections of popular models from each provider,
@@ -76,6 +85,10 @@ pub mod constants {
             pub const ANTHROPIC: &str = super::super::anthropic::popular::FLAGSHIP;
             /// Google's most capable model
             pub const GEMINI: &str = super::super::gemini::popular::FLAGSHIP;
+            /// xAI's most capable model
+            pub const XAI: &str = super::super::xai::popular::FLAGSHIP;
+            /// Groq's most capable model
+            pub const GROQ: &str = super::super::groq::popular::FLAGSHIP;
         }
 
         /// Best balanced models (capability vs cost)
@@ -86,6 +99,10 @@ pub mod constants {
             pub const ANTHROPIC: &str = super::super::anthropic::popular::BALANCED;
             /// Google's balanced model
             pub const GEMINI: &str = super::super::gemini::popular::BALANCED;
+            /// xAI's balanced model
+            pub const XAI: &str = super::super::xai::popular::BALANCED;
+            /// Groq's balanced model
+            pub const GROQ: &str = super::super::groq::popular::BALANCED;
         }
 
         /// Best reasoning models
@@ -96,6 +113,12 @@ pub mod constants {
             pub const ANTHROPIC: &str = super::super::anthropic::popular::THINKING;
             /// Google's flagship model (has thinking)
             pub const GEMINI: &str = super::super::gemini::popular::FLAGSHIP;
+            /// Ollama's reasoning model
+            pub const OLLAMA: &str = super::super::ollama::popular::REASONING;
+            /// xAI's reasoning model
+            pub const XAI: &str = super::super::xai::popular::REASONING;
+            /// Groq's reasoning model
+            pub const GROQ: &str = super::super::groq::popular::REASONING;
         }
 
         /// Most economical models
@@ -106,6 +129,12 @@ pub mod constants {
             pub const ANTHROPIC: &str = super::super::anthropic::popular::FAST;
             /// Google's economical model
             pub const GEMINI: &str = super::super::gemini::popular::ECONOMICAL;
+            /// Ollama's lightweight model (free local)
+            pub const OLLAMA: &str = super::super::ollama::popular::LIGHTWEIGHT;
+            /// xAI's lightweight model
+            pub const XAI: &str = super::super::xai::popular::LIGHTWEIGHT;
+            /// Groq's lightweight model
+            pub const GROQ: &str = super::super::groq::popular::LIGHTWEIGHT;
         }
 
         /// Latest and most advanced models
@@ -116,6 +145,10 @@ pub mod constants {
             pub const ANTHROPIC: &str = super::super::anthropic::popular::LATEST;
             /// Google's latest model
             pub const GEMINI: &str = super::super::gemini::popular::LATEST;
+            /// xAI's latest model
+            pub const XAI: &str = super::super::xai::popular::LATEST;
+            /// Groq's latest model
+            pub const GROQ: &str = super::super::groq::popular::LATEST;
         }
     }
 
@@ -149,7 +182,7 @@ pub mod constants {
     /// Get all audio generation models from all providers
     pub fn all_audio_generation_models() -> Vec<&'static str> {
         let mut models = Vec::new();
-        models.extend_from_slice(&openai::audio::ALL);
+        models.extend_from_slice(openai::audio::ALL);
         models.extend_from_slice(&gemini::all_audio_generation_models());
         models
     }
@@ -157,7 +190,7 @@ pub mod constants {
     /// Get all image generation models from all providers
     pub fn all_image_generation_models() -> Vec<&'static str> {
         let mut models = Vec::new();
-        models.extend_from_slice(&openai::images::ALL);
+        models.extend_from_slice(openai::images::ALL);
         models.extend_from_slice(&gemini::all_image_generation_models());
         models
     }
@@ -165,7 +198,7 @@ pub mod constants {
     /// Get all embedding models from all providers
     pub fn all_embedding_models() -> Vec<&'static str> {
         let mut models = Vec::new();
-        models.extend_from_slice(&openai::embeddings::ALL);
+        models.extend_from_slice(openai::embeddings::ALL);
         models
     }
 }
@@ -178,17 +211,17 @@ pub mod constants {
 /// # Examples
 ///
 /// ```rust
-/// use siumai::models;
+/// use siumai::model_constants;
 ///
 /// // Short and sweet access
-/// let model = models::openai::GPT_4O;
-/// let claude = models::anthropic::CLAUDE_OPUS_4_1;
-/// let gemini = models::gemini::GEMINI_2_5_PRO;
+/// let model = model_constants::openai::GPT_4O;
+/// let claude = model_constants::anthropic::CLAUDE_OPUS_4_1;
+/// let gemini = model_constants::gemini::GEMINI_2_5_PRO;
 ///
 /// // Popular recommendations
-/// let flagship = models::popular::OPENAI_FLAGSHIP;
+/// let flagship = model_constants::popular::OPENAI_FLAGSHIP;
 /// ```
-pub mod models {
+pub mod model_constants {
     /// OpenAI models with simplified access
     pub mod openai {
         use crate::providers::openai::model_constants as c;
@@ -327,10 +360,92 @@ pub mod models {
             use super::c;
 
             pub const GPT_4O: &str = c::openrouter::openai::GPT_4O;
+            pub const CLAUDE_3_5_SONNET: &str = c::openrouter::anthropic::CLAUDE_3_5_SONNET;
             pub const CLAUDE_OPUS_4_1: &str = c::openrouter::anthropic::CLAUDE_OPUS_4_1;
             pub const GEMINI_2_5_PRO: &str = c::openrouter::google::GEMINI_2_5_PRO;
             pub const DEEPSEEK_REASONER: &str = c::openrouter::deepseek::DEEPSEEK_REASONER;
             pub const LLAMA_3_1_405B: &str = c::openrouter::meta::LLAMA_3_1_405B;
         }
+    }
+
+    /// Ollama models with simplified access
+    pub mod ollama {
+        use crate::providers::ollama::model_constants as c;
+
+        // Llama 3.2 family
+        pub const LLAMA_3_2: &str = c::llama_3_2::LLAMA_3_2;
+        pub const LLAMA_3_2_3B: &str = c::llama_3_2::LLAMA_3_2_3B;
+        pub const LLAMA_3_2_1B: &str = c::llama_3_2::LLAMA_3_2_1B;
+
+        // Llama 3.1 family
+        pub const LLAMA_3_1: &str = c::llama_3_1::LLAMA_3_1;
+        pub const LLAMA_3_1_8B: &str = c::llama_3_1::LLAMA_3_1_8B;
+        pub const LLAMA_3_1_70B: &str = c::llama_3_1::LLAMA_3_1_70B;
+
+        // Code Llama
+        pub const CODE_LLAMA: &str = c::code_llama::CODE_LLAMA;
+        pub const CODE_LLAMA_13B: &str = c::code_llama::CODE_LLAMA_13B;
+
+        // Other popular models
+        pub const MISTRAL: &str = c::mistral::MISTRAL;
+        pub const PHI_3: &str = c::phi_3::PHI_3;
+        pub const GEMMA: &str = c::gemma::GEMMA;
+        pub const QWEN2: &str = c::qwen2::QWEN2;
+
+        // DeepSeek models
+        pub const DEEPSEEK_R1: &str = c::deepseek::DEEPSEEK_R1;
+        pub const DEEPSEEK_CODER: &str = c::deepseek::DEEPSEEK_CODER;
+
+        // Embedding models
+        pub const NOMIC_EMBED_TEXT: &str = c::embeddings::NOMIC_EMBED_TEXT;
+    }
+
+    /// xAI models with simplified access
+    pub mod xai {
+        use crate::providers::xai::models as c;
+
+        // Grok 4 family (latest flagship)
+        pub const GROK_4: &str = c::grok_4::GROK_4;
+        pub const GROK_4_0709: &str = c::grok_4::GROK_4_0709;
+        pub const GROK_4_LATEST: &str = c::grok_4::GROK_4_LATEST;
+
+        // Grok 3 family
+        pub const GROK_3: &str = c::grok_3::GROK_3;
+        pub const GROK_3_LATEST: &str = c::grok_3::GROK_3_LATEST;
+        pub const GROK_3_MINI: &str = c::grok_3::GROK_3_MINI;
+        pub const GROK_3_FAST: &str = c::grok_3::GROK_3_FAST;
+
+        // Grok 2 family
+        pub const GROK_2: &str = c::grok_2::GROK_2;
+        pub const GROK_2_LATEST: &str = c::grok_2::GROK_2_LATEST;
+
+        // Image generation
+        pub const GROK_2_IMAGE: &str = c::images::GROK_2_IMAGE;
+
+        // Legacy
+        pub const GROK_BETA: &str = c::legacy::GROK_BETA;
+    }
+
+    /// Groq models with simplified access
+    pub mod groq {
+        use crate::providers::groq::models as c;
+
+        // Production models (stable)
+        pub const LLAMA_3_1_8B_INSTANT: &str = c::production::LLAMA_3_1_8B_INSTANT;
+        pub const LLAMA_3_3_70B_VERSATILE: &str = c::production::LLAMA_3_3_70B_VERSATILE;
+        pub const LLAMA_GUARD_4_12B: &str = c::production::LLAMA_GUARD_4_12B;
+        pub const WHISPER_LARGE_V3: &str = c::production::WHISPER_LARGE_V3;
+        pub const WHISPER_LARGE_V3_TURBO: &str = c::production::WHISPER_LARGE_V3_TURBO;
+
+        // Preview models (experimental)
+        pub const DEEPSEEK_R1_DISTILL_LLAMA_70B: &str = c::preview::DEEPSEEK_R1_DISTILL_LLAMA_70B;
+        pub const GPT_OSS_120B: &str = c::preview::GPT_OSS_120B;
+        pub const GPT_OSS_20B: &str = c::preview::GPT_OSS_20B;
+        pub const QWEN3_32B: &str = c::preview::QWEN3_32B;
+        pub const PLAYAI_TTS: &str = c::preview::PLAYAI_TTS;
+
+        // System models
+        pub const COMPOUND_BETA: &str = c::systems::COMPOUND_BETA;
+        pub const COMPOUND_BETA_MINI: &str = c::systems::COMPOUND_BETA_MINI;
     }
 }

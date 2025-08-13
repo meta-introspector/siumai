@@ -171,34 +171,34 @@ impl EnhancedParameterValidator {
             ParameterMapperFactory::create_mapper(provider_type).get_param_constraints();
 
         // Optimize temperature (only clamp negative values)
-        if let Some(temp) = params.temperature {
-            if temp < 0.0 {
-                let optimal_temp = 0.0;
-                report.add_optimization(ParameterOptimization {
-                    parameter: "temperature".to_string(),
-                    original_value: temp.to_string(),
-                    optimized_value: optimal_temp.to_string(),
-                    reason: "Clamped negative temperature to 0.0".to_string(),
-                });
-                params.temperature = Some(optimal_temp);
-            }
-            // Note: We don't clamp high temperatures anymore, let the provider handle it
+        if let Some(temp) = params.temperature
+            && temp < 0.0
+        {
+            let optimal_temp = 0.0;
+            report.add_optimization(ParameterOptimization {
+                parameter: "temperature".to_string(),
+                original_value: temp.to_string(),
+                optimized_value: optimal_temp.to_string(),
+                reason: "Clamped negative temperature to 0.0".to_string(),
+            });
+            params.temperature = Some(optimal_temp);
         }
+        // Note: We don't clamp high temperatures anymore, let the provider handle it
 
         // Optimize max_tokens (only fix zero/invalid values)
-        if let Some(max_tokens) = params.max_tokens {
-            if max_tokens == 0 {
-                let optimal_tokens = 1;
-                report.add_optimization(ParameterOptimization {
-                    parameter: "max_tokens".to_string(),
-                    original_value: max_tokens.to_string(),
-                    optimized_value: optimal_tokens.to_string(),
-                    reason: "Changed zero max_tokens to 1 (minimum valid value)".to_string(),
-                });
-                params.max_tokens = Some(optimal_tokens);
-            }
-            // Note: We don't clamp large max_tokens anymore, let the provider handle it
+        if let Some(max_tokens) = params.max_tokens
+            && max_tokens == 0
+        {
+            let optimal_tokens = 1;
+            report.add_optimization(ParameterOptimization {
+                parameter: "max_tokens".to_string(),
+                original_value: max_tokens.to_string(),
+                optimized_value: optimal_tokens.to_string(),
+                reason: "Changed zero max_tokens to 1 (minimum valid value)".to_string(),
+            });
+            params.max_tokens = Some(optimal_tokens);
         }
+        // Note: We don't clamp large max_tokens anymore, let the provider handle it
 
         // Optimize top_p
         if let Some(top_p) = params.top_p {

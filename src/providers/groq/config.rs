@@ -126,12 +126,12 @@ impl GroqConfig {
             ));
         }
 
-        // Validate temperature range
+        // Validate temperature range (relaxed validation - only check for negative values)
         if let Some(temp) = self.common_params.temperature
-            && !(0.0..=2.0).contains(&temp)
+            && temp < 0.0
         {
             return Err(LlmError::ConfigurationError(
-                "Temperature must be between 0.0 and 2.0".to_string(),
+                "Temperature cannot be negative".to_string(),
             ));
         }
 
@@ -158,19 +158,7 @@ impl GroqConfig {
 
     /// Get supported models for Groq
     pub fn supported_models() -> Vec<&'static str> {
-        vec![
-            "llama-3.3-70b-versatile",
-            "llama-3.1-70b-versatile",
-            "llama-3.1-8b-instant",
-            "llama3-70b-8192",
-            "llama3-8b-8192",
-            "mixtral-8x7b-32768",
-            "gemma2-9b-it",
-            "gemma-7b-it",
-            "whisper-large-v3",
-            "whisper-large-v3-turbo",
-            "distil-whisper-large-v3-en",
-        ]
+        crate::providers::groq::models::all_models()
     }
 
     /// Check if a model is supported
@@ -180,8 +168,7 @@ impl GroqConfig {
 
     /// Get default model
     pub fn default_model() -> &'static str {
-        use crate::providers::openai_compatible::providers::models::groq;
-        groq::LLAMA_3_1_70B
+        crate::providers::groq::models::popular::FLAGSHIP
     }
 }
 
@@ -217,24 +204,33 @@ mod tests {
             .with_temperature(0.7);
         assert!(valid_config.validate().is_ok());
 
-        // Invalid temperature
-        let invalid_temp_config = GroqConfig::new("test-api-key")
+        // High temperature (now allowed with relaxed validation)
+        let high_temp_config = GroqConfig::new("test-api-key")
             .with_model("llama-3.3-70b-versatile")
             .with_temperature(3.0);
+        assert!(high_temp_config.validate().is_ok());
+
+        // Negative temperature (still invalid)
+        let invalid_temp_config = GroqConfig::new("test-api-key")
+            .with_model("llama-3.3-70b-versatile")
+            .with_temperature(-1.0);
         assert!(invalid_temp_config.validate().is_err());
 
         // Empty API key
-        let empty_key_config = GroqConfig::new("").with_model("llama-3.3-70b-versatile");
+        let empty_key_config =
+            GroqConfig::new("").with_model(crate::providers::groq::models::popular::FLAGSHIP);
         assert!(empty_key_config.validate().is_err());
     }
 
     #[test]
     fn test_supported_models() {
         let models = GroqConfig::supported_models();
-        assert!(models.contains(&"llama-3.3-70b-versatile"));
-        assert!(models.contains(&"whisper-large-v3"));
+        assert!(models.contains(&crate::providers::groq::models::popular::FLAGSHIP));
+        assert!(models.contains(&crate::providers::groq::models::popular::SPEECH_TO_TEXT));
 
-        assert!(GroqConfig::is_model_supported("llama-3.3-70b-versatile"));
+        assert!(GroqConfig::is_model_supported(
+            crate::providers::groq::models::popular::FLAGSHIP
+        ));
         assert!(!GroqConfig::is_model_supported("non-existent-model"));
     }
 }

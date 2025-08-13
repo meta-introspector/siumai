@@ -7,9 +7,10 @@ use async_trait::async_trait;
 use crate::client::LlmClient;
 use crate::error::LlmError;
 use crate::stream::ChatStream;
-use crate::traits::{ChatCapability, ProviderCapabilities};
+use crate::traits::{ChatCapability, ModelListingCapability, ProviderCapabilities};
 use crate::types::*;
 
+use super::api::GroqModels;
 use super::chat::GroqChatCapability;
 use super::config::GroqConfig;
 
@@ -21,6 +22,8 @@ pub struct GroqClient {
     http_client: reqwest::Client,
     /// Chat capability
     chat_capability: GroqChatCapability,
+    /// Models capability
+    models_capability: GroqModels,
     /// Tracing configuration
     tracing_config: Option<crate::tracing::TracingConfig>,
     /// Tracing guard to keep tracing system active
@@ -38,10 +41,18 @@ impl GroqClient {
             config.common_params.clone(),
         );
 
+        let models_capability = GroqModels::new(
+            config.api_key.clone(),
+            config.base_url.clone(),
+            http_client.clone(),
+            config.http_config.clone(),
+        );
+
         Self {
             config,
             http_client,
             chat_capability,
+            models_capability,
             tracing_config: None,
             _tracing_guard: None,
         }
@@ -119,5 +130,16 @@ impl GroqClient {
     /// Set the tracing configuration
     pub(crate) fn set_tracing_config(&mut self, config: Option<crate::tracing::TracingConfig>) {
         self.tracing_config = config;
+    }
+}
+
+#[async_trait]
+impl ModelListingCapability for GroqClient {
+    async fn list_models(&self) -> Result<Vec<ModelInfo>, LlmError> {
+        self.models_capability.list_models().await
+    }
+
+    async fn get_model(&self, model_id: String) -> Result<ModelInfo, LlmError> {
+        self.models_capability.get_model(model_id).await
     }
 }

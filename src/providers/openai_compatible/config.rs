@@ -3,6 +3,7 @@
 //! This module defines the configuration structures and types for OpenAI-compatible providers.
 
 use crate::error::LlmError;
+use crate::providers::openai_compatible::providers::models::deepseek::{DEEPSEEK_V3, REASONER};
 use crate::types::CommonParams;
 use std::collections::HashMap;
 
@@ -83,17 +84,15 @@ impl OpenAiCompatibleConfig {
 
         // Handle provider-specific model selection
         if self.provider_id == "deepseek" {
-            use crate::models::openai_compatible::deepseek;
-
             // Override model based on reasoning/coding parameters
             if let Some(reasoning) = self.provider_params.get("reasoning") {
                 if reasoning.as_bool() == Some(true) {
-                    model = deepseek::REASONER.to_string();
+                    model = REASONER.to_string();
                 }
             } else if let Some(coding) = self.provider_params.get("coding")
                 && coding.as_bool() == Some(true)
             {
-                model = deepseek::V3.to_string(); // Use V3 for coding
+                model = DEEPSEEK_V3.to_string(); // Use V3 for coding
             }
         }
 
