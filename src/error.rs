@@ -4,6 +4,10 @@
 
 use thiserror::Error;
 
+// Static assertions to ensure error types are Send + Sync
+// This is important for async code and multi-threading
+static_assertions::assert_impl_all!(LlmError: Send, Sync, Clone);
+
 /// Error category for better error handling and recovery strategies.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ErrorCategory {

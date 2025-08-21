@@ -1210,7 +1210,7 @@ impl ChatCapability for OpenAiResponses {
 
         // Use unified EventSource-based stream processor for reliability
         let converter = OpenAiResponsesEventConverter::new(self.config.common_params.model.clone());
-        crate::utils::streaming::StreamProcessor::create_eventsource_stream(
+        crate::utils::streaming::StreamFactory::create_eventsource_stream(
             request_builder,
             converter,
         )

@@ -7,7 +7,7 @@ use crate::error::LlmError;
 use crate::providers::openai::config::OpenAiConfig;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
-use crate::utils::streaming::{SseEventConverter, StreamProcessor};
+use crate::utils::streaming::{SseEventConverter, StreamFactory};
 use eventsource_stream::Event;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -276,6 +276,6 @@ impl OpenAiStreaming {
             .json(&request_body);
 
         let converter = OpenAiEventConverter::new(self.config);
-        StreamProcessor::create_eventsource_stream(request_builder, converter).await
+        StreamFactory::create_eventsource_stream(request_builder, converter).await
     }
 }

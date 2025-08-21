@@ -375,6 +375,10 @@ impl LlmClient for OllamaClient {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+
+    fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {
+        Some(self)
+    }
 }
 
 impl LlmProvider for OllamaClient {

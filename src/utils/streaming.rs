@@ -37,10 +37,13 @@ pub trait JsonEventConverter: Send + Sync {
     fn convert_json<'a>(&'a self, json_data: &'a str) -> JsonEventFuture<'a>;
 }
 
-/// Stream processor for all providers using eventsource-stream
-pub struct StreamProcessor;
+/// Stream factory for creating provider-specific streams
+///
+/// This factory provides utilities for creating SSE and JSON streams
+/// using eventsource-stream for proper UTF-8 handling.
+pub struct StreamFactory;
 
-impl StreamProcessor {
+impl StreamFactory {
     /// Create a chat stream for JSON-based streaming (like Gemini)
     ///
     /// Some providers use JSON streaming instead of SSE. This method handles
@@ -83,16 +86,10 @@ impl StreamProcessor {
         Ok(boxed_stream)
     }
 
-    /// Create a chat stream using reqwest_eventsource (with retry support)
+    /// Create a chat stream using eventsource-stream
     ///
-    /// This method provides enhanced features over the basic eventsource-stream:
-    /// - Automatic retry on connection failures
-    /// - Better error handling and recovery
-    /// - Connection state management
-    /// - Last-Event-ID support for reconnection
-    ///
-    /// Note: This method creates the EventSource and immediately processes it,
-    /// avoiding Sync issues with the EventSource type.
+    /// This method creates an SSE stream using the eventsource-stream crate,
+    /// which handles UTF-8 boundaries, line buffering, and SSE parsing automatically.
     pub async fn create_eventsource_stream<C>(
         request_builder: reqwest::RequestBuilder,
         converter: C,
@@ -100,6 +97,8 @@ impl StreamProcessor {
     where
         C: SseEventConverter + Clone + Send + 'static,
     {
+        use crate::utils::sse_stream::SseStreamExt;
+
         // Send the request and get the response
         let response = request_builder
             .send()
@@ -117,66 +116,41 @@ impl StreamProcessor {
             )));
         }
 
-        // Process the response as a byte stream and parse SSE manually
-        let mut byte_stream = response.bytes_stream();
-        let mut buffer = String::new();
-        let mut events = Vec::new();
+        // Convert response to byte stream
+        let byte_stream = response
+            .bytes_stream()
+            .map(|chunk| chunk.map_err(|e| LlmError::HttpError(format!("Stream error: {e}"))));
 
-        while let Some(chunk_result) = byte_stream.next().await {
-            match chunk_result {
-                Ok(chunk) => {
-                    // Convert bytes to string and add to buffer
-                    let chunk_str = String::from_utf8_lossy(&chunk);
-                    buffer.push_str(&chunk_str);
+        // Use eventsource-stream to parse SSE
+        let sse_stream = byte_stream.into_sse_stream();
 
-                    // Process complete lines
-                    while let Some(line_end) = buffer.find('\n') {
-                        let line = buffer[..line_end].trim_end_matches('\r').to_string();
-                        buffer = buffer[line_end + 1..].to_string();
-
-                        // Process SSE data lines
-                        if let Some(data) = line.strip_prefix("data: ") {
-                            // Remove "data: " prefix
-
-                            // Handle [DONE] events
-                            if data == "[DONE]" {
-                                if let Some(end_event) = converter.handle_stream_end() {
-                                    events.push(end_event);
-                                }
-                                // Don't break here, let the stream end naturally
-                                continue;
-                            }
-
-                            // Skip empty events
-                            if data.trim().is_empty() {
-                                continue;
-                            }
-
-                            // Create an Event for the converter
-                            let event = Event {
-                                event: "".to_string(),
-                                data: data.to_string(),
-                                id: "".to_string(),
-                                retry: None,
-                            };
-
-                            // Convert using provider-specific logic
-                            if let Some(result) = converter.convert_event(event).await {
-                                events.push(result);
-                            }
+        // Convert SSE events to ChatStreamEvents
+        let chat_stream = sse_stream.filter_map(move |event_result| {
+            let converter = converter.clone();
+            async move {
+                match event_result {
+                    Ok(event) => {
+                        // Handle special [DONE] event
+                        if event.data.trim() == "[DONE]" {
+                            return converter.handle_stream_end();
                         }
+
+                        // Skip empty events
+                        if event.data.trim().is_empty() {
+                            return None;
+                        }
+
+                        // Convert using provider-specific logic
+                        converter.convert_event(event).await
                     }
-                }
-                Err(e) => {
-                    events.push(Err(LlmError::StreamError(format!("Stream error: {e}"))));
-                    break;
+                    Err(e) => Some(Err(LlmError::StreamError(format!(
+                        "SSE parsing error: {e}"
+                    )))),
                 }
             }
-        }
+        });
 
-        // Create a stream from the collected events
-        let stream = futures_util::stream::iter(events);
-        Ok(Box::pin(stream))
+        Ok(Box::pin(chat_stream))
     }
 }
 

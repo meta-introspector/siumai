@@ -7,7 +7,7 @@ use crate::error::LlmError;
 use crate::params::AnthropicParams;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
-use crate::utils::streaming::{SseEventConverter, StreamProcessor};
+use crate::utils::streaming::{SseEventConverter, StreamFactory};
 use eventsource_stream::Event;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -362,7 +362,7 @@ impl AnthropicStreaming {
             .json(&request_body);
 
         let converter = AnthropicEventConverter::new(self.config);
-        StreamProcessor::create_eventsource_stream(request_builder, converter).await
+        StreamFactory::create_eventsource_stream(request_builder, converter).await
     }
 
     /// Convert messages to Anthropic format

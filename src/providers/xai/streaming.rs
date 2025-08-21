@@ -5,7 +5,7 @@
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, ChatResponse, FinishReason, MessageContent, Usage};
-use crate::utils::streaming::{SseEventConverter, StreamProcessor};
+use crate::utils::streaming::{SseEventConverter, StreamFactory};
 use eventsource_stream::Event;
 use std::collections::HashMap;
 use std::future::Future;
@@ -186,6 +186,6 @@ impl XaiStreaming {
             .json(&request_body);
 
         let converter = XaiEventConverter::new(self.config);
-        StreamProcessor::create_eventsource_stream(request_builder, converter).await
+        StreamFactory::create_eventsource_stream(request_builder, converter).await
     }
 }

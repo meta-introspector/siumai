@@ -20,6 +20,38 @@ pub trait LlmClient: ChatCapability + Send + Sync {
 
     /// Get as Any for dynamic casting
     fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Get as embedding capability if supported
+    ///
+    /// Returns None by default. Providers that support embeddings
+    /// should override this method to return Some(self).
+    fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {
+        None
+    }
+
+    /// Get as audio capability if supported
+    ///
+    /// Returns None by default. Providers that support audio
+    /// should override this method to return Some(self).
+    fn as_audio_capability(&self) -> Option<&dyn AudioCapability> {
+        None
+    }
+
+    /// Get as vision capability if supported
+    ///
+    /// Returns None by default. Providers that support vision
+    /// should override this method to return Some(self).
+    fn as_vision_capability(&self) -> Option<&dyn VisionCapability> {
+        None
+    }
+
+    /// Get as image generation capability if supported
+    ///
+    /// Returns None by default. Providers that support image generation
+    /// should override this method to return Some(self).
+    fn as_image_generation_capability(&self) -> Option<&dyn ImageGenerationCapability> {
+        None
+    }
 }
 
 /// Client Wrapper - provides dynamic dispatch for different provider clients

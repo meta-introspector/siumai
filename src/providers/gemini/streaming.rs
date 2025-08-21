@@ -7,7 +7,7 @@ use crate::error::LlmError;
 use crate::providers::gemini::types::GeminiConfig;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
-use crate::utils::streaming::{SseEventConverter, StreamProcessor};
+use crate::utils::streaming::{SseEventConverter, StreamFactory};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::future::Future;
@@ -212,7 +212,7 @@ impl GeminiStreaming {
         let mut config = self.config;
         config.api_key = api_key.clone();
         let converter = GeminiEventConverter::new(config);
-        StreamProcessor::create_eventsource_stream(
+        StreamFactory::create_eventsource_stream(
             self.http_client
                 .post(&url)
                 .header("Content-Type", "application/json")

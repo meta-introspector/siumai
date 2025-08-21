@@ -916,6 +916,121 @@ pub trait CompletionCapability: Send + Sync {
     }
 }
 
+/// Application-level timeout support for LLM operations.
+///
+/// This trait provides timeout control for complete operations including retries,
+/// complementing the HTTP-level timeouts in `HttpConfig`.
+///
+/// ## Why Two Timeout Levels?
+///
+/// 1. **HTTP timeout** (via `HttpConfig`):
+///    - Controls individual HTTP request timeout (default: 30s)
+///    - Prevents single requests from hanging
+///    - Does NOT control retry duration
+///
+/// 2. **Application timeout** (via this trait):
+///    - Controls the TOTAL operation time including retries
+///    - Example: 3 retries with exponential backoff could take 5+ minutes
+///    - Useful for strict time constraints (e.g., web API handlers)
+///
+/// ## Example Scenario
+///
+/// ```text
+/// Without application timeout:
+/// - HTTP timeout: 30s per request
+/// - Retry policy: 3 attempts with exponential backoff
+/// - Worst case: 30s + 60s + 120s = 210s (3.5 minutes)
+///
+/// With application timeout of 60s:
+/// - Operation fails after 60s regardless of retry state
+/// - Provides predictable maximum latency
+/// ```
+///
+/// ## Usage Example
+///
+/// ```rust,no_run
+/// use siumai::traits::TimeoutCapability;
+/// use std::time::Duration;
+///
+/// # async fn example(client: impl TimeoutCapability) -> Result<(), Box<dyn std::error::Error>> {
+/// // Strict timeout for web API handler
+/// let response = client.chat_with_timeout(
+///     messages,
+///     tools,
+///     Duration::from_secs(10)  // Fail fast for user-facing API
+/// ).await?;
+///
+/// // Longer timeout for background job
+/// let response = client.chat_with_timeout(
+///     messages,
+///     tools,
+///     Duration::from_secs(300)  // Allow full retry cycle
+/// ).await?;
+/// # Ok(())
+/// # }
+/// ```
+#[async_trait]
+pub trait TimeoutCapability: ChatCapability + Send + Sync {
+    /// Chat with application-level timeout.
+    ///
+    /// Controls the total operation time including all retries.
+    /// Use this when you need strict time bounds regardless of retry behavior.
+    ///
+    /// # Arguments
+    /// * `messages` - The conversation history
+    /// * `tools` - Optional tools to use
+    /// * `timeout` - Maximum total time for the operation (including retries)
+    ///
+    /// # Returns
+    /// Chat response or timeout error
+    async fn chat_with_timeout(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        timeout: std::time::Duration,
+    ) -> Result<ChatResponse, LlmError> {
+        tokio::time::timeout(timeout, self.chat_with_tools(messages, tools))
+            .await
+            .map_err(|_| {
+                LlmError::TimeoutError(format!(
+                    "Operation timed out after {:?} (including retries)",
+                    timeout
+                ))
+            })?
+    }
+
+    /// Streaming chat with timeout for initial response.
+    ///
+    /// Note: This only controls the time to receive the FIRST chunk.
+    /// Once streaming starts, the timeout no longer applies.
+    ///
+    /// # Arguments
+    /// * `messages` - The conversation history
+    /// * `tools` - Optional tools to use
+    /// * `timeout` - Maximum time to wait for the stream to start
+    ///
+    /// # Returns
+    /// Chat stream or timeout error
+    async fn chat_stream_with_timeout(
+        &self,
+        messages: Vec<ChatMessage>,
+        tools: Option<Vec<Tool>>,
+        timeout: std::time::Duration,
+    ) -> Result<ChatStream, LlmError> {
+        tokio::time::timeout(timeout, self.chat_stream(messages, tools))
+            .await
+            .map_err(|_| {
+                LlmError::TimeoutError(format!(
+                    "Stream initialization timed out after {:?}",
+                    timeout
+                ))
+            })?
+    }
+}
+
+// Blanket implementation for all types that implement ChatCapability
+impl<T> TimeoutCapability for T where T: ChatCapability + Send + Sync {}
+
 /// OpenAI-specific capabilities.
 ///
 /// This trait provides OpenAI-specific functionality that's not available

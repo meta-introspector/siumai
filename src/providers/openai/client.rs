@@ -398,6 +398,22 @@ impl LlmClient for OpenAiClient {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+
+    fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {
+        Some(self)
+    }
+
+    fn as_audio_capability(&self) -> Option<&dyn AudioCapability> {
+        // OpenAI client doesn't directly implement AudioCapability
+        // Audio is handled through separate OpenAiAudio struct
+        None
+    }
+
+    fn as_image_generation_capability(&self) -> Option<&dyn ImageGenerationCapability> {
+        // OpenAI client doesn't directly implement ImageGenerationCapability
+        // Image generation is handled through separate OpenAiImages struct
+        None
+    }
 }
 
 #[cfg(test)]

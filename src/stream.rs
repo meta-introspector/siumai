@@ -36,6 +36,30 @@ pub struct FunctionCallDelta {
     pub arguments: Option<String>,
 }
 
+/// Stream Processor configuration
+#[derive(Debug, Clone)]
+pub struct StreamProcessorConfig {
+    /// Maximum size for content buffer (in bytes)
+    pub max_content_buffer_size: Option<usize>,
+    /// Maximum size for thinking buffer (in bytes)  
+    pub max_thinking_buffer_size: Option<usize>,
+    /// Maximum number of tool calls to track
+    pub max_tool_calls: Option<usize>,
+    /// Handler for buffer overflow
+    pub overflow_handler: Option<fn(&str, usize)>,
+}
+
+impl Default for StreamProcessorConfig {
+    fn default() -> Self {
+        Self {
+            max_content_buffer_size: Some(10 * 1024 * 1024), // 10MB default
+            max_thinking_buffer_size: Some(5 * 1024 * 1024), // 5MB default
+            max_tool_calls: Some(100),                       // 100 tool calls max
+            overflow_handler: None,
+        }
+    }
+}
+
 /// Stream Processor - for processing and transforming stream events
 pub struct StreamProcessor {
     buffer: String,
@@ -43,16 +67,23 @@ pub struct StreamProcessor {
     tool_call_order: Vec<String>, // Track order of tool calls for consistent output
     thinking_buffer: String,
     current_usage: Option<Usage>,
+    config: StreamProcessorConfig,
 }
 
 impl StreamProcessor {
     pub fn new() -> Self {
+        Self::with_config(StreamProcessorConfig::default())
+    }
+
+    /// Create a new stream processor with custom configuration
+    pub fn with_config(config: StreamProcessorConfig) -> Self {
         Self {
             buffer: String::new(),
             tool_calls: std::collections::HashMap::new(),
             tool_call_order: Vec::new(),
             thinking_buffer: String::new(),
             current_usage: None,
+            config,
         }
     }
 
@@ -60,6 +91,30 @@ impl StreamProcessor {
     pub fn process_event(&mut self, event: ChatStreamEvent) -> ProcessedEvent {
         match event {
             ChatStreamEvent::ContentDelta { delta, index } => {
+                // Check buffer size limit before appending
+                if let Some(max_size) = self.config.max_content_buffer_size {
+                    let new_size = self.buffer.len() + delta.len();
+                    if new_size > max_size {
+                        // Call overflow handler if provided
+                        if let Some(handler) = self.config.overflow_handler {
+                            handler("content_buffer", new_size);
+                        }
+                        // Truncate buffer to keep within limits
+                        let available = max_size.saturating_sub(self.buffer.len());
+                        let truncated_delta = if available > 0 {
+                            delta.chars().take(available).collect()
+                        } else {
+                            String::new()
+                        };
+                        self.buffer.push_str(&truncated_delta);
+                        return ProcessedEvent::ContentUpdate {
+                            delta: truncated_delta,
+                            accumulated: self.buffer.clone(),
+                            index,
+                        };
+                    }
+                }
+
                 self.buffer.push_str(&delta);
                 ProcessedEvent::ContentUpdate {
                     delta,
@@ -92,6 +147,21 @@ impl StreamProcessor {
 
                 // Get or create the tool call builder
                 let is_new_tool_call = !self.tool_calls.contains_key(&tool_id);
+
+                // Check tool call limit
+                if let Some(max_tool_calls) = self.config.max_tool_calls
+                    && is_new_tool_call && self.tool_calls.len() >= max_tool_calls {
+                    // Too many tool calls, skip this one
+                    if let Some(handler) = self.config.overflow_handler {
+                        handler("tool_calls", self.tool_calls.len() + 1);
+                    }
+                    return ProcessedEvent::ToolCallUpdate {
+                        id: tool_id,
+                        current_state: ToolCallBuilder::new(),
+                        index,
+                    };
+                }
+
                 let builder = self.tool_calls.entry(tool_id.clone()).or_insert_with(|| {
                     let mut builder = ToolCallBuilder::new();
                     if !id.is_empty() {
@@ -128,6 +198,29 @@ impl StreamProcessor {
                 }
             }
             ChatStreamEvent::ThinkingDelta { delta } => {
+                // Check thinking buffer size limit
+                if let Some(max_size) = self.config.max_thinking_buffer_size {
+                    let new_size = self.thinking_buffer.len() + delta.len();
+                    if new_size > max_size {
+                        // Call overflow handler if provided
+                        if let Some(handler) = self.config.overflow_handler {
+                            handler("thinking_buffer", new_size);
+                        }
+                        // Truncate buffer to keep within limits
+                        let available = max_size.saturating_sub(self.thinking_buffer.len());
+                        let truncated_delta = if available > 0 {
+                            delta.chars().take(available).collect()
+                        } else {
+                            String::new()
+                        };
+                        self.thinking_buffer.push_str(&truncated_delta);
+                        return ProcessedEvent::ThinkingUpdate {
+                            delta: truncated_delta,
+                            accumulated: self.thinking_buffer.clone(),
+                        };
+                    }
+                }
+
                 self.thinking_buffer.push_str(&delta);
                 ProcessedEvent::ThinkingUpdate {
                     delta,

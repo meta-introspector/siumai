@@ -6,7 +6,7 @@ use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatRequest, Usage};
 use crate::types::{ChatResponse, FinishReason, MessageContent};
-use crate::utils::streaming::{SseEventConverter, StreamProcessor};
+use crate::utils::streaming::{SseEventConverter, StreamFactory};
 use eventsource_stream::Event;
 use std::future::Future;
 use std::pin::Pin;
@@ -188,6 +188,6 @@ impl GroqStreaming {
             .json(&request_body);
 
         let converter = GroqEventConverter::new(self.config.clone());
-        StreamProcessor::create_eventsource_stream(request_builder, converter).await
+        StreamFactory::create_eventsource_stream(request_builder, converter).await
     }
 }

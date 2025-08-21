@@ -297,8 +297,7 @@ pub use crate::builder::{
 // Convenient macro definitions
 /// Creates a user message
 ///
-/// For simple text messages, returns `ChatMessage` directly.
-/// For messages with additional parameters, returns `ChatMessageBuilder`.
+/// Always returns `ChatMessage` for consistent type handling.
 #[macro_export]
 macro_rules! user {
     // Simple text message - returns ChatMessage directly
@@ -311,9 +310,11 @@ macro_rules! user {
             tool_call_id: None,
         }
     };
-    // Message with cache control - returns ChatMessageBuilder for chaining
+    // Message with cache control - returns ChatMessage via builder
     ($content:expr, cache: $cache:expr) => {
-        $crate::types::ChatMessage::user($content).cache_control($cache)
+        $crate::types::ChatMessage::user($content)
+            .cache_control($cache)
+            .build()
     };
 }
 
@@ -329,8 +330,7 @@ macro_rules! user_builder {
 
 /// Creates a system message
 ///
-/// For simple text messages, returns `ChatMessage` directly.
-/// For messages with additional parameters, returns `ChatMessageBuilder`.
+/// Always returns `ChatMessage` for consistent type handling.
 #[macro_export]
 macro_rules! system {
     // Simple text message - returns ChatMessage directly
@@ -343,16 +343,17 @@ macro_rules! system {
             tool_call_id: None,
         }
     };
-    // Message with cache control - returns ChatMessageBuilder for chaining
+    // Message with cache control - returns ChatMessage via builder
     ($content:expr, cache: $cache:expr) => {
-        $crate::types::ChatMessage::system($content).cache_control($cache)
+        $crate::types::ChatMessage::system($content)
+            .cache_control($cache)
+            .build()
     };
 }
 
 /// Creates an assistant message
 ///
-/// For simple text messages, returns `ChatMessage` directly.
-/// For messages with additional parameters, returns `ChatMessageBuilder`.
+/// Always returns `ChatMessage` for consistent type handling.
 #[macro_export]
 macro_rules! assistant {
     // Simple text message - returns ChatMessage directly
@@ -365,9 +366,11 @@ macro_rules! assistant {
             tool_call_id: None,
         }
     };
-    // Message with tool calls - returns ChatMessageBuilder for chaining
+    // Message with tool calls - returns ChatMessage via builder
     ($content:expr, tools: $tools:expr) => {
-        $crate::types::ChatMessage::assistant($content).with_tool_calls($tools)
+        $crate::types::ChatMessage::assistant($content)
+            .with_tool_calls($tools)
+            .build()
     };
 }
 
@@ -388,14 +391,19 @@ macro_rules! tool {
 }
 
 /// Multimodal user message macro
+///
+/// Always returns `ChatMessage` for consistent type handling.
 #[macro_export]
 macro_rules! user_with_image {
     ($text:expr, $image_url:expr) => {
-        $crate::types::ChatMessage::user($text).with_image($image_url.to_string(), None)
+        $crate::types::ChatMessage::user($text)
+            .with_image($image_url.to_string(), None)
+            .build()
     };
     ($text:expr, $image_url:expr, detail: $detail:expr) => {
         $crate::types::ChatMessage::user($text)
             .with_image($image_url.to_string(), Some($detail.to_string()))
+            .build()
     };
 }
 

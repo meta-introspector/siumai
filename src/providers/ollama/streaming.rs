@@ -6,7 +6,7 @@
 use crate::error::LlmError;
 use crate::stream::{ChatStream, ChatStreamEvent};
 use crate::types::{ChatResponse, FinishReason, MessageContent, Usage};
-use crate::utils::streaming::{JsonEventConverter, StreamProcessor};
+use crate::utils::streaming::{JsonEventConverter, StreamFactory};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::future::Future;
@@ -195,7 +195,7 @@ impl OllamaStreaming {
 
         // Create the stream using our new infrastructure
         let converter = OllamaEventConverter::new();
-        StreamProcessor::create_json_stream(response, converter).await
+        StreamFactory::create_json_stream(response, converter).await
     }
 
     /// Create a completion stream from URL, headers, and body
@@ -230,7 +230,7 @@ impl OllamaStreaming {
 
         // Create the stream using our new infrastructure
         let converter = OllamaEventConverter::new();
-        StreamProcessor::create_json_stream(response, converter).await
+        StreamFactory::create_json_stream(response, converter).await
     }
 }
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Type Downcasting Anti-pattern** - Replaced runtime type downcasting with capability methods in `LlmClient` trait
+- **Memory Limits in Stream Processing** - Added configurable buffer limits (10MB content, 5MB thinking, 100 tool calls) with overflow handlers
+- **Inconsistent Macro Return Types** - All message macros now consistently return `ChatMessage` instead of mixed types
+- **Send+Sync Static Assertions** - Added compile-time verification for error type thread safety
+
+### Added
+
+- **Application-Level Timeout Support** - New `TimeoutCapability` trait provides timeout control for complete operations including retries, complementing existing HTTP-level timeouts
+
 ## [0.8.0] - 2025-08-13
 
 ### Breaking Changes
