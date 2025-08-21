@@ -1807,6 +1807,18 @@ impl XaiBuilderWrapper {
         self
     }
 
+    /// Enable minimal tracing
+    pub fn minimal_tracing(mut self) -> Self {
+        self.xai_builder = self.xai_builder.minimal_tracing();
+        self
+    }
+
+    /// Enable JSON tracing
+    pub fn json_tracing(mut self) -> Self {
+        self.xai_builder = self.xai_builder.json_tracing();
+        self
+    }
+
     /// Build the xAI client
     pub async fn build(self) -> Result<crate::providers::xai::XaiClient, LlmError> {
         // Build HTTP client from base configuration
@@ -1879,9 +1891,15 @@ impl GroqBuilderWrapper {
         self
     }
 
-    /// Set the timeout
-    pub fn timeout(mut self, timeout: Duration) -> Self {
-        self.groq_builder = self.groq_builder.timeout(timeout);
+    /// Add a built-in tool
+    pub fn tool(mut self, tool: crate::types::Tool) -> Self {
+        self.groq_builder = self.groq_builder.tool(tool);
+        self
+    }
+
+    /// Add multiple built-in tools
+    pub fn tools(mut self, tools: Vec<crate::types::Tool>) -> Self {
+        self.groq_builder = self.groq_builder.tools(tools);
         self
     }
 
@@ -1897,20 +1915,45 @@ impl GroqBuilderWrapper {
         self
     }
 
+    /// Enable minimal tracing
+    pub fn minimal_tracing(mut self) -> Self {
+        self.groq_builder = self.groq_builder.minimal_tracing();
+        self
+    }
+
+    /// Enable JSON tracing
+    pub fn json_tracing(mut self) -> Self {
+        self.groq_builder = self.groq_builder.json_tracing();
+        self
+    }
+
     /// Build the Groq client
     pub async fn build(self) -> Result<crate::providers::groq::GroqClient, LlmError> {
-        // Since Groq doesn't have build_with_client, we need to configure the HTTP settings
-        // through the builder's HTTP configuration methods
-
-        // Apply base HTTP configuration to Groq builder
+        // Apply all HTTP configuration from base LlmBuilder to Groq builder
         let mut groq_builder = self.groq_builder;
 
+        // Apply timeout settings
         if let Some(timeout) = self.base.timeout {
             groq_builder = groq_builder.timeout(timeout);
         }
+        if let Some(connect_timeout) = self.base.connect_timeout {
+            groq_builder = groq_builder.connect_timeout(connect_timeout);
+        }
 
-        // Note: Groq builder doesn't support all HTTP configurations from base
-        // This is a limitation of the current Groq implementation
+        // Apply proxy settings
+        if let Some(proxy) = &self.base.proxy {
+            groq_builder = groq_builder.proxy(proxy);
+        }
+
+        // Apply user agent
+        if let Some(user_agent) = &self.base.user_agent {
+            groq_builder = groq_builder.user_agent(user_agent);
+        }
+
+        // Apply default headers
+        for (key, value) in &self.base.default_headers {
+            groq_builder = groq_builder.header(key, value);
+        }
 
         groq_builder.build().await
     }
@@ -1926,5 +1969,78 @@ mod tests {
         let _openai_builder = builder.openai();
         // Basic test for builder creation
         // Placeholder test
+    }
+
+    #[test]
+    fn test_http_config_inheritance() {
+        use std::time::Duration;
+
+        // Test that HTTP configuration is properly inherited by provider builders
+        let base_builder = LlmBuilder::new()
+            .with_timeout(Duration::from_secs(60))
+            .with_proxy("http://proxy.example.com:8080")
+            .with_user_agent("test-agent/1.0")
+            .with_header("X-Test-Header", "test-value");
+
+        // Test OpenAI builder inherits HTTP config
+        let openai_builder = base_builder.clone().openai();
+        assert_eq!(openai_builder.base.timeout, Some(Duration::from_secs(60)));
+        assert_eq!(
+            openai_builder.base.proxy,
+            Some("http://proxy.example.com:8080".to_string())
+        );
+        assert_eq!(
+            openai_builder.base.user_agent,
+            Some("test-agent/1.0".to_string())
+        );
+        assert!(
+            openai_builder
+                .base
+                .default_headers
+                .contains_key("X-Test-Header")
+        );
+
+        // Test Anthropic builder inherits HTTP config
+        let anthropic_builder = base_builder.clone().anthropic();
+        assert_eq!(
+            anthropic_builder.base.timeout,
+            Some(Duration::from_secs(60))
+        );
+        assert_eq!(
+            anthropic_builder.base.proxy,
+            Some("http://proxy.example.com:8080".to_string())
+        );
+
+        // Test Gemini builder inherits HTTP config
+        let gemini_builder = base_builder.clone().gemini();
+        assert_eq!(gemini_builder.base.timeout, Some(Duration::from_secs(60)));
+        assert_eq!(
+            gemini_builder.base.proxy,
+            Some("http://proxy.example.com:8080".to_string())
+        );
+
+        // Test Ollama builder inherits HTTP config
+        let ollama_builder = base_builder.clone().ollama();
+        assert_eq!(ollama_builder.base.timeout, Some(Duration::from_secs(60)));
+        assert_eq!(
+            ollama_builder.base.proxy,
+            Some("http://proxy.example.com:8080".to_string())
+        );
+
+        // Test xAI wrapper inherits HTTP config
+        let xai_wrapper = base_builder.clone().xai();
+        assert_eq!(xai_wrapper.base.timeout, Some(Duration::from_secs(60)));
+        assert_eq!(
+            xai_wrapper.base.proxy,
+            Some("http://proxy.example.com:8080".to_string())
+        );
+
+        // Test Groq wrapper inherits HTTP config
+        let groq_wrapper = base_builder.groq();
+        assert_eq!(groq_wrapper.base.timeout, Some(Duration::from_secs(60)));
+        assert_eq!(
+            groq_wrapper.base.proxy,
+            Some("http://proxy.example.com:8080".to_string())
+        );
     }
 }
