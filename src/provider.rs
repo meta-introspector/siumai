@@ -374,6 +374,7 @@ impl SiumaiBuilder {
     // Convenience methods for specific providers (llm_dart style)
 
     /// Create an `OpenAI` provider (convenience method)
+    #[cfg(feature = "openai")]
     pub fn openai(mut self) -> Self {
         self.provider_type = Some(ProviderType::OpenAi);
         self.provider_name = Some("openai".to_string());
@@ -381,6 +382,7 @@ impl SiumaiBuilder {
     }
 
     /// Create an Anthropic provider (convenience method)
+    #[cfg(feature = "anthropic")]
     pub fn anthropic(mut self) -> Self {
         self.provider_type = Some(ProviderType::Anthropic);
         self.provider_name = Some("anthropic".to_string());
@@ -388,6 +390,7 @@ impl SiumaiBuilder {
     }
 
     /// Create a Gemini provider (convenience method)
+    #[cfg(feature = "google")]
     pub fn gemini(mut self) -> Self {
         self.provider_type = Some(ProviderType::Gemini);
         self.provider_name = Some("gemini".to_string());
@@ -395,6 +398,7 @@ impl SiumaiBuilder {
     }
 
     /// Create an Ollama provider (convenience method)
+    #[cfg(feature = "ollama")]
     pub fn ollama(mut self) -> Self {
         self.provider_type = Some(ProviderType::Ollama);
         self.provider_name = Some("ollama".to_string());
@@ -402,6 +406,7 @@ impl SiumaiBuilder {
     }
 
     /// Create a `DeepSeek` provider (convenience method)
+    #[cfg(feature = "openai")]
     pub fn deepseek(mut self) -> Self {
         self.provider_type = Some(ProviderType::Custom("deepseek".to_string()));
         self.provider_name = Some("deepseek".to_string());
@@ -409,6 +414,7 @@ impl SiumaiBuilder {
     }
 
     /// Create an `OpenRouter` provider (convenience method)
+    #[cfg(feature = "openai")]
     pub fn openrouter(mut self) -> Self {
         self.provider_type = Some(ProviderType::Custom("openrouter".to_string()));
         self.provider_name = Some("openrouter".to_string());
@@ -416,6 +422,7 @@ impl SiumaiBuilder {
     }
 
     /// Create a Groq provider (convenience method)
+    #[cfg(feature = "groq")]
     pub fn groq(mut self) -> Self {
         self.provider_type = Some(ProviderType::Groq);
         self.provider_name = Some("groq".to_string());
@@ -423,6 +430,7 @@ impl SiumaiBuilder {
     }
 
     /// Create an xAI provider (convenience method)
+    #[cfg(feature = "xai")]
     pub fn xai(mut self) -> Self {
         self.provider_type = Some(ProviderType::XAI);
         self.provider_name = Some("xai".to_string());
@@ -629,20 +637,67 @@ impl SiumaiBuilder {
         // Set default model if none provided
         if common_params.model.is_empty() {
             // Set default model based on provider type
+            #[cfg(any(feature = "openai", feature = "anthropic", feature = "google"))]
             use crate::types::models::model_constants as models;
 
             common_params.model = match provider_type {
+                #[cfg(feature = "openai")]
                 ProviderType::OpenAi => models::openai::GPT_4O.to_string(),
+                #[cfg(feature = "anthropic")]
                 ProviderType::Anthropic => models::anthropic::CLAUDE_SONNET_3_5.to_string(),
+                #[cfg(feature = "google")]
                 ProviderType::Gemini => models::gemini::GEMINI_2_5_FLASH.to_string(),
+                #[cfg(feature = "ollama")]
                 ProviderType::Ollama => "llama3.2".to_string(),
+                #[cfg(feature = "xai")]
                 ProviderType::XAI => "grok-beta".to_string(),
+                #[cfg(feature = "groq")]
                 ProviderType::Groq => "llama-3.1-70b-versatile".to_string(),
                 ProviderType::Custom(ref name) => match name.as_str() {
+                    #[cfg(feature = "openai")]
                     "deepseek" => models::openai_compatible::deepseek::CHAT.to_string(),
+                    #[cfg(feature = "openai")]
                     "openrouter" => models::openai_compatible::openrouter::GPT_4O.to_string(),
                     _ => "default-model".to_string(),
                 },
+
+                // For disabled features, return error
+                #[cfg(not(feature = "openai"))]
+                ProviderType::OpenAi => {
+                    return Err(LlmError::UnsupportedOperation(
+                        "OpenAI feature not enabled".to_string(),
+                    ));
+                }
+                #[cfg(not(feature = "anthropic"))]
+                ProviderType::Anthropic => {
+                    return Err(LlmError::UnsupportedOperation(
+                        "Anthropic feature not enabled".to_string(),
+                    ));
+                }
+                #[cfg(not(feature = "google"))]
+                ProviderType::Gemini => {
+                    return Err(LlmError::UnsupportedOperation(
+                        "Google feature not enabled".to_string(),
+                    ));
+                }
+                #[cfg(not(feature = "ollama"))]
+                ProviderType::Ollama => {
+                    return Err(LlmError::UnsupportedOperation(
+                        "Ollama feature not enabled".to_string(),
+                    ));
+                }
+                #[cfg(not(feature = "xai"))]
+                ProviderType::XAI => {
+                    return Err(LlmError::UnsupportedOperation(
+                        "xAI feature not enabled".to_string(),
+                    ));
+                }
+                #[cfg(not(feature = "groq"))]
+                ProviderType::Groq => {
+                    return Err(LlmError::UnsupportedOperation(
+                        "Groq feature not enabled".to_string(),
+                    ));
+                }
             };
         }
 
@@ -695,6 +750,7 @@ impl SiumaiBuilder {
         // Now create the appropriate client based on provider type
         // Parameters have already been validated by RequestBuilder
         let client: Box<dyn LlmClient> = match provider_type {
+            #[cfg(feature = "openai")]
             ProviderType::OpenAi => {
                 let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
                     .with_base_url(
@@ -724,6 +780,7 @@ impl SiumaiBuilder {
                     http_client,
                 ))
             }
+            #[cfg(feature = "anthropic")]
             ProviderType::Anthropic => {
                 let anthropic_base_url =
                     base_url.unwrap_or_else(|| "https://api.anthropic.com".to_string());
@@ -746,6 +803,7 @@ impl SiumaiBuilder {
                     http_config,
                 ))
             }
+            #[cfg(feature = "google")]
             ProviderType::Gemini => {
                 // Create Gemini client using the provider-specific builder
                 // Parameters have already been validated by RequestBuilder
@@ -776,6 +834,7 @@ impl SiumaiBuilder {
                     LlmError::ConfigurationError(format!("Failed to build Gemini client: {e}"))
                 })?)
             }
+            #[cfg(feature = "xai")]
             ProviderType::XAI => {
                 // Create xAI client using the provider-specific builder
                 // Parameters have already been validated by RequestBuilder
@@ -799,6 +858,7 @@ impl SiumaiBuilder {
                     LlmError::ConfigurationError(format!("Failed to build xAI client: {e}"))
                 })?)
             }
+            #[cfg(feature = "ollama")]
             ProviderType::Ollama => {
                 let ollama_base_url =
                     base_url.unwrap_or_else(|| "http://localhost:11434".to_string());
@@ -825,6 +885,7 @@ impl SiumaiBuilder {
                     http_client,
                 ))
             }
+            #[cfg(feature = "groq")]
             ProviderType::Groq => {
                 let groq_base_url =
                     base_url.unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
@@ -846,6 +907,7 @@ impl SiumaiBuilder {
             }
             ProviderType::Custom(name) => {
                 match name.as_str() {
+                    #[cfg(feature = "openai")]
                     "deepseek" => {
                         // Use OpenAI-compatible client for DeepSeek
                         let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
@@ -868,6 +930,7 @@ impl SiumaiBuilder {
                             http_client,
                         ))
                     }
+                    #[cfg(feature = "openai")]
                     "openrouter" => {
                         // Use OpenAI-compatible client for OpenRouter
                         let mut config = crate::providers::openai::OpenAiConfig::new(api_key)
@@ -898,6 +961,44 @@ impl SiumaiBuilder {
                         )));
                     }
                 }
+            }
+
+            // Handle cases where required features are not enabled
+            #[cfg(not(feature = "openai"))]
+            ProviderType::OpenAi => {
+                return Err(LlmError::UnsupportedOperation(
+                    "OpenAI provider requires the 'openai' feature to be enabled".to_string(),
+                ));
+            }
+            #[cfg(not(feature = "anthropic"))]
+            ProviderType::Anthropic => {
+                return Err(LlmError::UnsupportedOperation(
+                    "Anthropic provider requires the 'anthropic' feature to be enabled".to_string(),
+                ));
+            }
+            #[cfg(not(feature = "google"))]
+            ProviderType::Gemini => {
+                return Err(LlmError::UnsupportedOperation(
+                    "Gemini provider requires the 'google' feature to be enabled".to_string(),
+                ));
+            }
+            #[cfg(not(feature = "ollama"))]
+            ProviderType::Ollama => {
+                return Err(LlmError::UnsupportedOperation(
+                    "Ollama provider requires the 'ollama' feature to be enabled".to_string(),
+                ));
+            }
+            #[cfg(not(feature = "xai"))]
+            ProviderType::XAI => {
+                return Err(LlmError::UnsupportedOperation(
+                    "xAI provider requires the 'xai' feature to be enabled".to_string(),
+                ));
+            }
+            #[cfg(not(feature = "groq"))]
+            ProviderType::Groq => {
+                return Err(LlmError::UnsupportedOperation(
+                    "Groq provider requires the 'groq' feature to be enabled".to_string(),
+                ));
             }
         };
 

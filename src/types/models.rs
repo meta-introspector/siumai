@@ -52,24 +52,31 @@ pub struct ModelInfo {
 /// ```
 pub mod constants {
     /// Re-export OpenAI model constants (detailed structure)
+    #[cfg(feature = "openai")]
     pub use crate::providers::openai::model_constants as openai;
 
     /// Re-export Anthropic model constants (detailed structure)
+    #[cfg(feature = "anthropic")]
     pub use crate::providers::anthropic::model_constants as anthropic;
 
     /// Re-export Gemini model constants (detailed structure)
+    #[cfg(feature = "google")]
     pub use crate::providers::gemini::model_constants as gemini;
 
     /// Re-export OpenAI-compatible provider model constants
+    #[cfg(feature = "openai")]
     pub use crate::providers::openai_compatible::providers::models as openai_compatible;
 
     /// Re-export Ollama model constants (detailed structure)
+    #[cfg(feature = "ollama")]
     pub use crate::providers::ollama::model_constants as ollama;
 
     /// Re-export xAI model constants (detailed structure)
+    #[cfg(feature = "xai")]
     pub use crate::providers::xai::models as xai;
 
     /// Re-export Groq model constants (detailed structure)
+    #[cfg(feature = "groq")]
     pub use crate::providers::groq::models as groq;
 
     /// Popular models across all providers
@@ -80,74 +87,101 @@ pub mod constants {
         /// Most capable models from each provider
         pub mod flagship {
             /// OpenAI's most capable model
+            #[cfg(feature = "openai")]
             pub const OPENAI: &str = super::super::openai::popular::FLAGSHIP;
             /// Anthropic's most capable model
+            #[cfg(feature = "anthropic")]
             pub const ANTHROPIC: &str = super::super::anthropic::popular::FLAGSHIP;
             /// Google's most capable model
+            #[cfg(feature = "google")]
             pub const GEMINI: &str = super::super::gemini::popular::FLAGSHIP;
             /// xAI's most capable model
+            #[cfg(feature = "xai")]
             pub const XAI: &str = super::super::xai::popular::FLAGSHIP;
             /// Groq's most capable model
+            #[cfg(feature = "groq")]
             pub const GROQ: &str = super::super::groq::popular::FLAGSHIP;
         }
 
         /// Best balanced models (capability vs cost)
         pub mod balanced {
             /// OpenAI's balanced model
+            #[cfg(feature = "openai")]
             pub const OPENAI: &str = super::super::openai::popular::BALANCED;
             /// Anthropic's balanced model
+            #[cfg(feature = "anthropic")]
             pub const ANTHROPIC: &str = super::super::anthropic::popular::BALANCED;
             /// Google's balanced model
+            #[cfg(feature = "google")]
             pub const GEMINI: &str = super::super::gemini::popular::BALANCED;
             /// xAI's balanced model
+            #[cfg(feature = "xai")]
             pub const XAI: &str = super::super::xai::popular::BALANCED;
             /// Groq's balanced model
+            #[cfg(feature = "groq")]
             pub const GROQ: &str = super::super::groq::popular::BALANCED;
         }
 
         /// Best reasoning models
         pub mod reasoning {
             /// OpenAI's reasoning model
+            #[cfg(feature = "openai")]
             pub const OPENAI: &str = super::super::openai::popular::REASONING;
             /// Anthropic's thinking model
+            #[cfg(feature = "anthropic")]
             pub const ANTHROPIC: &str = super::super::anthropic::popular::THINKING;
             /// Google's flagship model (has thinking)
+            #[cfg(feature = "google")]
             pub const GEMINI: &str = super::super::gemini::popular::FLAGSHIP;
             /// Ollama's reasoning model
+            #[cfg(feature = "ollama")]
             pub const OLLAMA: &str = super::super::ollama::popular::REASONING;
             /// xAI's reasoning model
+            #[cfg(feature = "xai")]
             pub const XAI: &str = super::super::xai::popular::REASONING;
             /// Groq's reasoning model
+            #[cfg(feature = "groq")]
             pub const GROQ: &str = super::super::groq::popular::REASONING;
         }
 
         /// Most economical models
         pub mod economical {
             /// OpenAI's economical model
+            #[cfg(feature = "openai")]
             pub const OPENAI: &str = super::super::openai::popular::ECONOMICAL;
             /// Anthropic's fast model
+            #[cfg(feature = "anthropic")]
             pub const ANTHROPIC: &str = super::super::anthropic::popular::FAST;
             /// Google's economical model
+            #[cfg(feature = "google")]
             pub const GEMINI: &str = super::super::gemini::popular::ECONOMICAL;
             /// Ollama's lightweight model (free local)
+            #[cfg(feature = "ollama")]
             pub const OLLAMA: &str = super::super::ollama::popular::LIGHTWEIGHT;
             /// xAI's lightweight model
+            #[cfg(feature = "xai")]
             pub const XAI: &str = super::super::xai::popular::LIGHTWEIGHT;
             /// Groq's lightweight model
+            #[cfg(feature = "groq")]
             pub const GROQ: &str = super::super::groq::popular::LIGHTWEIGHT;
         }
 
         /// Latest and most advanced models
         pub mod latest {
             /// OpenAI's latest model
+            #[cfg(feature = "openai")]
             pub const OPENAI: &str = super::super::openai::popular::LATEST;
             /// Anthropic's latest model
+            #[cfg(feature = "anthropic")]
             pub const ANTHROPIC: &str = super::super::anthropic::popular::LATEST;
             /// Google's latest model
+            #[cfg(feature = "google")]
             pub const GEMINI: &str = super::super::gemini::popular::LATEST;
             /// xAI's latest model
+            #[cfg(feature = "xai")]
             pub const XAI: &str = super::super::xai::popular::LATEST;
             /// Groq's latest model
+            #[cfg(feature = "groq")]
             pub const GROQ: &str = super::super::groq::popular::LATEST;
         }
     }
@@ -155,8 +189,11 @@ pub mod constants {
     /// Get all available chat models from all providers
     pub fn all_chat_models() -> Vec<&'static str> {
         let mut models = Vec::new();
+        #[cfg(feature = "openai")]
         models.extend_from_slice(&openai::all_chat_models());
+        #[cfg(feature = "anthropic")]
         models.extend_from_slice(&anthropic::all_chat_models());
+        #[cfg(feature = "google")]
         models.extend_from_slice(&gemini::all_chat_models());
         models
     }
@@ -164,8 +201,11 @@ pub mod constants {
     /// Get all reasoning models from all providers
     pub fn all_reasoning_models() -> Vec<&'static str> {
         let mut models = Vec::new();
+        #[cfg(feature = "openai")]
         models.extend_from_slice(&openai::all_reasoning_models());
+        #[cfg(feature = "anthropic")]
         models.extend_from_slice(&anthropic::all_thinking_models());
+        #[cfg(feature = "google")]
         models.extend_from_slice(&gemini::all_thinking_models());
         models
     }
@@ -173,8 +213,11 @@ pub mod constants {
     /// Get all multimodal models from all providers
     pub fn all_multimodal_models() -> Vec<&'static str> {
         let mut models = Vec::new();
+        #[cfg(feature = "openai")]
         models.extend_from_slice(&openai::all_multimodal_models());
+        #[cfg(feature = "anthropic")]
         models.extend_from_slice(&anthropic::all_vision_models());
+        #[cfg(feature = "google")]
         models.extend_from_slice(&gemini::all_chat_models()); // Most Gemini models are multimodal
         models
     }
@@ -182,7 +225,9 @@ pub mod constants {
     /// Get all audio generation models from all providers
     pub fn all_audio_generation_models() -> Vec<&'static str> {
         let mut models = Vec::new();
+        #[cfg(feature = "openai")]
         models.extend_from_slice(openai::audio::ALL);
+        #[cfg(feature = "google")]
         models.extend_from_slice(&gemini::all_audio_generation_models());
         models
     }
@@ -190,16 +235,20 @@ pub mod constants {
     /// Get all image generation models from all providers
     pub fn all_image_generation_models() -> Vec<&'static str> {
         let mut models = Vec::new();
+        #[cfg(feature = "openai")]
         models.extend_from_slice(openai::images::ALL);
+        #[cfg(feature = "google")]
         models.extend_from_slice(&gemini::all_image_generation_models());
         models
     }
 
     /// Get all embedding models from all providers
     pub fn all_embedding_models() -> Vec<&'static str> {
-        let mut models = Vec::new();
-        models.extend_from_slice(openai::embeddings::ALL);
-        models
+        #[cfg(feature = "openai")]
+        return openai::embeddings::ALL.to_vec();
+
+        #[cfg(not(feature = "openai"))]
+        Vec::new()
     }
 }
 
@@ -220,6 +269,7 @@ pub mod constants {
 /// ```
 pub mod model_constants {
     /// OpenAI models with simplified access
+    #[cfg(feature = "openai")]
     pub mod openai {
         use crate::providers::openai::model_constants as c;
 
@@ -279,6 +329,7 @@ pub mod model_constants {
     }
 
     /// Anthropic models with simplified access
+    #[cfg(feature = "anthropic")]
     pub mod anthropic {
         use crate::providers::anthropic::model_constants as c;
 
@@ -308,6 +359,7 @@ pub mod model_constants {
     }
 
     /// Gemini models with simplified access
+    #[cfg(feature = "google")]
     pub mod gemini {
         use crate::providers::gemini::model_constants as c;
 
@@ -339,6 +391,7 @@ pub mod model_constants {
     }
 
     /// OpenAI-compatible provider models
+    #[cfg(feature = "openai")]
     pub mod openai_compatible {
         use crate::providers::openai_compatible::providers::models as c;
 
@@ -366,6 +419,7 @@ pub mod model_constants {
     }
 
     /// Ollama models with simplified access
+    #[cfg(feature = "ollama")]
     pub mod ollama {
         use crate::providers::ollama::model_constants as c;
 
@@ -398,6 +452,7 @@ pub mod model_constants {
     }
 
     /// xAI models with simplified access
+    #[cfg(feature = "xai")]
     pub mod xai {
         use crate::providers::xai::models as c;
 
@@ -424,6 +479,7 @@ pub mod model_constants {
     }
 
     /// Groq models with simplified access
+    #[cfg(feature = "groq")]
     pub mod groq {
         use crate::providers::groq::models as c;
 

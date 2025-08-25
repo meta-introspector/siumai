@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Provider Feature Flags** - Added optional feature flags for selective provider inclusion (`openai`, `anthropic`, `google`, `ollama`, `xai`, `groq`) with build-time validation
+
 ## [0.8.1] - 2025-08-25
 
 ### Added

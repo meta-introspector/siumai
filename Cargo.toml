@@ -73,7 +73,19 @@ secrecy = { version = "0.10", features = ["serde"] }
 backoff = { version = "0.4", features = ["tokio"] }
 
 [features]
-default = []
+# Default features - include all providers for convenience
+default = ["all-providers"]
+
+# Provider features - each provider can be enabled independently
+openai = []
+anthropic = []
+google = []
+ollama = []
+xai = []
+groq = []
+
+# Convenience features for common combinations
+all-providers = ["openai", "anthropic", "google", "ollama", "xai", "groq"]
 
 [dev-dependencies]
 tokio-test = "0.4"
@@ -215,6 +227,10 @@ path = "examples/05_use_cases/content_generator.rs"
 [[example]]
 name = "response_cache"
 path = "examples/02_core_features/response_cache.rs"
+
+[[example]]
+name = "http_client_factory"
+path = "examples/03_core_features/http_client_factory.rs"
 
 [[example]]
 name = "http_mcp_client"

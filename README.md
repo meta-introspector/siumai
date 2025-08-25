@@ -36,15 +36,51 @@ Add Siumai to your `Cargo.toml`:
 
 ```toml
 [dependencies]
+# By default, all providers are included
 siumai = "0.8.1"
 tokio = { version = "1.0", features = ["full"] }
 ```
+
+### 🎛️ Feature Selection
+
+Siumai allows you to include only the providers you need, reducing compilation time and binary size:
+
+```toml
+[dependencies]
+# Only OpenAI
+siumai = { version = "0.8.1", features = ["openai"] }
+
+# Multiple specific providers
+siumai = { version = "0.8.1", features = ["openai", "anthropic", "google"] }
+
+# All cloud providers (excludes Ollama)
+siumai = { version = "0.8.1", features = ["cloud-providers"] }
+
+# All providers (same as default)
+siumai = { version = "0.8.1", features = ["all-providers"] }
+
+# Only local AI (Ollama)
+siumai = { version = "0.8.1", features = ["ollama"] }
+```
+
+#### Available Features
+
+| Feature | Providers | Description |
+|---------|-----------|-------------|
+| `openai` | OpenAI + compatible | OpenAI, DeepSeek, OpenRouter |
+| `anthropic` | Anthropic | Claude models with thinking mode |
+| `google` | Google | Gemini models with multimodal capabilities |
+| `ollama` | Ollama | Local AI models |
+| `xai` | xAI | Grok models with reasoning |
+| `groq` | Groq | Ultra-fast inference |
+| `all-providers` | All | Complete provider support (default) |
 
 ### Provider-Specific Clients
 
 Use `Provider` when you need access to provider-specific features:
 
 ```rust
+// Cargo.toml: siumai = { version = "0.8.1", features = ["openai"] }
 use siumai::models;
 use siumai::prelude::*;
 
@@ -70,6 +106,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Unified Interface
 
 Use `Siumai::builder()` when you want provider-agnostic code:
+
+```rust
+// Cargo.toml: siumai = { version = "0.8.1", features = ["anthropic"] }
+use siumai::models;
+use siumai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Build a unified client, backed by Anthropic
+    let client = Siumai::builder()
+        .anthropic()
+        .api_key("your-anthropic-key")
+        .model(models::anthropic::CLAUDE_SONNET_3_5)
+        .build()
+        .await?;
+
+    // Your code uses the standard Siumai interface
+    let request = vec![user!("What is the capital of France?")];
+    let response = client.chat(request).await?;
+
+    // If you decide to switch to OpenAI, you only change the builder and feature.
+    // The `.chat(request)` call remains identical.
+    println!("The unified client says: {}", response.text().unwrap_or_default());
+    Ok(())
+}
+```
+
+> **💡 Feature Tip**: When using specific providers, make sure to enable the corresponding feature in your `Cargo.toml`. If you try to use a provider without its feature enabled, you'll get a compile-time error with a helpful message.
 
 ```rust
 use siumai::models;

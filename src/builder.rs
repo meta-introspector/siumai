@@ -90,8 +90,20 @@ use crate::error::LlmError;
 use crate::types::*;
 
 // Import parameter types - these will be moved to providers modules later
-use crate::params::{AnthropicParams, OpenAiParams, ResponseFormat, ToolChoice};
+#[cfg(feature = "anthropic")]
+use crate::params::AnthropicParams;
+#[cfg(feature = "openai")]
+use crate::params::{OpenAiParams, ResponseFormat, ToolChoice};
+#[cfg(feature = "ollama")]
 use crate::providers::ollama::config::OllamaParams;
+#[cfg(any(
+    feature = "openai",
+    feature = "anthropic",
+    feature = "google",
+    feature = "ollama",
+    feature = "xai",
+    feature = "groq"
+))]
 use crate::providers::*;
 
 /// Quick `OpenAI` client creation with minimal configuration.
@@ -113,11 +125,13 @@ use crate::providers::*;
 ///     Ok(())
 /// }
 /// ```
+#[cfg(feature = "openai")]
 pub async fn quick_openai() -> Result<crate::providers::openai::OpenAiClient, LlmError> {
     quick_openai_with_model("gpt-4o-mini").await
 }
 
 /// Quick `OpenAI` client creation with custom model.
+#[cfg(feature = "openai")]
 pub async fn quick_openai_with_model(
     model: &str,
 ) -> Result<crate::providers::openai::OpenAiClient, LlmError> {
@@ -127,11 +141,13 @@ pub async fn quick_openai_with_model(
 /// Quick Anthropic client creation with minimal configuration.
 ///
 /// Uses environment variable `ANTHROPIC_API_KEY` and default settings.
+#[cfg(feature = "anthropic")]
 pub async fn quick_anthropic() -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
     quick_anthropic_with_model("claude-3-5-sonnet-20241022").await
 }
 
 /// Quick Anthropic client creation with custom model.
+#[cfg(feature = "anthropic")]
 pub async fn quick_anthropic_with_model(
     model: &str,
 ) -> Result<crate::providers::anthropic::AnthropicClient, LlmError> {
@@ -141,11 +157,13 @@ pub async fn quick_anthropic_with_model(
 /// Quick Gemini client creation with minimal configuration.
 ///
 /// Uses environment variable `GEMINI_API_KEY` and default settings.
+#[cfg(feature = "google")]
 pub async fn quick_gemini() -> Result<crate::providers::gemini::GeminiClient, LlmError> {
     quick_gemini_with_model("gemini-1.5-flash").await
 }
 
 /// Quick Gemini client creation with custom model.
+#[cfg(feature = "google")]
 pub async fn quick_gemini_with_model(
     model: &str,
 ) -> Result<crate::providers::gemini::GeminiClient, LlmError> {
@@ -155,11 +173,13 @@ pub async fn quick_gemini_with_model(
 /// Quick Ollama client creation with minimal configuration.
 ///
 /// Uses default Ollama settings (<http://localhost:11434>) and llama3.2 model.
+#[cfg(feature = "ollama")]
 pub async fn quick_ollama() -> Result<crate::providers::ollama::OllamaClient, LlmError> {
     quick_ollama_with_model("llama3.2").await
 }
 
 /// Quick Ollama client creation with custom model.
+#[cfg(feature = "ollama")]
 pub async fn quick_ollama_with_model(
     model: &str,
 ) -> Result<crate::providers::ollama::OllamaClient, LlmError> {
@@ -169,11 +189,13 @@ pub async fn quick_ollama_with_model(
 /// Quick Groq client creation with minimal configuration.
 ///
 /// Uses environment variable `GROQ_API_KEY` and default settings.
+#[cfg(feature = "groq")]
 pub async fn quick_groq() -> Result<crate::providers::groq::GroqClient, LlmError> {
     quick_groq_with_model(crate::providers::groq::models::popular::FLAGSHIP).await
 }
 
 /// Quick Groq client creation with custom model.
+#[cfg(feature = "groq")]
 pub async fn quick_groq_with_model(
     model: &str,
 ) -> Result<crate::providers::groq::GroqClient, LlmError> {
@@ -183,11 +205,13 @@ pub async fn quick_groq_with_model(
 /// Quick xAI client creation with minimal configuration.
 ///
 /// Uses environment variable `XAI_API_KEY` and default settings.
+#[cfg(feature = "xai")]
 pub async fn quick_xai() -> Result<crate::providers::xai::XaiClient, LlmError> {
     quick_xai_with_model(crate::providers::xai::models::popular::LATEST).await
 }
 
 /// Quick xAI client creation with custom model.
+#[cfg(feature = "xai")]
 pub async fn quick_xai_with_model(
     model: &str,
 ) -> Result<crate::providers::xai::XaiClient, LlmError> {
@@ -403,6 +427,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// OpenAI-specific builder for further configuration
+    #[cfg(feature = "openai")]
     pub fn openai(self) -> OpenAiBuilder {
         OpenAiBuilder::new(self)
     }
@@ -411,6 +436,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// Anthropic-specific builder for further configuration
+    #[cfg(feature = "anthropic")]
     pub fn anthropic(self) -> AnthropicBuilder {
         AnthropicBuilder::new(self)
     }
@@ -419,6 +445,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// Gemini-specific builder for further configuration
+    #[cfg(feature = "google")]
     pub const fn gemini(self) -> GeminiBuilder {
         GeminiBuilder::new(self)
     }
@@ -427,6 +454,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// Ollama-specific builder for further configuration
+    #[cfg(feature = "ollama")]
     pub fn ollama(self) -> OllamaBuilder {
         OllamaBuilder::new(self)
     }
@@ -435,6 +463,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// xAI-specific builder for further configuration
+    #[cfg(feature = "xai")]
     pub fn xai(self) -> XaiBuilderWrapper {
         XaiBuilderWrapper::new(self)
     }
@@ -443,6 +472,7 @@ impl LlmBuilder {
     ///
     /// # Returns
     /// Groq-specific builder for further configuration
+    #[cfg(feature = "groq")]
     pub fn groq(self) -> GroqBuilderWrapper {
         GroqBuilderWrapper::new(self)
     }
@@ -471,6 +501,7 @@ impl LlmBuilder {
     ///     Ok(())
     /// }
     /// ```
+    #[cfg(feature = "openai")]
     pub fn deepseek(self) -> crate::providers::openai::OpenAiBuilder {
         // Create OpenAI builder with DeepSeek-specific defaults
         crate::providers::openai::OpenAiBuilder::new(self)
@@ -500,6 +531,7 @@ impl LlmBuilder {
     ///     Ok(())
     /// }
     /// ```
+    #[cfg(feature = "openai")]
     pub fn openrouter(self) -> crate::providers::openai::OpenAiBuilder {
         // Create OpenAI builder with OpenRouter-specific defaults
         crate::providers::openai::OpenAiBuilder::new(self)
@@ -583,6 +615,7 @@ impl Default for LlmBuilder {
 }
 
 /// OpenAI-specific builder
+#[cfg(feature = "openai")]
 pub struct OpenAiBuilder {
     base: LlmBuilder,
     api_key: Option<String>,
@@ -596,6 +629,7 @@ pub struct OpenAiBuilder {
     tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
+#[cfg(feature = "openai")]
 impl OpenAiBuilder {
     fn new(base: LlmBuilder) -> Self {
         Self {
@@ -872,6 +906,7 @@ impl OpenAiBuilder {
 }
 
 /// Anthropic-specific builder
+#[cfg(feature = "anthropic")]
 pub struct AnthropicBuilder {
     base: LlmBuilder,
     api_key: Option<String>,
@@ -883,6 +918,7 @@ pub struct AnthropicBuilder {
     tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
+#[cfg(feature = "anthropic")]
 impl AnthropicBuilder {
     fn new(base: LlmBuilder) -> Self {
         Self {
@@ -1120,6 +1156,7 @@ impl AnthropicBuilder {
 /// }
 /// ```
 #[derive(Debug, Clone)]
+#[cfg(feature = "google")]
 pub struct GeminiBuilder {
     /// Base builder with HTTP configuration
     base: LlmBuilder,
@@ -1151,6 +1188,7 @@ pub struct GeminiBuilder {
     tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
+#[cfg(feature = "google")]
 impl GeminiBuilder {
     /// Create a new Gemini builder
     pub const fn new(base: LlmBuilder) -> Self {
@@ -1430,6 +1468,7 @@ impl GeminiBuilder {
 }
 
 /// Ollama-specific builder
+#[cfg(feature = "ollama")]
 pub struct OllamaBuilder {
     base: LlmBuilder,
     base_url: Option<String>,
@@ -1440,6 +1479,7 @@ pub struct OllamaBuilder {
     tracing_config: Option<crate::tracing::TracingConfig>,
 }
 
+#[cfg(feature = "ollama")]
 impl OllamaBuilder {
     /// Create a new Ollama builder
     pub fn new(base: LlmBuilder) -> Self {
@@ -1734,11 +1774,13 @@ impl GenericProviderBuilder {
 }
 
 /// Wrapper for xAI builder that supports HTTP client inheritance
+#[cfg(feature = "xai")]
 pub struct XaiBuilderWrapper {
     base: LlmBuilder,
     xai_builder: crate::providers::xai::XaiBuilder,
 }
 
+#[cfg(feature = "xai")]
 impl XaiBuilderWrapper {
     fn new(base: LlmBuilder) -> Self {
         Self {
@@ -1830,11 +1872,13 @@ impl XaiBuilderWrapper {
 }
 
 /// Wrapper for Groq builder that supports HTTP client inheritance
+#[cfg(feature = "groq")]
 pub struct GroqBuilderWrapper {
     base: LlmBuilder,
     groq_builder: crate::providers::groq::GroqBuilder,
 }
 
+#[cfg(feature = "groq")]
 impl GroqBuilderWrapper {
     fn new(base: LlmBuilder) -> Self {
         Self {

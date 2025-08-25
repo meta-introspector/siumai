@@ -75,6 +75,12 @@
 //! }
 //! ```
 
+/// Enabled providers at compile time
+pub const ENABLED_PROVIDERS: &str = env!("SIUMAI_ENABLED_PROVIDERS");
+
+/// Number of enabled providers at compile time  
+pub const PROVIDER_COUNT: &str = env!("SIUMAI_PROVIDER_COUNT");
+
 pub mod benchmarks;
 pub mod builder;
 pub mod client;
@@ -85,6 +91,14 @@ pub mod params;
 pub mod performance;
 pub mod provider;
 pub mod provider_features;
+#[cfg(any(
+    feature = "openai",
+    feature = "anthropic",
+    feature = "google",
+    feature = "ollama",
+    feature = "xai",
+    feature = "groq"
+))]
 pub mod providers;
 pub mod request_factory;
 pub mod retry;
@@ -119,7 +133,15 @@ pub use types::{
 };
 
 // Builders
-pub use builder::{AnthropicBuilder, GeminiBuilder, LlmBuilder, OllamaBuilder, OpenAiBuilder};
+#[cfg(feature = "anthropic")]
+pub use builder::AnthropicBuilder;
+#[cfg(feature = "google")]
+pub use builder::GeminiBuilder;
+pub use builder::LlmBuilder;
+#[cfg(feature = "ollama")]
+pub use builder::OllamaBuilder;
+#[cfg(feature = "openai")]
+pub use builder::OpenAiBuilder;
 
 // Streaming
 pub use stream::{ChatStream, ChatStreamEvent};
@@ -174,10 +196,16 @@ pub mod prelude {
     pub use crate::models;
     pub use crate::{Provider, assistant, provider, system, tool, user, user_with_image};
     pub use crate::{conversation, conversation_with_system, messages, quick_chat};
-    pub use crate::{
-        quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model,
-        quick_groq, quick_groq_with_model, quick_openai, quick_openai_with_model,
-    };
+
+    // Conditional provider quick functions
+    #[cfg(feature = "anthropic")]
+    pub use crate::{quick_anthropic, quick_anthropic_with_model};
+    #[cfg(feature = "google")]
+    pub use crate::{quick_gemini, quick_gemini_with_model};
+    #[cfg(feature = "groq")]
+    pub use crate::{quick_groq, quick_groq_with_model};
+    #[cfg(feature = "openai")]
+    pub use crate::{quick_openai, quick_openai_with_model};
 }
 
 /// Provider entry point for creating specific provider clients
@@ -211,41 +239,49 @@ pub struct Provider;
 
 impl Provider {
     /// Create an `OpenAI` client builder
+    #[cfg(feature = "openai")]
     pub fn openai() -> crate::builder::OpenAiBuilder {
         crate::builder::LlmBuilder::new().openai()
     }
 
     /// Create an Anthropic client builder
+    #[cfg(feature = "anthropic")]
     pub fn anthropic() -> crate::builder::AnthropicBuilder {
         crate::builder::LlmBuilder::new().anthropic()
     }
 
     /// Create a Gemini client builder
+    #[cfg(feature = "google")]
     pub fn gemini() -> crate::builder::GeminiBuilder {
         crate::builder::LlmBuilder::new().gemini()
     }
 
     /// Create an Ollama client builder
+    #[cfg(feature = "ollama")]
     pub fn ollama() -> crate::builder::OllamaBuilder {
         crate::builder::LlmBuilder::new().ollama()
     }
 
     /// Create an xAI client builder
+    #[cfg(feature = "xai")]
     pub fn xai() -> crate::providers::xai::XaiBuilder {
         crate::providers::xai::XaiBuilder::new()
     }
 
     /// Create a Groq client builder
+    #[cfg(feature = "groq")]
     pub fn groq() -> crate::providers::groq::GroqBuilder {
         crate::providers::groq::GroqBuilder::new()
     }
 
     /// Create an `OpenRouter` client builder
+    #[cfg(feature = "openai")]
     pub fn openrouter() -> crate::providers::openai::OpenAiBuilder {
         crate::builder::LlmBuilder::new().openrouter()
     }
 
     /// Create a `DeepSeek` client builder
+    #[cfg(feature = "openai")]
     pub fn deepseek() -> crate::providers::openai::OpenAiBuilder {
         crate::builder::LlmBuilder::new().deepseek()
     }
@@ -289,10 +325,22 @@ impl crate::provider::Siumai {
 }
 
 // Re-export convenience functions
-pub use crate::builder::{
-    quick_anthropic, quick_anthropic_with_model, quick_gemini, quick_gemini_with_model, quick_groq,
-    quick_groq_with_model, quick_openai, quick_openai_with_model,
-};
+#[cfg(feature = "anthropic")]
+pub use crate::builder::quick_anthropic;
+#[cfg(feature = "anthropic")]
+pub use crate::builder::quick_anthropic_with_model;
+#[cfg(feature = "google")]
+pub use crate::builder::quick_gemini;
+#[cfg(feature = "google")]
+pub use crate::builder::quick_gemini_with_model;
+#[cfg(feature = "groq")]
+pub use crate::builder::quick_groq;
+#[cfg(feature = "groq")]
+pub use crate::builder::quick_groq_with_model;
+#[cfg(feature = "openai")]
+pub use crate::builder::quick_openai;
+#[cfg(feature = "openai")]
+pub use crate::builder::quick_openai_with_model;
 
 // Convenient macro definitions
 /// Creates a user message
