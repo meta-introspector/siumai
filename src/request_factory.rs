@@ -97,7 +97,7 @@ pub struct RequestBuilderConfig {
 /// This trait operates at the **parameter layer**, not the **client layer**.
 /// It does not handle HTTP clients, authentication, or network configuration.
 /// Those responsibilities belong to LlmBuilder and provider clients.
-pub trait RequestBuilder {
+pub trait RequestBuilder: Send + Sync {
     /// Build a ChatRequest with consistent parameter handling
     ///
     /// # Arguments
@@ -402,6 +402,32 @@ impl RequestBuilderFactory {
 mod tests {
     use super::*;
     use crate::types::{MessageContent, MessageRole};
+
+    // Test that RequestBuilder implementations satisfy Send + Sync constraints
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    #[test]
+    fn test_request_builder_send_sync() {
+        // Verify that StandardRequestBuilder implements Send + Sync
+        assert_send_sync::<StandardRequestBuilder>();
+
+        // Verify that Box<dyn RequestBuilder> implements Send + Sync
+        assert_send_sync::<Box<dyn RequestBuilder>>();
+    }
+
+    #[test]
+    fn test_provider_specific_request_builders_send_sync() {
+        use crate::providers::anthropic::request::AnthropicRequestBuilder;
+        use crate::providers::gemini::request::GeminiRequestBuilder;
+        use crate::providers::openai::request::OpenAiRequestBuilder;
+
+        // Verify that provider-specific RequestBuilder implementations support Send + Sync
+        assert_send_sync::<OpenAiRequestBuilder>();
+        assert_send_sync::<AnthropicRequestBuilder>();
+        assert_send_sync::<GeminiRequestBuilder>();
+    }
+
+
 
     #[test]
     fn test_standard_request_builder() {

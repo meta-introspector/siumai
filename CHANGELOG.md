@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.8.1] - 2025-08-25
+
+### Added
+
+- **RequestBuilder Send+Sync Support** - Added Send+Sync constraints to RequestBuilder trait for better multi-threading support
+
 ### Fixed
 
 - **Type Downcasting Anti-pattern** - Replaced runtime type downcasting with capability methods in `LlmClient` trait

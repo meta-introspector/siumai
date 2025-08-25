@@ -150,7 +150,9 @@ impl StreamProcessor {
 
                 // Check tool call limit
                 if let Some(max_tool_calls) = self.config.max_tool_calls
-                    && is_new_tool_call && self.tool_calls.len() >= max_tool_calls {
+                    && is_new_tool_call
+                    && self.tool_calls.len() >= max_tool_calls
+                {
                     // Too many tool calls, skip this one
                     if let Some(handler) = self.config.overflow_handler {
                         handler("tool_calls", self.tool_calls.len() + 1);

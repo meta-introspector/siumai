@@ -950,13 +950,16 @@ pub trait CompletionCapability: Send + Sync {
 ///
 /// ```rust,no_run
 /// use siumai::traits::TimeoutCapability;
+/// use siumai::types::{ChatMessage, Tool};
 /// use std::time::Duration;
 ///
 /// # async fn example(client: impl TimeoutCapability) -> Result<(), Box<dyn std::error::Error>> {
+/// # let messages: Vec<ChatMessage> = vec![];
+/// # let tools: Option<Vec<Tool>> = None;
 /// // Strict timeout for web API handler
 /// let response = client.chat_with_timeout(
-///     messages,
-///     tools,
+///     messages.clone(),
+///     tools.clone(),
 ///     Duration::from_secs(10)  // Fail fast for user-facing API
 /// ).await?;
 ///
