@@ -427,8 +427,6 @@ mod tests {
         assert_send_sync::<GeminiRequestBuilder>();
     }
 
-
-
     #[test]
     fn test_standard_request_builder() {
         let common_params = CommonParams {
