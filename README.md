@@ -53,9 +53,6 @@ siumai = { version = "0.8.1", features = ["openai"] }
 # Multiple specific providers
 siumai = { version = "0.8.1", features = ["openai", "anthropic", "google"] }
 
-# All cloud providers (excludes Ollama)
-siumai = { version = "0.8.1", features = ["cloud-providers"] }
-
 # All providers (same as default)
 siumai = { version = "0.8.1", features = ["all-providers"] }
 
