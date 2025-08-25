@@ -229,10 +229,6 @@ name = "response_cache"
 path = "examples/02_core_features/response_cache.rs"
 
 [[example]]
-name = "http_client_factory"
-path = "examples/03_core_features/http_client_factory.rs"
-
-[[example]]
 name = "http_mcp_client"
 path = "examples/06_mcp_integration/http_mcp_client.rs"
 
