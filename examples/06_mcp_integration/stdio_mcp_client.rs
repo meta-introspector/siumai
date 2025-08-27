@@ -125,8 +125,7 @@ impl StdioMcpClient {
         // Extract text content from MCP response
         let content = result
             .content
-            .as_ref()
-            .and_then(|content_vec| content_vec.first())
+            .first()
             .and_then(|content| {
                 if let rmcp::model::RawContent::Text(text_content) = &content.raw {
                     Some(text_content.text.clone())

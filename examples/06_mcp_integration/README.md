@@ -2,6 +2,14 @@
 
 This directory contains examples demonstrating how to integrate Model Context Protocol (MCP) with siumai for LLM tool calling functionality.
 
+## ⚠️ rmcp Version Compatibility
+
+These examples have been updated to work with **rmcp 0.6.0**. The main API changes from rmcp 0.5.0 to 0.6.0 include:
+
+- `CallToolResult.content` field type changed from `Option<Vec<Annotated<RawContent>>>` to `Vec<Content>` (where `Content` is `Annotated<RawContent>`)
+- Content is no longer optional and is always a vector
+- Updated content extraction logic to work with the new structure
+
 ## File Overview
 
 ### HTTP Transport
