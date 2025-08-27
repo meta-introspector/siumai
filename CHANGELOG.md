@@ -1,10 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [0.9.0] - 2025-08-27
 
 ### Added
 
 - **Provider Feature Flags** - Added optional feature flags for selective provider inclusion (`openai`, `anthropic`, `google`, `ollama`, `xai`, `groq`) with build-time validation
+
+### Fixed
+
+- **Ollama API Key Requirement** - Fixed SiumaiBuilder to allow Ollama provider creation without API key, as Ollama doesn't require authentication
 
 ## [0.8.1] - 2025-08-25
 

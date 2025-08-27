@@ -618,10 +618,20 @@ impl SiumaiBuilder {
             LlmError::ConfigurationError("Provider type not specified".to_string())
         })?;
 
-        let api_key = self
-            .api_key
-            .clone()
-            .ok_or_else(|| LlmError::ConfigurationError("API key not specified".to_string()))?;
+        // Check if API key is required for this provider type
+        let requires_api_key = match provider_type {
+            ProviderType::Ollama => false, // Ollama doesn't require API key
+            _ => true,                     // All other providers require API key
+        };
+
+        let api_key = if requires_api_key {
+            self.api_key
+                .clone()
+                .ok_or_else(|| LlmError::ConfigurationError("API key not specified".to_string()))?
+        } else {
+            // For providers that don't require API key, use empty string or None
+            self.api_key.clone().unwrap_or_default()
+        };
 
         // Extract all needed values to avoid borrow checker issues
         let base_url = self.base_url.clone();
@@ -1335,6 +1345,49 @@ mod tests {
             assert!(msg.contains("does not support embedding functionality"));
         } else {
             panic!("Expected UnsupportedOperation error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ollama_build_without_api_key() {
+        // Test that Ollama can be built without API key
+        let result = SiumaiBuilder::new()
+            .ollama()
+            .model("llama3.2")
+            .build()
+            .await;
+
+        // This should not fail due to missing API key
+        // Note: It might fail for other reasons (like Ollama not running), but not API key
+        match result {
+            Ok(_) => {
+                // Success - Ollama client was created without API key
+            }
+            Err(LlmError::ConfigurationError(msg)) => {
+                // Should not be an API key error
+                assert!(
+                    !msg.contains("API key not specified"),
+                    "Ollama should not require API key, but got: {}",
+                    msg
+                );
+            }
+            Err(_) => {
+                // Other errors are acceptable (e.g., network issues)
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_openai_requires_api_key() {
+        // Test that OpenAI still requires API key
+        let result = SiumaiBuilder::new().openai().model("gpt-4o").build().await;
+
+        // This should fail due to missing API key
+        assert!(result.is_err());
+        if let Err(LlmError::ConfigurationError(msg)) = result {
+            assert!(msg.contains("API key not specified"));
+        } else {
+            panic!("Expected ConfigurationError for missing API key");
         }
     }
 }
