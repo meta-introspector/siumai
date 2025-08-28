@@ -18,53 +18,53 @@ exclude = [
 
 [dependencies]
 # Async traits
-async-trait = "0.1"
+async-trait = { workspace = true }
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 
 # Validation
 validator = { version = "0.20", features = ["derive"] }
 
 # HTTP client
-reqwest = { version = "0.12", features = ["json", "stream", "multipart"] }
+reqwest = { workspace = true, features = ["json", "stream", "multipart"] }
 reqwest-eventsource = "0.6"
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
-futures = "0.3"
+tokio = { workspace = true, features = ["full"] }
+futures = { workspace = true }
 async-stream = "0.3"
 
 # Streaming
-futures-util = "0.3"
-pin-project-lite = "0.2"
-bytes = "1.0"
+futures-util = { workspace = true }
+pin-project-lite = { workspace = true }
+bytes = { workspace = true }
 eventsource-stream = "0.2"
 
 # Time handling
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
 
 # Error handling
-thiserror = "2.0"
+thiserror = { workspace = true }
 
 # Static assertions
 static_assertions = "1.1"
 
 # UUID generation
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { workspace = true, features = ["v4", "serde"] }
 
 # Tracing and observability
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt", "time", "chrono"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json", "fmt", "time", "chrono"] }
 tracing-appender = "0.2"
 
 # Random number generation (for retry jitter)
-rand = "0.8"
+rand = { workspace = true }
 
 # URL encoding
 urlencoding = "2.1"
-regex = "1.11.1"
+regex = { workspace = true }
 
 # Security
 secrecy = { version = "0.10", features = ["serde"] }
@@ -246,9 +246,6 @@ path = "examples/06_mcp_integration/stdio_mcp_server.rs"
 
 
 
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"
+
 
 
