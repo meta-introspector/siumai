@@ -36,6 +36,19 @@ pub struct XaiClient {
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
+impl Clone for XaiClient {
+    fn clone(&self) -> Self {
+        Self {
+            chat_capability: self.chat_capability.clone(),
+            models_capability: self.models_capability.clone(),
+            common_params: self.common_params.clone(),
+            http_client: self.http_client.clone(),
+            tracing_config: self.tracing_config.clone(),
+            _tracing_guard: None, // Don't clone the tracing guard
+        }
+    }
+}
+
 impl XaiClient {
     /// Create a new `xAI` client
     pub async fn new(config: XaiConfig) -> Result<Self, LlmError> {
@@ -157,6 +170,10 @@ impl LlmClient for XaiClient {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 }
 

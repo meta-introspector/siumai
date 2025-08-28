@@ -26,6 +26,19 @@ pub struct Siumai {
     metadata: ProviderMetadata,
 }
 
+impl Clone for Siumai {
+    fn clone(&self) -> Self {
+        // Clone the client using the ClientWrapper approach
+        let client = self.client.clone_box();
+
+        Self {
+            client,
+            capabilities: HashMap::new(), // Don't clone capabilities as they're not used
+            metadata: self.metadata.clone(),
+        }
+    }
+}
+
 /// Metadata about the provider
 #[derive(Debug, Clone)]
 pub struct ProviderMetadata {
@@ -245,6 +258,10 @@ impl LlmClient for Siumai {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 }
 
@@ -1302,6 +1319,10 @@ mod tests {
 
         fn as_any(&self) -> &dyn std::any::Any {
             self
+        }
+
+        fn clone_box(&self) -> Box<dyn LlmClient> {
+            Box::new(MockProvider)
         }
     }
 

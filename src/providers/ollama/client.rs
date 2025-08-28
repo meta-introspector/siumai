@@ -47,6 +47,24 @@ pub struct OllamaClient {
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
+impl Clone for OllamaClient {
+    fn clone(&self) -> Self {
+        Self {
+            chat_capability: self.chat_capability.clone(),
+            completion_capability: self.completion_capability.clone(),
+            embedding_capability: self.embedding_capability.clone(),
+            models_capability: self.models_capability.clone(),
+            streaming_capability: self.streaming_capability.clone(),
+            common_params: self.common_params.clone(),
+            ollama_params: self.ollama_params.clone(),
+            http_client: self.http_client.clone(),
+            base_url: self.base_url.clone(),
+            tracing_config: self.tracing_config.clone(),
+            _tracing_guard: None, // Don't clone the tracing guard
+        }
+    }
+}
+
 impl OllamaClient {
     /// Creates a new Ollama client with configuration and HTTP client
     pub fn new(config: OllamaConfig, http_client: reqwest::Client) -> Self {
@@ -374,6 +392,10 @@ impl LlmClient for OllamaClient {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 
     fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {

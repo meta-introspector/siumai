@@ -8,14 +8,14 @@ use super::cache::CacheControl;
 use super::thinking::ThinkingConfig;
 
 /// Anthropic Message format
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnthropicMessage {
     pub role: String,
     pub content: serde_json::Value,
 }
 
 /// Anthropic Chat Response
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AnthropicChatResponse {
     pub id: String,
     pub r#type: String,
@@ -29,7 +29,7 @@ pub struct AnthropicChatResponse {
 
 /// Anthropic Content Block according to official API documentation
 /// <https://docs.anthropic.com/en/api/messages>
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AnthropicContentBlock {
     pub r#type: String,
     pub text: Option<String>,
@@ -47,7 +47,7 @@ pub struct AnthropicContentBlock {
 }
 
 /// Anthropic Usage
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AnthropicUsage {
     pub input_tokens: u32,
     pub output_tokens: u32,
@@ -70,7 +70,7 @@ pub struct AnthropicSpecificParams {
 
 /// Anthropic Models List Response according to official API documentation
 /// <https://docs.anthropic.com/en/api/models-list>
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AnthropicModelsResponse {
     pub data: Vec<AnthropicModelInfo>,
     pub first_id: Option<String>,
@@ -79,7 +79,7 @@ pub struct AnthropicModelsResponse {
 }
 
 /// Anthropic Model Information
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AnthropicModelInfo {
     pub id: String,
     pub display_name: String,
@@ -88,7 +88,7 @@ pub struct AnthropicModelInfo {
 }
 
 /// Tool Use block for Anthropic
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnthropicToolUse {
     pub r#type: String,
     pub id: String,
@@ -97,7 +97,7 @@ pub struct AnthropicToolUse {
 }
 
 /// Tool Result block for Anthropic
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnthropicToolResult {
     pub r#type: String,
     pub tool_use_id: String,

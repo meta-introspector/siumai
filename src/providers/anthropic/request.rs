@@ -30,6 +30,7 @@ pub trait AnthropicParameterMapper {
 ///
 /// Handles the construction of ChatRequest objects with proper
 /// Anthropic parameter mapping and validation.
+#[derive(Clone)]
 pub struct AnthropicRequestBuilder {
     /// Common parameters shared across providers
     common_params: CommonParams,

@@ -37,7 +37,7 @@ Add Siumai to your `Cargo.toml`:
 ```toml
 [dependencies]
 # By default, all providers are included
-siumai = "0.9.0"
+siumai = "0.9.1"
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -48,16 +48,16 @@ Siumai allows you to include only the providers you need, reducing compilation t
 ```toml
 [dependencies]
 # Only OpenAI
-siumai = { version = "0.9.0", features = ["openai"] }
+siumai = { version = "0.9.1", features = ["openai"] }
 
 # Multiple specific providers
-siumai = { version = "0.9.0", features = ["openai", "anthropic", "google"] }
+siumai = { version = "0.9.1", features = ["openai", "anthropic", "google"] }
 
 # All providers (same as default)
-siumai = { version = "0.9.0", features = ["all-providers"] }
+siumai = { version = "0.9.1", features = ["all-providers"] }
 
 # Only local AI (Ollama)
-siumai = { version = "0.9.0", features = ["ollama"] }
+siumai = { version = "0.9.1", features = ["ollama"] }
 ```
 
 #### Available Features
@@ -77,7 +77,7 @@ siumai = { version = "0.9.0", features = ["ollama"] }
 Use `Provider` when you need access to provider-specific features:
 
 ```rust
-// Cargo.toml: siumai = { version = "0.9.0", features = ["openai"] }
+// Cargo.toml: siumai = { version = "0.9.1", features = ["openai"] }
 use siumai::models;
 use siumai::prelude::*;
 
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Use `Siumai::builder()` when you want provider-agnostic code:
 
 ```rust
-// Cargo.toml: siumai = { version = "0.9.0", features = ["anthropic"] }
+// Cargo.toml: siumai = { version = "0.9.1", features = ["anthropic"] }
 use siumai::models;
 use siumai::prelude::*;
 
@@ -286,6 +286,7 @@ let custom_client = reqwest::Client::builder()
 let client = Provider::openai()
     .api_key("your-key")
     .model(models::openai::GPT_4)
+    .http_client(custom_client.clone())
     .build()
     .await?;
 
@@ -294,8 +295,67 @@ let unified_client = Siumai::builder()
     .openai()
     .api_key("your-key")
     .model(models::openai::GPT_4)
+    .http_client(custom_client)
     .build()
     .await?;
+```
+
+### Concurrent Usage with Clone
+
+All clients support `Clone` for concurrent usage scenarios:
+
+```rust
+use siumai::prelude::*;
+use std::sync::Arc;
+use tokio::task;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a client
+    let client = Provider::openai()
+        .api_key("your-key")
+        .model(models::openai::GPT_4)
+        .build()
+        .await?;
+
+    // Clone for concurrent usage
+    let client_arc = Arc::new(client);
+    let mut handles = vec![];
+
+    for i in 0..5 {
+        let client_clone = Arc::clone(&client_arc);
+        let handle = task::spawn(async move {
+            let messages = vec![user!(format!("Task {}: What is AI?", i))];
+            client_clone.chat(messages).await
+        });
+        handles.push(handle);
+    }
+
+    // Wait for all tasks to complete
+    for handle in handles {
+        let response = handle.await??;
+        println!("Response: {}", response.text().unwrap_or_default());
+    }
+
+    Ok(())
+}
+```
+
+#### Direct Clone Usage
+
+```rust
+// Clone clients directly (lightweight operation)
+let client1 = Provider::openai()
+    .api_key("your-key")
+    .model(models::openai::GPT_4)
+    .build()
+    .await?;
+
+let client2 = client1.clone(); // Shares HTTP client and configuration
+
+// Both clients can be used independently
+let response1 = client1.chat(vec![user!("Hello from client 1")]).await?;
+let response2 = client2.chat(vec![user!("Hello from client 2")]).await?;
 ```
 
 ### Provider-Specific Features
@@ -343,6 +403,126 @@ let unified_client = Siumai::builder()
     .build()
     .await?;
 ```
+
+### 🔄 Clone Support & Concurrent Usage
+
+All siumai clients implement `Clone` for easy concurrent usage. The clone operation is lightweight as it shares the underlying HTTP client and configuration:
+
+#### Basic Clone Usage
+
+```rust
+use siumai::prelude::*;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Provider::openai()
+        .api_key("your-key")
+        .model("gpt-4")
+        .build()
+        .await?;
+
+    // Clone is lightweight - shares HTTP client and config
+    let client1 = client.clone();
+    let client2 = client.clone();
+
+    // All clients work independently
+    let response1 = client1.chat(vec![user!("Hello from client 1")]).await?;
+    let response2 = client2.chat(vec![user!("Hello from client 2")]).await?;
+
+    Ok(())
+}
+```
+
+#### Concurrent Processing with Arc
+
+```rust
+use siumai::prelude::*;
+use std::sync::Arc;
+use tokio::task;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Provider::anthropic()
+        .api_key("your-key")
+        .model("claude-3-sonnet-20240229")
+        .build()
+        .await?;
+
+    // Use Arc for shared ownership across tasks
+    let client_arc = Arc::new(client);
+    let mut handles = vec![];
+
+    // Process multiple requests concurrently
+    for i in 0..5 {
+        let client_clone = Arc::clone(&client_arc);
+        let handle = task::spawn(async move {
+            let messages = vec![user!(format!("Question {}: What is AI?", i))];
+            client_clone.chat(messages).await
+        });
+        handles.push(handle);
+    }
+
+    // Collect all responses
+    for handle in handles {
+        let response = handle.await??;
+        println!("Response: {}", response.text().unwrap_or_default());
+    }
+
+    Ok(())
+}
+```
+
+#### Multi-Provider Concurrent Usage
+
+```rust
+use siumai::prelude::*;
+use tokio::task;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create clients for different providers
+    let openai_client = Provider::openai()
+        .api_key("openai-key")
+        .model("gpt-4")
+        .build()
+        .await?;
+
+    let anthropic_client = Provider::anthropic()
+        .api_key("anthropic-key")
+        .model("claude-3-sonnet-20240229")
+        .build()
+        .await?;
+
+    // Query multiple providers concurrently
+    let openai_handle = task::spawn({
+        let client = openai_client.clone();
+        async move {
+            client.chat(vec![user!("What is your name?")]).await
+        }
+    });
+
+    let anthropic_handle = task::spawn({
+        let client = anthropic_client.clone();
+        async move {
+            client.chat(vec![user!("What is your name?")]).await
+        }
+    });
+
+    // Get responses from both providers
+    let (openai_response, anthropic_response) =
+        tokio::try_join!(openai_handle, anthropic_handle)?;
+
+    println!("OpenAI: {}", openai_response?.text().unwrap_or_default());
+    println!("Anthropic: {}", anthropic_response?.text().unwrap_or_default());
+
+    Ok(())
+}
+```
+
+> **Performance Note**: Clone operations are lightweight because:
+> - HTTP clients use internal connection pooling (Arc-based)
+> - Configuration parameters are small and cheap to clone
+> - No duplicate network connections are created
 
 ### Advanced Features
 

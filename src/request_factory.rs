@@ -227,6 +227,7 @@ pub trait RequestBuilder: Send + Sync {
 }
 
 /// Standard implementation helper for RequestBuilder
+#[derive(Clone)]
 pub struct StandardRequestBuilder {
     common_params: CommonParams,
     provider_params: Option<ProviderParams>,
@@ -336,6 +337,7 @@ impl RequestBuilder for StandardRequestBuilder {
 ///
 /// This factory serves as the **bridge** between the unified interface (SiumaiBuilder)
 /// and the parameter management layer (RequestBuilder implementations).
+#[derive(Clone)]
 pub struct RequestBuilderFactory;
 
 impl RequestBuilderFactory {

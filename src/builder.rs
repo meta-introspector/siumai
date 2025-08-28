@@ -1753,6 +1753,7 @@ impl OllamaBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct GenericProviderBuilder {
     _base: LlmBuilder,
     _provider_type: ProviderType,

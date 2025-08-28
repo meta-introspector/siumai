@@ -14,6 +14,7 @@ use super::providers::{DeepSeekProvider, OpenAiCompatibleProvider, OpenRouterPro
 ///
 /// This builder provides a type-safe way to configure OpenAI-compatible providers
 /// with provider-specific methods and validation.
+#[derive(Clone)]
 pub struct OpenAiCompatibleBuilder<P: OpenAiCompatibleProvider> {
     /// Base LLM builder for HTTP configuration
     base: LlmBuilder,

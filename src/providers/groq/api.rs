@@ -19,6 +19,7 @@ use super::types::*;
 use super::utils::*;
 
 /// Groq Models API Implementation
+#[derive(Clone)]
 pub struct GroqModels {
     pub api_key: String,
     pub base_url: String,

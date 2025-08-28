@@ -241,7 +241,7 @@ impl TracingConfig {
 }
 
 /// Builder for tracing configuration
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct TracingConfigBuilder {
     config: TracingConfig,
 }

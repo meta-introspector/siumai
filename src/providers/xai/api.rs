@@ -11,7 +11,7 @@ use super::types::*;
 use super::utils::build_headers;
 
 /// xAI Models API implementation
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct XaiModels {
     pub api_key: String,
     pub base_url: String,

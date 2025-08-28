@@ -17,6 +17,7 @@ use super::types::*;
 use super::utils::*;
 
 /// Anthropic Chat Capability Implementation
+#[derive(Clone)]
 pub struct AnthropicChatCapability {
     pub api_key: String,
     pub base_url: String,

@@ -14,6 +14,7 @@ use super::types::*;
 use super::utils::*;
 
 /// Ollama Models Capability Implementation
+#[derive(Clone)]
 pub struct OllamaModelsCapability {
     pub base_url: String,
     pub http_client: reqwest::Client,

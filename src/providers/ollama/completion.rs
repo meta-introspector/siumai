@@ -12,6 +12,7 @@ use super::types::*;
 use super::utils::*;
 
 /// Ollama Completion Capability Implementation
+#[derive(Clone)]
 pub struct OllamaCompletionCapability {
     pub base_url: String,
     pub http_client: reqwest::Client,

@@ -35,6 +35,20 @@ pub struct AnthropicClient {
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
+impl Clone for AnthropicClient {
+    fn clone(&self) -> Self {
+        Self {
+            chat_capability: self.chat_capability.clone(),
+            models_capability: self.models_capability.clone(),
+            common_params: self.common_params.clone(),
+            anthropic_params: self.anthropic_params.clone(),
+            specific_params: self.specific_params.clone(),
+            tracing_config: self.tracing_config.clone(),
+            _tracing_guard: None, // Don't clone the tracing guard
+        }
+    }
+}
+
 impl AnthropicClient {
     /// Creates a new Anthropic client
     pub fn new(
@@ -240,6 +254,10 @@ impl LlmClient for AnthropicClient {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 }
 

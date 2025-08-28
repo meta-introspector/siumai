@@ -12,6 +12,7 @@ use crate::error::LlmError;
 use crate::types::{CommonParams, ProviderParams, ProviderType};
 
 /// Anthropic Parameter Mapper
+#[derive(Debug, Clone)]
 pub struct AnthropicParameterMapper;
 
 impl ParameterMapper for AnthropicParameterMapper {

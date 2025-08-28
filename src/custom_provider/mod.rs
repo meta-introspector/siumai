@@ -381,6 +381,12 @@ impl LlmClient for CustomProviderClient {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        // Custom providers need to implement their own cloning logic
+        // This is a placeholder implementation
+        panic!("Custom provider cloning not implemented")
+    }
 }
 
 /// Helper trait for building custom providers

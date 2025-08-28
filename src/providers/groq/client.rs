@@ -30,6 +30,19 @@ pub struct GroqClient {
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
+impl Clone for GroqClient {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            http_client: self.http_client.clone(),
+            chat_capability: self.chat_capability.clone(),
+            models_capability: self.models_capability.clone(),
+            tracing_config: self.tracing_config.clone(),
+            _tracing_guard: None, // Don't clone the tracing guard
+        }
+    }
+}
+
 impl GroqClient {
     /// Create a new `Groq` client
     pub fn new(config: GroqConfig, http_client: reqwest::Client) -> Self {
@@ -96,6 +109,10 @@ impl LlmClient for GroqClient {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 }
 

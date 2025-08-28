@@ -16,6 +16,7 @@ use super::types::*;
 use super::utils::*;
 
 /// Ollama Chat Capability Implementation
+#[derive(Clone)]
 pub struct OllamaChatCapability {
     pub base_url: String,
     pub http_client: reqwest::Client,

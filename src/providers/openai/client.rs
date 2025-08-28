@@ -34,7 +34,8 @@ pub struct OpenAiClient {
     http_client: reqwest::Client,
     /// Tracing configuration
     tracing_config: Option<crate::tracing::TracingConfig>,
-    /// Tracing guard to keep tracing system active
+    /// Tracing guard to keep tracing system active (not cloned)
+    #[allow(dead_code)]
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
     /// Responses API toggle
     use_responses_api: bool,
@@ -44,6 +45,25 @@ pub struct OpenAiClient {
     built_in_tools: Vec<crate::types::OpenAiBuiltInTool>,
     /// Web search config
     web_search_config: crate::types::WebSearchConfig,
+}
+
+impl Clone for OpenAiClient {
+    fn clone(&self) -> Self {
+        Self {
+            chat_capability: self.chat_capability.clone(),
+            models_capability: self.models_capability.clone(),
+            common_params: self.common_params.clone(),
+            openai_params: self.openai_params.clone(),
+            specific_params: self.specific_params.clone(),
+            http_client: self.http_client.clone(),
+            tracing_config: self.tracing_config.clone(),
+            _tracing_guard: None, // Don't clone the tracing guard
+            use_responses_api: self.use_responses_api,
+            previous_response_id: self.previous_response_id.clone(),
+            built_in_tools: self.built_in_tools.clone(),
+            web_search_config: self.web_search_config.clone(),
+        }
+    }
 }
 
 impl OpenAiClient {
@@ -397,6 +417,10 @@ impl LlmClient for OpenAiClient {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 
     fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {

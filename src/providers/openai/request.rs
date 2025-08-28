@@ -30,6 +30,7 @@ pub trait OpenAiParameterMapper {
 ///
 /// Handles the construction of ChatRequest objects with proper
 /// OpenAI parameter mapping and validation.
+#[derive(Debug, Clone)]
 pub struct OpenAiRequestBuilder {
     /// Common parameters shared across providers
     common_params: CommonParams,

@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 /// `OpenAI` Message format
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAiMessage {
     pub role: String,
     pub content: Option<serde_json::Value>,
@@ -14,7 +14,7 @@ pub struct OpenAiMessage {
 }
 
 /// `OpenAI` Tool Call
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAiToolCall {
     pub id: String,
     pub r#type: String,
@@ -22,14 +22,14 @@ pub struct OpenAiToolCall {
 }
 
 /// `OpenAI` Function
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAiFunction {
     pub name: String,
     pub arguments: String,
 }
 
 /// `OpenAI` Chat Response
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenAiChatResponse {
     pub id: String,
     pub object: String,
@@ -40,7 +40,7 @@ pub struct OpenAiChatResponse {
 }
 
 /// `OpenAI` Choice
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenAiChoice {
     pub index: u32,
     pub message: OpenAiMessage,
@@ -48,7 +48,7 @@ pub struct OpenAiChoice {
 }
 
 /// `OpenAI` Usage
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenAiUsage {
     pub prompt_tokens: Option<u32>,
     pub completion_tokens: Option<u32>,
@@ -56,7 +56,7 @@ pub struct OpenAiUsage {
 }
 
 /// `OpenAI` Model information
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenAiModel {
     pub id: String,
     pub object: String,
@@ -68,7 +68,7 @@ pub struct OpenAiModel {
 }
 
 /// `OpenAI` Models API response
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OpenAiModelsResponse {
     pub object: String,
     pub data: Vec<OpenAiModel>,

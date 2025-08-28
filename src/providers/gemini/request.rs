@@ -30,6 +30,7 @@ pub trait GeminiParameterMapper {
 ///
 /// Handles the construction of ChatRequest objects with proper
 /// Gemini parameter mapping and validation.
+#[derive(Clone)]
 pub struct GeminiRequestBuilder {
     /// Common parameters shared across providers
     common_params: CommonParams,

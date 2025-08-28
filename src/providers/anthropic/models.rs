@@ -14,6 +14,7 @@ use super::types::{AnthropicModelInfo, AnthropicModelsResponse};
 use super::utils::{build_headers, map_anthropic_error};
 
 /// Anthropic Models API implementation
+#[derive(Clone)]
 pub struct AnthropicModels {
     pub api_key: String,
     pub base_url: String,

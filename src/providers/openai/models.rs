@@ -17,6 +17,7 @@ use super::types::*;
 use super::utils::build_headers;
 
 /// `OpenAI` Models API client
+#[derive(Clone)]
 pub struct OpenAiModels {
     /// API key for authentication (securely stored)
     pub api_key: SecretString,

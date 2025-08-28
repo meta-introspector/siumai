@@ -43,6 +43,23 @@ pub struct GeminiClient {
     _tracing_guard: Option<Option<tracing_appender::non_blocking::WorkerGuard>>,
 }
 
+impl Clone for GeminiClient {
+    fn clone(&self) -> Self {
+        Self {
+            http_client: self.http_client.clone(),
+            config: self.config.clone(),
+            common_params: self.common_params.clone(),
+            gemini_params: self.gemini_params.clone(),
+            chat_capability: self.chat_capability.clone(),
+            embedding_capability: self.embedding_capability.clone(),
+            models_capability: self.models_capability.clone(),
+            files_capability: self.files_capability.clone(),
+            tracing_config: self.tracing_config.clone(),
+            _tracing_guard: None, // Don't clone the tracing guard
+        }
+    }
+}
+
 impl GeminiClient {
     /// Create a new Gemini client with the given configuration
     pub fn new(config: GeminiConfig) -> Result<Self, LlmError> {
@@ -500,6 +517,10 @@ impl LlmClient for GeminiClient {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 
     fn as_embedding_capability(&self) -> Option<&dyn EmbeddingCapability> {

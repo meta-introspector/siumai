@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.9.1] - 2025-08-28
+
+### Added
+
+- **Comprehensive Clone Support** - All client types, builders, and configuration structs now implement `Clone` for seamless concurrent usage and multi-threading scenarios
+
 ## [0.9.0] - 2025-08-27
 
 ### Added

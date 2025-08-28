@@ -101,6 +101,7 @@ use super::utils::*;
 use crate::request_factory::RequestBuilder;
 
 /// `OpenAI` Chat Capability Implementation
+#[derive(Clone)]
 pub struct OpenAiChatCapability {
     pub api_key: SecretString,
     pub base_url: String,

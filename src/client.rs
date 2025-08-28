@@ -21,6 +21,9 @@ pub trait LlmClient: ChatCapability + Send + Sync {
     /// Get as Any for dynamic casting
     fn as_any(&self) -> &dyn std::any::Any;
 
+    /// Clone the client into a boxed trait object
+    fn clone_box(&self) -> Box<dyn LlmClient>;
+
     /// Get as embedding capability if supported
     ///
     /// Returns None by default. Providers that support embeddings
@@ -101,7 +104,23 @@ pub enum ClientWrapper {
     Anthropic(Box<dyn LlmClient>),
     Gemini(Box<dyn LlmClient>),
     Groq(Box<dyn LlmClient>),
+    XAI(Box<dyn LlmClient>),
+    Ollama(Box<dyn LlmClient>),
     Custom(Box<dyn LlmClient>),
+}
+
+impl Clone for ClientWrapper {
+    fn clone(&self) -> Self {
+        match self {
+            ClientWrapper::OpenAi(client) => ClientWrapper::OpenAi(client.clone_box()),
+            ClientWrapper::Anthropic(client) => ClientWrapper::Anthropic(client.clone_box()),
+            ClientWrapper::Gemini(client) => ClientWrapper::Gemini(client.clone_box()),
+            ClientWrapper::Groq(client) => ClientWrapper::Groq(client.clone_box()),
+            ClientWrapper::XAI(client) => ClientWrapper::XAI(client.clone_box()),
+            ClientWrapper::Ollama(client) => ClientWrapper::Ollama(client.clone_box()),
+            ClientWrapper::Custom(client) => ClientWrapper::Custom(client.clone_box()),
+        }
+    }
 }
 
 impl ClientWrapper {
@@ -125,6 +144,16 @@ impl ClientWrapper {
         Self::Groq(client)
     }
 
+    /// Creates an xAI client wrapper
+    pub fn xai(client: Box<dyn LlmClient>) -> Self {
+        Self::XAI(client)
+    }
+
+    /// Creates an Ollama client wrapper
+    pub fn ollama(client: Box<dyn LlmClient>) -> Self {
+        Self::Ollama(client)
+    }
+
     /// Creates a custom client wrapper
     pub fn custom(client: Box<dyn LlmClient>) -> Self {
         Self::Custom(client)
@@ -137,6 +166,8 @@ impl ClientWrapper {
             Self::Anthropic(client) => client.as_ref(),
             Self::Gemini(client) => client.as_ref(),
             Self::Groq(client) => client.as_ref(),
+            Self::XAI(client) => client.as_ref(),
+            Self::Ollama(client) => client.as_ref(),
             Self::Custom(client) => client.as_ref(),
         }
     }
@@ -148,6 +179,8 @@ impl ClientWrapper {
             Self::Anthropic(_) => ProviderType::Anthropic,
             Self::Gemini(_) => ProviderType::Gemini,
             Self::Groq(_) => ProviderType::Groq,
+            Self::XAI(_) => ProviderType::XAI,
+            Self::Ollama(_) => ProviderType::Ollama,
             Self::Custom(_) => ProviderType::Custom("unknown".to_string()),
         }
     }
@@ -208,6 +241,10 @@ impl LlmClient for ClientWrapper {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
     }
 }
 
